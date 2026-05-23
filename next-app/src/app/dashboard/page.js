@@ -1,99 +1,82 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
+import { useSheets } from '@/lib/SheetsContext';
+import { computeOverallStats, getDateColumns, getEmployeeNameColumn, getEmployeeIdColumn } from '@/lib/attendance';
+import PageHeader from '@/components/PageHeader';
+import KpiCard from '@/components/KpiCard';
+import StatusBadge from '@/components/StatusBadge';
+import SheetPicker from '@/components/SheetPicker';
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ total: '—', present: '—', late: '—', absent: '—' });
+  const { activeSheet, activeSheetData, loading, error } = useSheets();
 
-  useEffect(() => {
-    // In a real implementation, you would connect to the websocket here 
-    // or fetch data from your API to populate these stats dynamically
-    const fetchStats = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch('/api/localfile', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (data && data.sheets) {
-          const sheetNames = Object.keys(data.sheets);
-          const firstSheet = sheetNames.find(n => n.toLowerCase() !== 'leave list');
-          if (firstSheet && data.sheets[firstSheet]) {
-             setStats({
-               total: data.sheets[firstSheet].rows.length,
-               present: Math.floor(data.sheets[firstSheet].rows.length * 0.85), // Mock derived data
-               late: Math.floor(data.sheets[firstSheet].rows.length * 0.10),
-               absent: Math.floor(data.sheets[firstSheet].rows.length * 0.05),
-             });
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to fetch local stats', err);
-      }
-    };
-    
-    fetchStats();
-  }, []);
+  const stats = useMemo(() => {
+    if (!activeSheetData) return null;
+    return computeOverallStats(activeSheetData.rows, activeSheetData.headers);
+  }, [activeSheetData]);
+
+  const matrix = useMemo(() => {
+    if (!activeSheetData) return null;
+    const { headers, rows } = activeSheetData;
+    const dateCols = getDateColumns(headers).slice(-10);
+    const idCol = getEmployeeIdColumn(headers);
+    const nameCol = getEmployeeNameColumn(headers);
+    const preview = rows.filter(r => String(r[nameCol] ?? '').trim()).slice(0, 10);
+    return { dateCols, idCol, nameCol, rows: preview };
+  }, [activeSheetData]);
 
   return (
     <div className="flex flex-col gap-8">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-6">
-        <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[rgba(139,92,246,0.15)] flex items-center justify-center text-[var(--color-purple)]">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-          </div>
-          <div>
-            <p className="text-sm text-[var(--color-text-muted)]">Total Employees</p>
-            <h3 className="text-2xl font-bold text-white">{stats.total}</h3>
-          </div>
-        </div>
+      <PageHeader
+        title="Dashboard"
+        subtitle={activeSheet ? `Viewing ${activeSheet}` : 'No sheet selected'}
+        actions={<SheetPicker />}
+      />
 
-        <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)]">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <div>
-            <p className="text-sm text-[var(--color-text-muted)]">Present Today</p>
-            <h3 className="text-2xl font-bold text-white">{stats.present}</h3>
-          </div>
-        </div>
+      {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
+      {loading && !stats && <div className="card text-[var(--color-text-muted)] text-sm">Loading sheet data…</div>}
 
-        <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[rgba(234,179,8,0.15)] flex items-center justify-center text-[var(--color-yellow)]">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <div>
-            <p className="text-sm text-[var(--color-text-muted)]">Late Today</p>
-            <h3 className="text-2xl font-bold text-white">{stats.late}</h3>
-          </div>
-        </div>
-
-        <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[rgba(239,68,68,0.15)] flex items-center justify-center text-[var(--color-red)]">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <div>
-            <p className="text-sm text-[var(--color-text-muted)]">Absent Today</p>
-            <h3 className="text-2xl font-bold text-white">{stats.absent}</h3>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <KpiCard label="Total Employees" value={stats?.total ?? '—'} color="purple" />
+        <KpiCard label="Present Days"    value={stats?.present ?? '—'} color="green"  />
+        <KpiCard label="Late Days"       value={stats?.late ?? '—'} color="yellow" />
+        <KpiCard label="Absent Days"     value={stats?.absent ?? '—'} color="red"    />
       </div>
 
-      {/* Main content grid */}
-      <div className="grid grid-cols-2 gap-8">
-        <div className="card min-h-[400px]">
-          <h3 className="font-semibold text-lg mb-4">Attendance Overview</h3>
-          <div className="flex items-center justify-center h-[300px] text-[var(--color-text-muted)] opacity-50">
-            <p>Chart data will be rendered here...</p>
-          </div>
+      <div className="card overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-lg">Attendance Matrix (last 10 days)</h3>
+          {stats && <span className="text-xs text-[var(--color-text-muted)]">Overall attendance: {stats.rate}%</span>}
         </div>
-        <div className="card min-h-[400px]">
-          <h3 className="font-semibold text-lg mb-4">Recent Attendance</h3>
-          <div className="w-full text-left text-sm text-[var(--color-text-muted)] flex items-center justify-center h-[300px] opacity-50">
-            <p>Upload sheet data to view recent records.</p>
+        {!matrix || matrix.rows.length === 0 ? (
+          <div className="text-[var(--color-text-muted)] text-sm py-8 text-center opacity-60">
+            No data to display.
           </div>
-        </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-separate border-spacing-0">
+              <thead>
+                <tr className="text-left text-[var(--color-text-muted)] text-xs">
+                  <th className="py-2 pr-4 font-medium">ID</th>
+                  <th className="py-2 pr-4 font-medium">Name</th>
+                  {matrix.dateCols.map(c => <th key={c} className="py-2 px-2 font-medium text-center">{c}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.rows.map((r, i) => (
+                  <tr key={i} className="border-t border-[var(--color-card-border)]">
+                    <td className="py-2 pr-4 text-[var(--color-text-muted)] text-xs">{r[matrix.idCol]}</td>
+                    <td className="py-2 pr-4 text-white">{r[matrix.nameCol]}</td>
+                    {matrix.dateCols.map(c => (
+                      <td key={c} className="py-2 px-2 text-center"><StatusBadge value={r[c]} /></td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

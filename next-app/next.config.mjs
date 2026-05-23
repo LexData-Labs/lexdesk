@@ -1,7 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  // Required when using a custom server
-  serverExternalPackages: ['xlsx', 'chokidar', 'bcryptjs'],
-};
+const nextConfig = {};
 
 export default nextConfig;
