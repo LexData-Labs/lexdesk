@@ -3,7 +3,7 @@
 @theme {
   --color-bg: #070B14;
   --color-card-bg: rgba(15, 23, 42, 0.6);
-  --color-card-border: rgba(255, 255, 255, 0.05);
+  --color-card-border: rgba(255, 255, 255, 0.06);
   --color-text-main: #F8FAFC;
   --color-text-muted: #94A3B8;
   --color-purple: #8B5CF6;
@@ -13,10 +13,16 @@
   --color-red: #EF4444;
 }
 
+:root {
+  --color-purple-glow: rgba(139, 92, 246, 0.45);
+  --color-blue-glow:   rgba(59, 130, 246, 0.35);
+}
+
 @layer base {
   body {
-    @apply bg-[var(--color-bg)] text-[var(--color-text-main)] min-h-screen overflow-hidden;
-    font-family: 'Inter', sans-serif;
+    @apply bg-[var(--color-bg)] text-[var(--color-text-main)] min-h-screen;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
