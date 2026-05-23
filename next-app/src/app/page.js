@@ -3,39 +3,18 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const DEMO_ACCOUNTS = [
-  { role: 'superadmin', label: 'Super Admin', email: 'superadmin@example.com', password: 'admin123' },
-  { role: 'admin',      label: 'Admin',       email: 'admin@example.com',      password: 'admin123' },
-  { role: 'employee',   label: 'Employee',    email: 'employee@example.com',   password: 'user123' },
-];
-
-function EyeIcon({ open }) {
-  return open ? (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  );
-}
-
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showDemo, setShowDemo] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -43,9 +22,12 @@ export default function Home() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
+      
       if (!res.ok) throw new Error(data.error || 'Login failed');
+      
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      
       router.push('/dashboard');
     } catch (err) {
       setError(err.message);
@@ -54,139 +36,116 @@ export default function Home() {
     }
   };
 
-  const useDemo = (acct) => {
-    setEmail(acct.email);
-    setPassword(acct.password);
-    setError('');
+  const fillDemo = (role) => {
+    if (role === 'super') {
+      setEmail('superadmin@example.com');
+      setPassword('admin123');
+    } else if (role === 'admin') {
+      setEmail('admin@example.com');
+      setPassword('admin123');
+    } else if (role === 'employee') {
+      setEmail('employee@example.com');
+      setPassword('user123');
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--color-bg)] relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 -left-32 w-[28rem] h-[28rem] rounded-full bg-[var(--color-purple)] opacity-[0.08] blur-[120px]" />
-        <div className="absolute bottom-1/4 -right-32 w-[28rem] h-[28rem] rounded-full bg-[var(--color-blue)] opacity-[0.08] blur-[120px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,var(--color-bg)_70%)]" />
-      </div>
+    <div className="flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.15),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_50%)] bg-[var(--color-bg)]">
+      <nav className="px-16 py-6 flex justify-between items-center border-b border-[var(--color-card-border)] bg-[rgba(7,11,20,0.6)] backdrop-blur-md">
+        <div className="flex items-center gap-3 text-2xl font-bold text-[var(--color-text-main)]">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm">A</div>
+          Attendance Pro
+        </div>
+        <div className="flex gap-4">
+          <button className="btn-outline">Documentation</button>
+          <button className="btn-primary">Get Started</button>
+        </div>
+      </nav>
 
-      <div className="relative w-full max-w-[420px]">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_24px_var(--color-purple-glow)] flex items-center justify-center text-white text-xl font-bold">
-              A
+      <div className="flex-1 flex items-center justify-between px-16 max-w-[1400px] mx-auto w-full gap-16">
+        <div className="flex-1 max-w-[600px]">
+          <h1 className="text-6xl font-extrabold leading-[1.1] mb-6 bg-gradient-to-br from-white to-slate-400 text-transparent bg-clip-text">
+            Next-Gen Attendance Management
+          </h1>
+          <p className="text-xl text-[var(--color-text-muted)] mb-10 leading-relaxed">
+            Experience a stunning, high-fidelity platform designed to streamline employee tracking, dynamic reporting, and robust role-based access control. Powered by AI and seamless Excel integration.
+          </p>
+          <div className="flex gap-8 text-[0.95rem] text-[var(--color-text-muted)] font-medium">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
+              Real-time Sync
             </div>
-            <span className="text-[1.6rem] font-semibold text-white tracking-tight">Attendance Pro</span>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
+              Advanced Analytics
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
+              Role Based Views
+            </div>
           </div>
-          <p className="text-sm text-[var(--color-text-muted)]">Sign in to access your dashboard</p>
         </div>
 
-        <div className="bg-[rgba(15,23,42,0.7)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-7">
-          <form onSubmit={handleLogin} className="flex flex-col gap-5" autoComplete="on">
-            <div>
-              <label htmlFor="email" className="block text-[11px] font-semibold mb-2 text-[var(--color-text-muted)] uppercase tracking-[0.08em]">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
+        <div className="w-[450px] p-10 bg-[rgba(15,23,42,0.7)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-2 text-white">Sign In</h2>
+            <p className="text-[var(--color-text-muted)] text-[0.95rem]">Access your workspace based on your role</p>
+          </div>
+
+          <div className="flex p-1 bg-black/40 rounded-xl mb-8 border border-[var(--color-card-border)]">
+            <button onClick={() => fillDemo('super')} className="flex-1 py-3 text-center rounded-lg text-xs font-semibold cursor-pointer transition-all bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] shadow-[0_0_10px_var(--color-purple-glow)] border border-[var(--color-purple)]">
+              Super Admin
+            </button>
+            <button onClick={() => fillDemo('admin')} className="flex-1 py-3 text-center rounded-lg text-[var(--color-text-muted)] text-xs font-semibold cursor-pointer transition-all hover:bg-white/5 hover:text-white">
+              Supervisor
+            </button>
+            <button onClick={() => fillDemo('employee')} className="flex-1 py-3 text-center rounded-lg text-[var(--color-text-muted)] text-xs font-semibold cursor-pointer transition-all hover:bg-white/5 hover:text-white">
+              Employee
+            </button>
+          </div>
+
+          <form onSubmit={handleLogin}>
+            {error && <div className="mb-4 text-sm text-[var(--color-red)] text-center">{error}</div>}
+            
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-2 text-[var(--color-text-muted)]">Email Address</label>
+              <input 
+                type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder="admin@example.com"
                 required
-                autoComplete="email"
-                className="w-full bg-black/30 border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-white text-sm placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.15)] transition-all"
+                className="w-full bg-black/30 border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(139,92,246,0.2)] transition-all"
+              />
+            </div>
+            
+            <div className="mb-8">
+              <label className="block text-sm font-semibold mb-2 text-[var(--color-text-muted)]">Password</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full bg-black/30 border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(139,92,246,0.2)] transition-all"
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-[11px] font-semibold mb-2 text-[var(--color-text-muted)] uppercase tracking-[0.08em]">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  autoComplete="current-password"
-                  className="w-full bg-black/30 border border-[var(--color-card-border)] rounded-lg px-4 py-3 pr-11 text-white text-sm placeholder:text-[var(--color-text-muted)]/50 focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.15)] transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(s => !s)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-white transition-colors"
-                >
-                  <EyeIcon open={showPassword} />
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-[rgba(239,68,68,0.08)] border border-[rgba(239,68,68,0.25)] text-sm text-[var(--color-red)]">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span>{error}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="w-full py-3 mt-1 bg-gradient-to-r from-[var(--color-purple)] to-[var(--color-blue)] text-white font-semibold text-sm rounded-lg shadow-[0_4px_20px_var(--color-purple-glow)] transition-all hover:shadow-[0_6px_28px_var(--color-purple-glow)] hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_4px_20px_var(--color-purple-glow)] flex items-center justify-center gap-2"
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full btn-primary py-3.5 text-[0.95rem] flex justify-center items-center"
             >
-              {loading ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Signing in…
-                </>
-              ) : 'Sign in'}
+              {loading ? 'Authenticating...' : 'Access Dashboard'}
             </button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-[var(--color-card-border)]">
-            <button
-              type="button"
-              onClick={() => setShowDemo(s => !s)}
-              className="w-full text-xs text-[var(--color-text-muted)] hover:text-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>{showDemo ? 'Hide' : 'Use a'} demo account</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${showDemo ? 'rotate-180' : ''}`}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-
-            {showDemo && (
-              <div className="mt-4 grid gap-2">
-                {DEMO_ACCOUNTS.map(acct => (
-                  <button
-                    key={acct.role}
-                    type="button"
-                    onClick={() => useDemo(acct)}
-                    className="w-full text-left px-3.5 py-2.5 rounded-lg bg-black/30 border border-[var(--color-card-border)] hover:border-[var(--color-purple)] hover:bg-black/40 transition-all group cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm text-white font-medium">{acct.label}</div>
-                        <div className="text-[11px] text-[var(--color-text-muted)] truncate">{acct.email}</div>
-                      </div>
-                      <span className="text-[11px] text-[var(--color-purple)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0">Use →</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="mt-6 flex justify-center gap-4 text-xs font-medium text-[var(--color-purple)] opacity-80">
+            <span className="cursor-pointer hover:underline" onClick={() => fillDemo('super')}>Demo SuperAdmin</span>
+            <span className="cursor-pointer hover:underline" onClick={() => fillDemo('admin')}>Demo Admin</span>
+            <span className="cursor-pointer hover:underline" onClick={() => fillDemo('employee')}>Demo Employee</span>
           </div>
         </div>
-
-        <p className="text-center text-[11px] text-[var(--color-text-muted)] mt-6 tracking-wide">
-          Attendance Pro · Internal use only
-        </p>
       </div>
     </div>
   );
