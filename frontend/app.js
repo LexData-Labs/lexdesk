@@ -312,6 +312,8 @@ async function initRealtime() {
     try {
        const u = JSON.parse(storedUser);
        userRole = u.role;
+       STATE.userRole = userRole;
+       STATE.user = u;
        
        // Update UI with user info
        const userProfileName = document.querySelector('.user-profile-sm .font-weight-600') || document.querySelector('.user-profile-sm div[style*="font-weight:600"]');
@@ -323,13 +325,32 @@ async function initRealtime() {
        if (userProfileAvatar) userProfileAvatar.innerText = u.avatar;
        
        // Handle RBAC UI logic
+       const settingsNav = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Settings'));
+       const uploadBtn = document.querySelector('.btn-primary[onclick*="excel-upload"]');
+       const dashboardNav = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Dashboard'));
+       const analyticsNav = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Analytics'));
+       const addEmpBtn = document.getElementById('btn-add-emp');
+       const editEmpBtn = document.querySelector('button[onclick="editEmployeeName()"]');
+       const delEmpBtn = document.querySelector('button[onclick="deleteEmployee()"]');
+
        if (userRole === 'employee') {
-          // Hide settings and directory for employees
-          const settingsNav = Array.from(document.querySelectorAll('.nav-item')).find(el => el.innerText.includes('Settings'));
+          // Employee - Can see his/her profile, attendence, calender
           if (settingsNav) settingsNav.style.display = 'none';
-          
-          const uploadBtn = document.querySelector('.btn-primary[onclick*="excel-upload"]');
           if (uploadBtn) uploadBtn.style.display = 'none';
+          if (dashboardNav) dashboardNav.style.display = 'none';
+          if (analyticsNav) analyticsNav.style.display = 'none';
+          if (addEmpBtn) addEmpBtn.style.display = 'none';
+          if (editEmpBtn) editEmpBtn.style.display = 'none';
+          if (delEmpBtn) delEmpBtn.style.display = 'none';
+          
+          setTimeout(() => switchView('profile'), 100);
+       } else if (userRole === 'admin') {
+          // Admin & Team Supervisor - Can see full team data manage specific team.
+          if (settingsNav) settingsNav.style.display = 'none';
+          if (uploadBtn) uploadBtn.style.display = 'none';
+       } else if (userRole === 'superadmin') {
+          // SuperAdmin - Can see all the data, Create Admin, Team Supervisor.
+          // Everything visible by default
        }
     } catch(e) {}
 
@@ -442,12 +463,24 @@ function renderLocalDashboard(data) {
 
   if (!targetSheet) return;
 
-  const { headers, rows } = targetSheet;
+  let { headers, rows } = targetSheet;
+
+  // RBAC: Filter rows for Employee
+  if (STATE.userRole === 'employee' && STATE.user) {
+    const nameCol = headers[1];
+    let matchedRows = rows.filter(r => String(r[nameCol]).toLowerCase() === STATE.user.name.toLowerCase());
+    if (matchedRows.length === 0 && rows.length > 0) {
+      // Mock fallback: if mock user name doesn't exist in the sheet, assign them the first employee so the demo works
+      matchedRows = [rows.find(r => r[nameCol] && String(r[nameCol]).trim())];
+    }
+    rows = matchedRows.filter(Boolean);
+  }
+
   const total = rows.length;
   document.getElementById('stat-total').innerText = total;
 
   // ── Render Attendance Matrix ──
-  renderMatrix(targetSheet, currentMonth);
+  renderMatrix({ headers, rows }, currentMonth);
 
   // ... (rest of the stats calculation remains the same)
   // Use last date column available (most recent day) for today's stats
@@ -601,6 +634,15 @@ function renderEmployeeList(filter) {
   const nameCol = sheet.headers[1];
   let emps = sheet.rows.filter(r => r[nameCol] && String(r[nameCol]).trim());
   if (filter) emps = emps.filter(r => String(r[nameCol]).toLowerCase().includes(filter));
+
+  // RBAC: Restrict Employee list to only themselves
+  if (STATE.userRole === 'employee' && STATE.user) {
+    let matchedEmps = emps.filter(r => String(r[nameCol]).toLowerCase() === STATE.user.name.toLowerCase());
+    if (matchedEmps.length === 0 && emps.length > 0) {
+       matchedEmps = [emps[0]]; // fallback for demo if name doesn't perfectly match sheet
+    }
+    emps = matchedEmps;
+  }
 
   if (countBadge) countBadge.textContent = emps.length;
 
