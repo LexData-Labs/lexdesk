@@ -10,7 +10,7 @@ export function isMonthSheet(name) {
 
 export function normalizeStatus(raw) {
   const s = String(raw ?? '').trim().toUpperCase();
-  if (s === '') return '';
+  if (s === '') return 'P';
   if (s.startsWith('P') && s.length <= 3) return 'P';
   if (s === 'L' || s.startsWith('LATE')) return 'L';
   if (s === 'A' || s === 'ABSENT') return 'A';

@@ -17,12 +17,11 @@ export default function SidebarNav({ role }) {
   return (
     <nav className="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
       {role !== 'employee' && <NavLink href="/dashboard" exact>Dashboard</NavLink>}
-      <NavLink href="/dashboard/employees">Employees</NavLink>
+      {role !== 'employee' && <NavLink href="/dashboard/employees">Employees</NavLink>}
       <NavLink href="/dashboard/attendance">Attendance</NavLink>
       <NavLink href="/dashboard/calendar">Calendar</NavLink>
       {role !== 'employee' && <NavLink href="/dashboard/analytics">Analytics</NavLink>}
-      <NavLink href="/dashboard/profile">Profile</NavLink>
-      {role === 'superadmin' && <NavLink href="/dashboard/settings">Settings</NavLink>}
+      <NavLink href="/dashboard/settings">Settings</NavLink>
     </nav>
   );
 }

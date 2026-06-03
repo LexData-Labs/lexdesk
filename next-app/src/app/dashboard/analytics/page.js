@@ -59,11 +59,11 @@ export default function AnalyticsPage() {
 
       {overall && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Total Employees</p><p className="text-2xl font-bold text-white mt-1">{overall.total}</p></div>
+          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Total Employees</p><p className="text-2xl font-bold text-[var(--color-text-main)] mt-1">{overall.total}</p></div>
           <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Present Days</p><p className="text-2xl font-bold text-[var(--color-green)] mt-1">{overall.present}</p></div>
           <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Late Days</p><p className="text-2xl font-bold text-[var(--color-yellow)] mt-1">{overall.late}</p></div>
           <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Absent Days</p><p className="text-2xl font-bold text-[var(--color-red)] mt-1">{overall.absent}</p></div>
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Overall Rate</p><p className="text-2xl font-bold text-white mt-1">{overall.rate}%</p></div>
+          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Overall Rate</p><p className="text-2xl font-bold text-[var(--color-text-main)] mt-1">{overall.rate}%</p></div>
         </div>
       )}
 
@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
             {topLate.map(e => (
               <div key={e.id} className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1"><span className="text-white truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.late}</span></div>
+                  <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.late}</span></div>
                   <HBar value={e.late} max={maxLate} color="var(--color-yellow)" />
                 </div>
               </div>
@@ -90,7 +90,7 @@ export default function AnalyticsPage() {
             {topAbsent.map(e => (
               <div key={e.id} className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1"><span className="text-white truncate">{e.name}</span><span className="text-[var(--color-red)] font-semibold">{e.absent}</span></div>
+                  <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-red)] font-semibold">{e.absent}</span></div>
                   <HBar value={e.absent} max={maxAbsent} color="var(--color-red)" />
                 </div>
               </div>
@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
             {topAttendance.map(e => (
               <div key={e.id} className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1"><span className="text-white truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.rate}%</span></div>
+                  <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.rate}%</span></div>
                   <HBar value={e.rate} max={100} color="var(--color-green)" />
                 </div>
               </div>
@@ -132,11 +132,11 @@ export default function AnalyticsPage() {
                 )}
                 {monthlySummary.map(m => (
                   <tr key={m.name} className="border-t border-[var(--color-card-border)]">
-                    <td className="py-2 pr-3 text-white">{m.name}</td>
+                    <td className="py-2 pr-3 text-[var(--color-text-main)]">{m.name}</td>
                     <td className="py-2 px-3 text-center text-[var(--color-green)] font-semibold">{m.present}</td>
                     <td className="py-2 px-3 text-center text-[var(--color-yellow)] font-semibold">{m.late}</td>
                     <td className="py-2 px-3 text-center text-[var(--color-red)] font-semibold">{m.absent}</td>
-                    <td className="py-2 px-3 text-center text-white font-semibold">{m.rate}%</td>
+                    <td className="py-2 px-3 text-center text-[var(--color-text-main)] font-semibold">{m.rate}%</td>
                   </tr>
                 ))}
               </tbody>

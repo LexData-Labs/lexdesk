@@ -33,7 +33,11 @@ export function SheetsProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    fetchData(); 
+    const intervalId = setInterval(fetchData, 5000);
+    return () => clearInterval(intervalId);
+  }, [fetchData]);
 
   const value = useMemo(() => {
     const sheetNames = data ? Object.keys(data.sheets) : [];

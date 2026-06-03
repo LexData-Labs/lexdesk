@@ -67,7 +67,7 @@ export default function DashboardPage() {
                 {matrix.rows.map((r, i) => (
                   <tr key={i} className="border-t border-[var(--color-card-border)]">
                     <td className="py-2 pr-4 text-[var(--color-text-muted)] text-xs">{r[matrix.idCol]}</td>
-                    <td className="py-2 pr-4 text-white">{r[matrix.nameCol]}</td>
+                    <td className="py-2 pr-4 text-[var(--color-text-main)]">{r[matrix.nameCol]}</td>
                     {matrix.dateCols.map(c => (
                       <td key={c} className="py-2 px-2 text-center"><StatusBadge value={r[c]} /></td>
                     ))}

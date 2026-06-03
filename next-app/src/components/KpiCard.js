@@ -24,7 +24,7 @@ export default function KpiCard({ label, value, color = 'purple', icon }) {
       </div>
       <div>
         <p className="text-sm text-[var(--color-text-muted)]">{label}</p>
-        <h3 className="text-2xl font-bold text-white">{value}</h3>
+        <h3 className="text-2xl font-bold text-[var(--color-text-main)]">{value}</h3>
       </div>
     </div>
   );

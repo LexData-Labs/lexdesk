@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# runtime user store (seeded from src/lib/auth.js DEFAULT_USERS)
+/data
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

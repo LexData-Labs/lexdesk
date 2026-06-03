@@ -14,6 +14,14 @@
 }
 
 @layer base {
+  :root.light {
+    --color-bg: #F8FAFC;
+    --color-card-bg: #FFFFFF;
+    --color-card-border: #E2E8F0;
+    --color-text-main: #0F172A;
+    --color-text-muted: #64748B;
+  }
+  
   body {
     @apply bg-[var(--color-bg)] text-[var(--color-text-main)] min-h-screen overflow-hidden;
     font-family: 'Inter', sans-serif;
@@ -21,9 +29,10 @@
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
 
 /* Custom utility classes from the original CSS */
 @layer components {
@@ -40,7 +49,7 @@
   }
 
   .nav-item {
-    @apply flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] rounded-[8px] cursor-pointer transition-all duration-200 font-medium text-[0.9rem] hover:text-[var(--color-text-main)] hover:bg-[rgba(255,255,255,0.03)];
+    @apply flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] rounded-[8px] cursor-pointer transition-all duration-200 font-medium text-[0.9rem] hover:text-[var(--color-text-main)] hover:bg-black/5 dark:hover:bg-[rgba(255,255,255,0.03)];
   }
   
   .nav-item.active {

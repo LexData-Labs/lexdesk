@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSheets } from '@/lib/SheetsContext';
 import { computeEmployeeStats, getDateColumns, getEmployeeIdColumn, getEmployeeNameColumn, normalizeStatus } from '@/lib/attendance';
 import PageHeader from '@/components/PageHeader';
-import SheetPicker from '@/components/SheetPicker';
+import MonthTabs from '@/components/MonthTabs';
 import StatusBadge from '@/components/StatusBadge';
+import SheetPicker from '@/components/SheetPicker';
 
 const STATUS_FILTERS = [
   { key: '',    label: 'All' },
@@ -24,11 +25,26 @@ export default function AttendancePage() {
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState('asc');
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) setCurrentUser(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const isEmployee = currentUser?.role === 'employee';
 
   const employees = useMemo(() => {
     if (!activeSheetData) return [];
-    return computeEmployeeStats(activeSheetData.rows, activeSheetData.headers);
-  }, [activeSheetData]);
+    const all = computeEmployeeStats(activeSheetData.rows, activeSheetData.headers);
+    // If logged in as employee, only show their own row
+    if (isEmployee && currentUser?.employeeId) {
+      return all.filter(e => e.id === String(currentUser.employeeId));
+    }
+    return all;
+  }, [activeSheetData, isEmployee, currentUser]);
 
   const filtered = useMemo(() => {
     let list = employees;
@@ -89,7 +105,7 @@ export default function AttendancePage() {
     else { setSortKey(key); setSortDir('asc'); }
   };
 
-  const dateCols = activeSheetData ? getDateColumns(activeSheetData.headers).slice(-15) : [];
+  const dateCols = activeSheetData ? getDateColumns(activeSheetData.headers) : [];
   const idCol = activeSheetData ? getEmployeeIdColumn(activeSheetData.headers) : '';
   const rawRows = activeSheetData?.rows || [];
 
@@ -98,41 +114,47 @@ export default function AttendancePage() {
       <PageHeader
         title="Attendance"
         subtitle={activeSheet ? `${activeSheet} · ${filtered.length} employees` : 'No sheet selected'}
-        actions={<SheetPicker />}
       />
+
+      <div className="card">
+        <MonthTabs />
+      </div>
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 
-      <div className="card flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search by name or ID…"
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-          className="flex-1 min-w-[200px] bg-black/30 border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[var(--color-purple)]"
-        />
-        <div className="flex gap-2">
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => { setStatusFilter(f.key); setPage(1); }}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${statusFilter === f.key
-                ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
-                : 'bg-black/30 text-[var(--color-text-muted)] border border-[var(--color-card-border)] hover:text-white'}`}
-            >
-              {f.label}
-            </button>
-          ))}
+      {/* Search & filters — hidden for employees since they only see their own row */}
+      {!isEmployee && (
+        <div className="card flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search by name or ID…"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            className="flex-1 min-w-[200px] bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]"
+          />
+          <div className="flex gap-2">
+            {STATUS_FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => { setStatusFilter(f.key); setPage(1); }}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all ${statusFilter === f.key
+                  ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
+                  : 'bg-[var(--color-card-bg)] text-[var(--color-text-muted)] border border-[var(--color-card-border)] hover:text-[var(--color-text-main)]'}`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={exportCsv} disabled={!filtered.length} className="btn-outline py-2 px-3 text-xs disabled:opacity-50">
+            Export CSV
+          </button>
         </div>
-        <button onClick={exportCsv} disabled={!filtered.length} className="btn-outline py-2 px-3 text-xs disabled:opacity-50">
-          Export CSV
-        </button>
-      </div>
+      )}
 
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-separate border-spacing-0">
-            <thead className="sticky top-0 bg-[rgba(15,23,42,0.95)] backdrop-blur">
+            <thead className="sticky top-0 bg-[var(--color-bg)] backdrop-blur shadow-sm">
               <tr className="text-left text-[var(--color-text-muted)] text-xs">
                 <th className="py-3 px-4 font-medium cursor-pointer" onClick={() => toggleSort('id')}>ID</th>
                 <th className="py-3 px-4 font-medium cursor-pointer" onClick={() => toggleSort('name')}>Name</th>
@@ -155,14 +177,14 @@ export default function AttendancePage() {
                 return (
                   <tr key={emp.id || i} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.02]">
                     <td className="py-2 px-4 text-[var(--color-text-muted)] text-xs">{emp.id}</td>
-                    <td className="py-2 px-4 text-white">{emp.name}</td>
+                    <td className="py-2 px-4 text-[var(--color-text-main)]">{emp.name}</td>
                     {dateCols.map(c => (
                       <td key={c} className="py-2 px-2 text-center"><StatusBadge value={raw?.[c]} /></td>
                     ))}
                     <td className="py-2 px-4 text-center text-[var(--color-green)] font-semibold">{emp.present}</td>
                     <td className="py-2 px-4 text-center text-[var(--color-yellow)] font-semibold">{emp.late}</td>
                     <td className="py-2 px-4 text-center text-[var(--color-red)] font-semibold">{emp.absent}</td>
-                    <td className="py-2 px-4 text-center text-white font-semibold">{emp.rate}%</td>
+                    <td className="py-2 px-4 text-center text-[var(--color-text-main)] font-semibold">{emp.rate}%</td>
                   </tr>
                 );
               })}

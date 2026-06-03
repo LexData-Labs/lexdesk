@@ -85,7 +85,7 @@ export default function EmployeeProfilePage() {
               )}
             </div>
             <div className="flex-1 min-w-[240px]">
-              <h2 className="text-xl font-semibold text-white">{employee.name}</h2>
+              <h2 className="text-xl font-semibold text-[var(--color-text-main)]">{employee.name}</h2>
               <p className="text-sm text-[var(--color-text-muted)]">Employee ID: {employee.id}</p>
               <div className="flex gap-3 mt-3">
                 <label className="btn-outline py-1.5 px-3 text-xs cursor-pointer">
