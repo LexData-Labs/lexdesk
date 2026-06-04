@@ -1,9 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useAttendData } from '@/lib/useAttendData';
 import { perEmployeeStats, dayKey, onlyEmployees } from '@/lib/attend';
+
+const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 function HBar({ value, max, color }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
@@ -16,8 +18,23 @@ function HBar({ value, max, color }) {
 
 export default function AnalyticsPage() {
   const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
+  const [ym, setYm] = useState(() => {
+    const d = new Date();
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
 
-  const stats = useMemo(() => perEmployeeStats(events), [events]);
+  // Scope every metric to the selected month.
+  const monthEvents = useMemo(
+    () =>
+      (events || []).filter((e) => {
+        if (!e.timestamp) return false;
+        const d = new Date(e.timestamp);
+        return d.getFullYear() === ym.y && d.getMonth() === ym.m;
+      }),
+    [events, ym],
+  );
+
+  const stats = useMemo(() => perEmployeeStats(monthEvents), [monthEvents]);
   const nameById = useMemo(
     () => Object.fromEntries((employees || []).map((e) => [e.id, e.name || e.email])),
     [employees],
@@ -42,20 +59,23 @@ export default function AnalyticsPage() {
 
   const byDay = useMemo(() => {
     const map = {};
-    for (const e of events || []) {
+    for (const e of monthEvents) {
       if (e.type !== 'CHECK_IN' || !e.timestamp) continue;
       const k = dayKey(e.timestamp);
       (map[k] ||= new Set()).add(e.user?.id);
     }
     return Object.entries(map)
       .map(([day, set]) => ({ day, count: set.size }))
-      .sort((a, b) => (a.day < b.day ? 1 : -1))
-      .slice(0, 14);
-  }, [events]);
+      .sort((a, b) => (a.day < b.day ? -1 : 1));
+  }, [monthEvents]);
 
   const maxLate = Math.max(1, ...topLate.map((e) => e.late));
   const maxActive = Math.max(1, ...topActive.map((e) => e.checkIns));
   const maxDay = Math.max(1, ...byDay.map((d) => d.count));
+
+  const prevMonth = () => setYm((p) => { const d = new Date(p.y, p.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const nextMonth = () => setYm((p) => { const d = new Date(p.y, p.m + 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const monthLabel = `${MONTH_FULL[ym.m]} ${ym.y}`;
 
   const kpis = [
     { label: 'Employees', value: onlyEmployees(employees).length, color: 'text-[var(--color-text-main)]' },
@@ -68,8 +88,15 @@ export default function AnalyticsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Analytics"
-        subtitle="Insights from AttendDesk check-in data"
-        actions={<button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
+        subtitle={`AttendDesk check-in data · ${monthLabel}`}
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={prevMonth} className="btn-outline py-2 px-3 text-sm">←</button>
+            <span className="text-sm font-semibold text-[var(--color-text-main)] min-w-[150px] text-center">{monthLabel}</span>
+            <button onClick={nextMonth} className="btn-outline py-2 px-3 text-sm">→</button>
+            <button onClick={refresh} className="btn-outline py-2 px-4 text-sm ml-2">Refresh</button>
+          </div>
+        }
       />
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
@@ -88,7 +115,7 @@ export default function AnalyticsPage() {
         <div className="card">
           <h3 className="font-semibold text-lg mb-4">Top 5 — Most Late</h3>
           <div className="flex flex-col gap-3">
-            {topLate.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No late check-ins</div>}
+            {topLate.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No late check-ins this month</div>}
             {topLate.map((e) => (
               <div key={e.id}>
                 <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.late}</span></div>
@@ -101,7 +128,7 @@ export default function AnalyticsPage() {
         <div className="card">
           <h3 className="font-semibold text-lg mb-4">Top 5 — Most Active</h3>
           <div className="flex flex-col gap-3">
-            {topActive.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No data</div>}
+            {topActive.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No check-ins this month</div>}
             {topActive.map((e) => (
               <div key={e.id}>
                 <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.checkIns}</span></div>
@@ -112,9 +139,9 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="card lg:col-span-2">
-          <h3 className="font-semibold text-lg mb-4">Check-ins by day (last 14)</h3>
+          <h3 className="font-semibold text-lg mb-4">Check-ins by day · {monthLabel}</h3>
           <div className="flex flex-col gap-2">
-            {byDay.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No check-ins</div>}
+            {byDay.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No check-ins this month</div>}
             {byDay.map((d) => (
               <div key={d.day} className="flex items-center gap-3 text-sm">
                 <span className="text-[var(--color-text-muted)] w-24 shrink-0">{d.day}</span>
