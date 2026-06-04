@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useAttendData } from '@/lib/useAttendData';
-import { perEmployeeStats, dayKey } from '@/lib/attend';
+import { perEmployeeStats, dayKey, onlyEmployees } from '@/lib/attend';
 
 function HBar({ value, max, color }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
   const maxDay = Math.max(1, ...byDay.map((d) => d.count));
 
   const kpis = [
-    { label: 'Employees', value: employees.length, color: 'text-[var(--color-text-main)]' },
+    { label: 'Employees', value: onlyEmployees(employees).length, color: 'text-[var(--color-text-main)]' },
     { label: 'Check-ins', value: totals.checkIns, color: 'text-[var(--color-green)]' },
     { label: 'Late', value: totals.late, color: 'text-[var(--color-yellow)]' },
     { label: 'On-time %', value: `${totals.onTimePct}%`, color: 'text-[var(--color-text-main)]' },

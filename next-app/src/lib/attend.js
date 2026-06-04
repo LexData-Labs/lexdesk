@@ -16,6 +16,33 @@ export function todayKey() {
   return dayKey(new Date());
 }
 
+// Office timezone used for late/early classification — matches AttendDesk's bdHhmm().
+const OFFICE_TZ = 'Asia/Dhaka';
+
+// "HH:mm" (24h) time-of-day of a timestamp in the office timezone.
+export function hhmmInOfficeTz(ts) {
+  const d = ts instanceof Date ? ts : new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: OFFICE_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(d);
+}
+
+// AttendDesk's rule, reimplemented here: a CHECK_IN is late when its time-of-day
+// (in the office timezone) is STRICTLY AFTER the event's scheduled start — no
+// grace period. Falls back to the server-stamped isLate flag when the event has
+// no scheduledStart snapshot.
+export function isLateCheckIn(event) {
+  if (!event || event.type !== 'CHECK_IN') return false;
+  if (event.scheduledStart && event.timestamp) {
+    return hhmmInOfficeTz(event.timestamp) > event.scheduledStart;
+  }
+  return !!event.isLate;
+}
+
 // uid -> { checkIns, late, lastCheckIn(ms|null), lastEvent(ms|null) }
 export function perEmployeeStats(events) {
   const out = {};
@@ -27,7 +54,7 @@ export function perEmployeeStats(events) {
     if (ts && (!s.lastEvent || ts > s.lastEvent)) s.lastEvent = ts;
     if (e.type === 'CHECK_IN') {
       s.checkIns += 1;
-      if (e.isLate) s.late += 1;
+      if (isLateCheckIn(e)) s.late += 1;
       if (ts && (!s.lastCheckIn || ts > s.lastCheckIn)) s.lastCheckIn = ts;
     }
   }
@@ -44,7 +71,7 @@ export function todaySummary(events) {
     const uid = e.user?.id;
     if (!uid) continue;
     inToday.add(uid);
-    if (e.isLate) lateToday.add(uid);
+    if (isLateCheckIn(e)) lateToday.add(uid);
   }
   return { checkedIn: inToday.size, late: lateToday.size };
 }
@@ -75,7 +102,7 @@ export function employeeMonthGrid(events, uid, year, month) {
     if (d.getFullYear() !== year || d.getMonth() !== month) continue;
     const day = d.getDate();
     if (!days[day] || d.getTime() < days[day].ts) {
-      days[day] = { status: e.isLate ? 'late' : 'present', ts: d.getTime() };
+      days[day] = { status: isLateCheckIn(e) ? 'late' : 'present', ts: d.getTime() };
     }
   }
   return { year, month, daysInMonth, firstWeekday, days };
@@ -86,3 +113,8 @@ export function fmtTime(ms) {
   const d = new Date(ms);
   return isNaN(d.getTime()) ? '—' : d.toLocaleString();
 }
+
+// Org users with the EMPLOYEE role only (excludes admins / super admins) —
+// the staff roster shown in directory/calendar/count views.
+export const onlyEmployees = (employees) =>
+  (employees || []).filter((e) => String(e.role || '').toUpperCase() === 'EMPLOYEE');

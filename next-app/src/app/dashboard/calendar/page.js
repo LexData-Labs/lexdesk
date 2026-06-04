@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useAttendData } from '@/lib/useAttendData';
-import { employeeMonthGrid } from '@/lib/attend';
+import { employeeMonthGrid, onlyEmployees } from '@/lib/attend';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -14,11 +14,13 @@ export default function CalendarPage() {
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth()); // 0-11
 
-  useEffect(() => {
-    if (!selected && employees.length) setSelected(employees[0].id);
-  }, [employees, selected]);
+  const staff = useMemo(() => onlyEmployees(employees), [employees]);
 
-  const employee = useMemo(() => employees.find((e) => e.id === selected) || null, [employees, selected]);
+  useEffect(() => {
+    if (!selected && staff.length) setSelected(staff[0].id);
+  }, [staff, selected]);
+
+  const employee = useMemo(() => staff.find((e) => e.id === selected) || null, [staff, selected]);
   const grid = useMemo(
     () => (selected ? employeeMonthGrid(events, selected, year, month) : null),
     [events, selected, year, month],
@@ -60,7 +62,7 @@ export default function CalendarPage() {
           className="flex-1 min-w-[220px] bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)]"
         >
           <option value="">Select employee…</option>
-          {employees.map((e) => <option key={e.id} value={e.id}>{e.name || e.email}</option>)}
+          {staff.map((e) => <option key={e.id} value={e.id}>{e.name || e.email}</option>)}
         </select>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="btn-outline py-2 px-3 text-sm">←</button>
@@ -69,7 +71,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {loading && !employees.length && <div className="card text-[var(--color-text-muted)] text-sm">Loading…</div>}
+      {loading && !staff.length && <div className="card text-[var(--color-text-muted)] text-sm">Loading…</div>}
 
       {employee && grid && (
         <div className="card flex flex-col gap-4">
@@ -107,7 +109,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {!loading && employees.length === 0 && (
+      {!loading && staff.length === 0 && (
         <div className="card text-[var(--color-text-muted)] text-sm text-center py-12">No employees found.</div>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
+import { isLateCheckIn } from '@/lib/attend';
 
 function fmtDateTime(ts) {
   if (!ts) return '—';
@@ -39,7 +40,7 @@ export default function MyAttendancePage() {
 
   const list = events || [];
   const checkIns = list.filter((e) => e.type === 'CHECK_IN');
-  const lateCount = checkIns.filter((e) => e.isLate).length;
+  const lateCount = checkIns.filter(isLateCheckIn).length;
   const days = new Set(
     list.map((e) => (e.timestamp ? new Date(e.timestamp).toDateString() : null)).filter(Boolean),
   ).size;
@@ -89,7 +90,7 @@ export default function MyAttendancePage() {
                     {e.type === 'CHECK_IN' ? 'Check in' : e.type === 'CHECK_OUT' ? 'Check out' : e.type}
                   </td>
                   <td className="py-3 px-4 whitespace-nowrap">
-                    {e.isLate ? (
+                    {isLateCheckIn(e) ? (
                       <span className="text-[var(--color-yellow)]">Late</span>
                     ) : e.isEarly ? (
                       <span className="text-[var(--color-blue)]">Early</span>

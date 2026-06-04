@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import PageHeader from '@/components/PageHeader';
 import KpiCard from '@/components/KpiCard';
 import { useAttendData } from '@/lib/useAttendData';
-import { todaySummary, onLeaveTodayCount, fmtTime } from '@/lib/attend';
+import { todaySummary, onLeaveTodayCount, fmtTime, onlyEmployees, isLateCheckIn } from '@/lib/attend';
 
 export default function DashboardPage() {
   const { employees, events, leave, loading, error, refresh } = useAttendData([
@@ -25,7 +25,7 @@ export default function DashboardPage() {
   );
 
   const kpis = [
-    { label: 'Employees', value: employees.length, color: 'purple' },
+    { label: 'Employees', value: onlyEmployees(employees).length, color: 'purple' },
     { label: 'Checked in today', value: today.checkedIn, color: 'green' },
     { label: 'Late today', value: today.late, color: 'yellow' },
     { label: 'On leave today', value: onLeave, color: 'blue' },
@@ -68,7 +68,7 @@ export default function DashboardPage() {
                   <td className="py-3 px-5 whitespace-nowrap">{fmtTime(e.timestamp ? new Date(e.timestamp).getTime() : 0)}</td>
                   <td className="py-3 px-5">{e.type === 'CHECK_IN' ? 'Check in' : e.type === 'CHECK_OUT' ? 'Check out' : e.type}</td>
                   <td className="py-3 px-5">
-                    {e.isLate ? <span className="text-[var(--color-yellow)]">Late</span> : <span className="text-[var(--color-green)]">On time</span>}
+                    {isLateCheckIn(e) ? <span className="text-[var(--color-yellow)]">Late</span> : <span className="text-[var(--color-green)]">On time</span>}
                   </td>
                 </tr>
               ))}

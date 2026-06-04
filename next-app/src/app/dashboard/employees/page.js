@@ -5,7 +5,7 @@ import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import EmployeeAvatar from '@/components/EmployeeAvatar';
 import { useAttendData } from '@/lib/useAttendData';
-import { perEmployeeStats, fmtTime } from '@/lib/attend';
+import { perEmployeeStats, fmtTime, onlyEmployees } from '@/lib/attend';
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -20,7 +20,7 @@ export default function EmployeesPage() {
 
   const rows = useMemo(
     () =>
-      (employees || []).map((e) => {
+      onlyEmployees(employees).map((e) => {
         const s = stats[e.id] || { checkIns: 0, late: 0, lastCheckIn: null };
         return { ...e, checkIns: s.checkIns, late: s.late, lastCheckIn: s.lastCheckIn };
       }),

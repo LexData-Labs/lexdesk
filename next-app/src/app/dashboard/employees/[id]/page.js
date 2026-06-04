@@ -6,7 +6,7 @@ import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import EmployeeAvatar from '@/components/EmployeeAvatar';
 import { useAttendData } from '@/lib/useAttendData';
-import { eventsForUser, perEmployeeStats, fmtTime } from '@/lib/attend';
+import { eventsForUser, perEmployeeStats, fmtTime, isLateCheckIn } from '@/lib/attend';
 
 export default function EmployeeProfilePage() {
   const { id } = useParams();
@@ -119,7 +119,7 @@ export default function EmployeeProfilePage() {
                     <tr key={e.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.02]">
                       <td className="py-3 px-5 whitespace-nowrap">{fmtTime(new Date(e.timestamp).getTime())}</td>
                       <td className="py-3 px-5">{e.type === 'CHECK_IN' ? 'Check in' : e.type === 'CHECK_OUT' ? 'Check out' : e.type}</td>
-                      <td className="py-3 px-5">{e.isLate ? <span className="text-[var(--color-yellow)]">Late</span> : <span className="text-[var(--color-green)]">On time</span>}</td>
+                      <td className="py-3 px-5">{isLateCheckIn(e) ? <span className="text-[var(--color-yellow)]">Late</span> : <span className="text-[var(--color-green)]">On time</span>}</td>
                       <td className="py-3 px-5 text-xs text-[var(--color-text-muted)]">{e.clientMode || 'mobile'}</td>
                     </tr>
                   ))}

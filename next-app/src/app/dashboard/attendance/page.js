@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useAttendData } from '@/lib/useAttendData';
-import { fmtTime } from '@/lib/attend';
+import { fmtTime, isLateCheckIn } from '@/lib/attend';
 
 const FILTERS = [
   { key: '', label: 'All' },
@@ -35,7 +35,7 @@ export default function AttendancePage() {
         (e) => (e.user?.name || '').toLowerCase().includes(q) || (e.user?.email || '').toLowerCase().includes(q),
       );
     }
-    if (filter === 'late') list = list.filter((e) => e.isLate);
+    if (filter === 'late') list = list.filter(isLateCheckIn);
     else if (filter) list = list.filter((e) => e.type === filter);
     return list;
   }, [sorted, search, filter]);
@@ -50,7 +50,7 @@ export default function AttendancePage() {
       e.user?.email || '',
       e.timestamp ? new Date(e.timestamp).toISOString() : '',
       e.type,
-      e.isLate ? 'late' : e.isEarly ? 'early' : 'on-time',
+      isLateCheckIn(e) ? 'late' : e.isEarly ? 'early' : 'on-time',
       e.allChecksPassed === false ? 'no' : 'yes',
       e.clientMode || 'mobile',
     ]);
@@ -134,7 +134,7 @@ export default function AttendancePage() {
                   <td className="py-2.5 px-4 whitespace-nowrap">{fmtTime(new Date(e.timestamp).getTime())}</td>
                   <td className="py-2.5 px-4">{e.type === 'CHECK_IN' ? 'Check in' : e.type === 'CHECK_OUT' ? 'Check out' : e.type}</td>
                   <td className="py-2.5 px-4">
-                    {e.isLate ? <span className="text-[var(--color-yellow)]">Late</span> : e.isEarly ? <span className="text-[var(--color-blue)]">Early</span> : <span className="text-[var(--color-green)]">On time</span>}
+                    {isLateCheckIn(e) ? <span className="text-[var(--color-yellow)]">Late</span> : e.isEarly ? <span className="text-[var(--color-blue)]">Early</span> : <span className="text-[var(--color-green)]">On time</span>}
                     {e.allChecksPassed === false && <span className="text-[var(--color-red)] ml-2">checks failed</span>}
                   </td>
                   <td className="py-2.5 px-4 text-xs text-[var(--color-text-muted)]">{e.clientMode || 'mobile'}</td>
