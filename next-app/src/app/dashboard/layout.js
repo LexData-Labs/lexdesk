@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SidebarNav from '@/components/SidebarNav';
 import Avatar from '@/components/Avatar';
-import { SheetsProvider } from '@/lib/SheetsContext';
 
 export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
@@ -25,9 +24,9 @@ export default function DashboardLayout({ children }) {
       // Redirect employee to their allowed landing page
       if (parsed.role === 'employee') {
         const path = window.location.pathname;
-        const restricted = ['/dashboard', '/dashboard/employees', '/dashboard/analytics'];
-        if (restricted.includes(path)) {
-          router.replace('/dashboard/attendance');
+        const allowed = ['/dashboard/my-attendance', '/dashboard/my-leave', '/dashboard/profile', '/dashboard/settings'];
+        if (!allowed.includes(path)) {
+          router.replace('/dashboard/my-attendance');
         }
       }
     } catch {
@@ -74,10 +73,9 @@ export default function DashboardLayout({ children }) {
   };
 
   return (
-    <SheetsProvider>
-      <div className="grid grid-cols-[260px_1fr] h-screen bg-[var(--color-bg)]">
+    <div className="grid grid-cols-[260px_1fr] h-screen bg-[var(--color-bg)]">
         <aside className="bg-[var(--color-bg)] border-r border-[var(--color-card-border)] flex flex-col">
-          <Link href={user.role === 'employee' ? '/dashboard/attendance' : '/dashboard'} className="p-6 flex items-center gap-3 text-xl font-bold text-[var(--color-text-main)] no-underline">
+          <Link href={user.role === 'employee' ? '/dashboard/my-attendance' : '/dashboard'} className="p-6 flex items-center gap-3 text-xl font-bold text-[var(--color-text-main)] no-underline">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">A</div>
             Attendance Pro
           </Link>
@@ -142,6 +140,5 @@ export default function DashboardLayout({ children }) {
           </div>
         </main>
       </div>
-    </SheetsProvider>
   );
 }

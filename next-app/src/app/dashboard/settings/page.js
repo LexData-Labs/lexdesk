@@ -126,29 +126,6 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Roles, permissions, and configuration" />
 
-      {/* Google Sheets source — superadmin only */}
-      {isSuper && (
-        <div className="card">
-          <h3 className="font-semibold text-lg mb-4">Google Sheets Source</h3>
-          <p className="text-xs text-[var(--color-text-muted)] mb-3">
-            The data source is configured via environment variables (set in Vercel Project Settings):
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div className="bg-black/30 rounded-lg p-3">
-              <div className="text-xs text-[var(--color-text-muted)] mb-1">GOOGLE_SHEET_ID</div>
-              <code className="text-white text-xs break-all">{process.env.NEXT_PUBLIC_GOOGLE_SHEET_ID || '(set on server)'}</code>
-            </div>
-            <div className="bg-black/30 rounded-lg p-3">
-              <div className="text-xs text-[var(--color-text-muted)] mb-1">GOOGLE_API_KEY</div>
-              <code className="text-white text-xs">(set on server — never exposed to client)</code>
-            </div>
-          </div>
-          <p className="text-xs text-[var(--color-text-muted)] mt-3">
-            Update these in Vercel and redeploy to point at a different spreadsheet.
-          </p>
-        </div>
-      )}
-
       {/* Manage Users — everyone can view; actions depend on role */}
       <div className="card">
         <div className="flex items-center justify-between mb-1">

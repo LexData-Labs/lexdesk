@@ -1,10 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useSheets } from '@/lib/SheetsContext';
-import { computeEmployeeStats, computeOverallStats, isMonthSheet } from '@/lib/attendance';
 import PageHeader from '@/components/PageHeader';
-import SheetPicker from '@/components/SheetPicker';
+import { useAttendData } from '@/lib/useAttendData';
+import { perEmployeeStats, dayKey } from '@/lib/attend';
 
 function HBar({ value, max, color }) {
   const pct = max > 0 ? (value / max) * 100 : 0;
@@ -16,131 +15,113 @@ function HBar({ value, max, color }) {
 }
 
 export default function AnalyticsPage() {
-  const { activeSheet, activeSheetData, data, loading, error } = useSheets();
+  const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
 
-  const employees = useMemo(() => {
-    if (!activeSheetData) return [];
-    return computeEmployeeStats(activeSheetData.rows, activeSheetData.headers);
-  }, [activeSheetData]);
+  const stats = useMemo(() => perEmployeeStats(events), [events]);
+  const nameById = useMemo(
+    () => Object.fromEntries((employees || []).map((e) => [e.id, e.name || e.email])),
+    [employees],
+  );
+  const rows = useMemo(
+    () => Object.entries(stats).map(([uid, s]) => ({ id: uid, name: nameById[uid] || uid, ...s })),
+    [stats, nameById],
+  );
 
-  const overall = useMemo(() => {
-    if (!activeSheetData) return null;
-    return computeOverallStats(activeSheetData.rows, activeSheetData.headers);
-  }, [activeSheetData]);
+  const totals = useMemo(() => {
+    const checkIns = rows.reduce((a, r) => a + r.checkIns, 0);
+    const late = rows.reduce((a, r) => a + r.late, 0);
+    const onTimePct = checkIns > 0 ? Math.round(((checkIns - late) / checkIns) * 100) : 0;
+    return { checkIns, late, onTimePct };
+  }, [rows]);
 
-  const topLate = useMemo(() => [...employees].sort((a, b) => b.late - a.late).slice(0, 5), [employees]);
-  const topAbsent = useMemo(() => [...employees].sort((a, b) => b.absent - a.absent).slice(0, 5), [employees]);
-  const topAttendance = useMemo(() => [...employees].sort((a, b) => b.rate - a.rate).slice(0, 5), [employees]);
+  const topLate = useMemo(
+    () => [...rows].filter((r) => r.late > 0).sort((a, b) => b.late - a.late).slice(0, 5),
+    [rows],
+  );
+  const topActive = useMemo(() => [...rows].sort((a, b) => b.checkIns - a.checkIns).slice(0, 5), [rows]);
 
-  const monthlySummary = useMemo(() => {
-    if (!data) return [];
-    return Object.keys(data.sheets)
-      .filter(isMonthSheet)
-      .map(name => {
-        const { headers, rows } = data.sheets[name];
-        const s = computeOverallStats(rows, headers);
-        return { name, ...s };
-      });
-  }, [data]);
+  const byDay = useMemo(() => {
+    const map = {};
+    for (const e of events || []) {
+      if (e.type !== 'CHECK_IN' || !e.timestamp) continue;
+      const k = dayKey(e.timestamp);
+      (map[k] ||= new Set()).add(e.user?.id);
+    }
+    return Object.entries(map)
+      .map(([day, set]) => ({ day, count: set.size }))
+      .sort((a, b) => (a.day < b.day ? 1 : -1))
+      .slice(0, 14);
+  }, [events]);
 
-  const maxLate = Math.max(1, ...topLate.map(e => e.late));
-  const maxAbsent = Math.max(1, ...topAbsent.map(e => e.absent));
+  const maxLate = Math.max(1, ...topLate.map((e) => e.late));
+  const maxActive = Math.max(1, ...topActive.map((e) => e.checkIns));
+  const maxDay = Math.max(1, ...byDay.map((d) => d.count));
+
+  const kpis = [
+    { label: 'Employees', value: employees.length, color: 'text-[var(--color-text-main)]' },
+    { label: 'Check-ins', value: totals.checkIns, color: 'text-[var(--color-green)]' },
+    { label: 'Late', value: totals.late, color: 'text-[var(--color-yellow)]' },
+    { label: 'On-time %', value: `${totals.onTimePct}%`, color: 'text-[var(--color-text-main)]' },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Analytics"
-        subtitle={activeSheet ? `Insights from ${activeSheet}` : 'No sheet selected'}
-        actions={<SheetPicker />}
+        subtitle="Insights from AttendDesk check-in data"
+        actions={<button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
       />
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
-      {loading && !overall && <div className="card text-[var(--color-text-muted)] text-sm">Loading…</div>}
+      {loading && !rows.length && <div className="card text-[var(--color-text-muted)] text-sm">Loading…</div>}
 
-      {overall && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Total Employees</p><p className="text-2xl font-bold text-[var(--color-text-main)] mt-1">{overall.total}</p></div>
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Present Days</p><p className="text-2xl font-bold text-[var(--color-green)] mt-1">{overall.present}</p></div>
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Late Days</p><p className="text-2xl font-bold text-[var(--color-yellow)] mt-1">{overall.late}</p></div>
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Absent Days</p><p className="text-2xl font-bold text-[var(--color-red)] mt-1">{overall.absent}</p></div>
-          <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Overall Rate</p><p className="text-2xl font-bold text-[var(--color-text-main)] mt-1">{overall.rate}%</p></div>
-        </div>
-      )}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {kpis.map((k) => (
+          <div key={k.label} className="card text-center">
+            <p className="text-xs text-[var(--color-text-muted)]">{k.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</p>
+          </div>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="font-semibold text-lg mb-4">Top 5 — Most Late</h3>
           <div className="flex flex-col gap-3">
-            {topLate.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No data</div>}
-            {topLate.map(e => (
-              <div key={e.id} className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.late}</span></div>
-                  <HBar value={e.late} max={maxLate} color="var(--color-yellow)" />
-                </div>
+            {topLate.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No late check-ins</div>}
+            {topLate.map((e) => (
+              <div key={e.id}>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.late}</span></div>
+                <HBar value={e.late} max={maxLate} color="var(--color-yellow)" />
               </div>
             ))}
           </div>
         </div>
 
         <div className="card">
-          <h3 className="font-semibold text-lg mb-4">Top 5 — Most Absent</h3>
+          <h3 className="font-semibold text-lg mb-4">Top 5 — Most Active</h3>
           <div className="flex flex-col gap-3">
-            {topAbsent.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No data</div>}
-            {topAbsent.map(e => (
-              <div key={e.id} className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-red)] font-semibold">{e.absent}</span></div>
-                  <HBar value={e.absent} max={maxAbsent} color="var(--color-red)" />
-                </div>
+            {topActive.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No data</div>}
+            {topActive.map((e) => (
+              <div key={e.id}>
+                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.checkIns}</span></div>
+                <HBar value={e.checkIns} max={maxActive} color="var(--color-green)" />
               </div>
             ))}
           </div>
         </div>
 
-        <div className="card">
-          <h3 className="font-semibold text-lg mb-4">Top 5 — Highest Attendance Rate</h3>
-          <div className="flex flex-col gap-3">
-            {topAttendance.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No data</div>}
-            {topAttendance.map(e => (
-              <div key={e.id} className="flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.rate}%</span></div>
-                  <HBar value={e.rate} max={100} color="var(--color-green)" />
-                </div>
+        <div className="card lg:col-span-2">
+          <h3 className="font-semibold text-lg mb-4">Check-ins by day (last 14)</h3>
+          <div className="flex flex-col gap-2">
+            {byDay.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No check-ins</div>}
+            {byDay.map((d) => (
+              <div key={d.day} className="flex items-center gap-3 text-sm">
+                <span className="text-[var(--color-text-muted)] w-24 shrink-0">{d.day}</span>
+                <div className="flex-1"><HBar value={d.count} max={maxDay} color="var(--color-blue)" /></div>
+                <span className="text-[var(--color-text-main)] w-8 text-right">{d.count}</span>
               </div>
             ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <h3 className="font-semibold text-lg mb-4">Monthly Summary</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[var(--color-text-muted)] text-xs border-b border-[var(--color-card-border)]">
-                  <th className="py-2 pr-3 font-medium">Month</th>
-                  <th className="py-2 px-3 font-medium text-center">P</th>
-                  <th className="py-2 px-3 font-medium text-center">L</th>
-                  <th className="py-2 px-3 font-medium text-center">A</th>
-                  <th className="py-2 px-3 font-medium text-center">Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlySummary.length === 0 && (
-                  <tr><td colSpan={5} className="py-4 text-center text-[var(--color-text-muted)]">No month sheets found</td></tr>
-                )}
-                {monthlySummary.map(m => (
-                  <tr key={m.name} className="border-t border-[var(--color-card-border)]">
-                    <td className="py-2 pr-3 text-[var(--color-text-main)]">{m.name}</td>
-                    <td className="py-2 px-3 text-center text-[var(--color-green)] font-semibold">{m.present}</td>
-                    <td className="py-2 px-3 text-center text-[var(--color-yellow)] font-semibold">{m.late}</td>
-                    <td className="py-2 px-3 text-center text-[var(--color-red)] font-semibold">{m.absent}</td>
-                    <td className="py-2 px-3 text-center text-[var(--color-text-main)] font-semibold">{m.rate}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       </div>

@@ -37,19 +37,6 @@ export default function Home() {
     }
   };
 
-  const fillDemo = (role) => {
-    if (role === 'super') {
-      setEmail('superadmin@example.com');
-      setPassword('admin123');
-    } else if (role === 'admin') {
-      setEmail('admin@example.com');
-      setPassword('admin123');
-    } else if (role === 'employee') {
-      setEmail('employee@example.com');
-      setPassword('user123');
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.15),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_50%)] bg-[var(--color-bg)]">
       <nav className="px-16 py-6 flex justify-between items-center border-b border-[var(--color-card-border)] bg-[rgba(7,11,20,0.6)] backdrop-blur-md">
@@ -87,18 +74,6 @@ export default function Home() {
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">Sign In</h2>
             <p className="text-[var(--color-text-muted)] text-[0.95rem]">Access your workspace based on your role</p>
-          </div>
-
-          <div className="flex p-1 bg-[var(--color-bg)] rounded-xl mb-8 border border-[var(--color-card-border)]">
-            <button onClick={() => fillDemo('super')} className="flex-1 py-3 text-center rounded-lg text-xs font-semibold cursor-pointer transition-all bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] shadow-[0_0_10px_var(--color-purple-glow)] border border-[var(--color-purple)]">
-              Super Admin
-            </button>
-            <button onClick={() => fillDemo('admin')} className="flex-1 py-3 text-center rounded-lg text-[var(--color-text-muted)] text-xs font-semibold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.05)] hover:text-[var(--color-text-main)]">
-              Supervisor
-            </button>
-            <button onClick={() => fillDemo('employee')} className="flex-1 py-3 text-center rounded-lg text-[var(--color-text-muted)] text-xs font-semibold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.05)] hover:text-[var(--color-text-main)]">
-              Employee
-            </button>
           </div>
 
           <form onSubmit={handleLogin}>
@@ -149,12 +124,6 @@ export default function Home() {
               {loading ? 'Authenticating...' : 'Access Dashboard'}
             </button>
           </form>
-
-          <div className="mt-6 flex justify-center gap-4 text-xs font-medium text-[var(--color-purple)] opacity-80">
-            <span className="cursor-pointer hover:underline" onClick={() => fillDemo('super')}>Demo SuperAdmin</span>
-            <span className="cursor-pointer hover:underline" onClick={() => fillDemo('admin')}>Demo Admin</span>
-            <span className="cursor-pointer hover:underline" onClick={() => fillDemo('employee')}>Demo Employee</span>
-          </div>
         </div>
       </div>
     </div>
