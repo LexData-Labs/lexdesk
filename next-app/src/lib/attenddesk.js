@@ -47,6 +47,13 @@ export const submitLeave = (body) => adk('/leave-requests', { method: 'POST', bo
 export const decideLeave = (id, decision, note) =>
   adk(`/leave-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { decision, note } });
 
+// Custom org holidays (pink on the calendar). Each is an inclusive [fromDay,toDay]
+// day range (YYYY-MM-DD) + name. read = 'holidays:read', write = 'holidays:write'.
+export const getHolidays = () => adk('/holidays');
+export const createHoliday = (body) => adk('/holidays', { method: 'POST', body });
+export const deleteHoliday = (id) =>
+  adk(`/holidays/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
 // Change a user's password (verifies their current password first).
 // Requires the 'auth:verify' scope.
 export const changePassword = (email, currentPassword, newPassword) =>

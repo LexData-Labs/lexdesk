@@ -171,3 +171,74 @@ export function fmtTime(ms) {
 // Org users with the EMPLOYEE role only (excludes admins / super admins).
 export const onlyEmployees = (employees) =>
   (employees || []).filter((e) => String(e.role || '').toUpperCase() === 'EMPLOYEE');
+
+// Weekly day(s) off (0=Sun … 6=Sat). The office works Sat–Thu, so Friday is off.
+export const WEEKLY_OFF = [5];
+
+// The custom holiday (if any) whose inclusive [fromDay,toDay] range covers dayKey.
+export function holidayCovers(holidays, dayKey) {
+  for (const h of holidays || []) {
+    const from = h.fromDay;
+    const to = h.toDay || h.fromDay;
+    if (from && dayKey >= from && dayKey <= to) return h;
+  }
+  return null;
+}
+
+// The approved leave request (if any) covering dayKey (YYYY-MM-DD).
+export function approvedLeaveCovers(leave, dayKey) {
+  for (const r of leave || []) {
+    if (r.status === 'approved' && r.fromDay && r.toDay && r.fromDay <= dayKey && dayKey <= r.toDay) {
+      return r;
+    }
+  }
+  return null;
+}
+
+// Classify every day of a month for ONE employee. `events` must already be that
+// employee's attendance events (e.g. from /api/me/attendance). Returns
+// { year, month, daysInMonth, firstWeekday, days: { [d]: { status, name?, subject? } }, counts }.
+// status ∈ 'ontime' | 'late' | 'holiday' | 'leave' | 'missed' | 'future' | 'today'.
+// Precedence (actual + known-ahead events win): a real check-in → holiday
+// (Friday/custom) → approved leave → future/today/missed.
+export function employeeCalendarMonth(events, leave, holidays, year, month, opts = {}) {
+  const weeklyOff = opts.weeklyOff || WEEKLY_OFF;
+  const canon = canonicalDays(events);
+  const todayKey = bdDateKey(new Date());
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const mm = String(month + 1).padStart(2, '0');
+  const days = {};
+  const counts = { ontime: 0, late: 0, holiday: 0, leave: 0, missed: 0 };
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${year}-${mm}-${String(d).padStart(2, '0')}`;
+    const dow = new Date(year, month, d).getDay();
+    const ci = canon[key]?.firstCheckIn;
+    let status;
+    const meta = {};
+    if (ci) {
+      status = ci.isLate ? 'late' : 'ontime';
+    } else {
+      const hol = holidayCovers(holidays, key);
+      if (hol || weeklyOff.includes(dow)) {
+        status = 'holiday';
+        meta.name = hol?.name || 'Weekly off';
+      } else {
+        const lv = approvedLeaveCovers(leave, key);
+        if (lv) {
+          status = 'leave';
+          meta.subject = lv.subject || 'Leave';
+        } else if (key > todayKey) {
+          status = 'future';
+        } else if (key === todayKey) {
+          status = 'today';
+        } else {
+          status = 'missed';
+        }
+      }
+    }
+    if (counts[status] != null) counts[status] += 1;
+    days[d] = { status, ...meta };
+  }
+  return { year, month, daysInMonth, firstWeekday, days, counts };
+}

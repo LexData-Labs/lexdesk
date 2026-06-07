@@ -20,10 +20,12 @@ export default function SidebarNav({ role }) {
       {role !== 'employee' && <NavLink href="/dashboard/employees">Employees</NavLink>}
       {role === 'employee' && <NavLink href="/dashboard/my-attendance">My Attendance</NavLink>}
       {role === 'employee' && <NavLink href="/dashboard/my-leave">My Leave</NavLink>}
+      {role === 'employee' && <NavLink href="/dashboard/my-calendar">Calendar</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/attendance">Attendance</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/calendar">Calendar</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/analytics">Analytics</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/leave-approvals">Leave Approvals</NavLink>}
+      {role !== 'employee' && <NavLink href="/dashboard/holidays">Holidays</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/attenddesk">AttendDesk</NavLink>}
       <NavLink href="/dashboard/settings">Settings</NavLink>
     </nav>
