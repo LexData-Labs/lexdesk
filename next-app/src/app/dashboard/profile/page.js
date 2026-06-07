@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import Avatar from '@/components/Avatar';
 import KpiCard from '@/components/KpiCard';
+import MonthNav from '@/components/MonthNav';
 import Link from 'next/link';
-import { canonicalStats } from '@/lib/attend';
+import { canonicalStats, inBdMonth } from '@/lib/attend';
 
 function initialsFromName(name) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -62,6 +63,7 @@ export default function MyProfilePage() {
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState(null);
   const [attLoading, setAttLoading] = useState(true);
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [adProfile, setAdProfile] = useState(null);
 
   const [editing, setEditing] = useState(false);
@@ -104,11 +106,12 @@ export default function MyProfilePage() {
     return () => { active = false; };
   }, []);
 
+  const monthEvents = useMemo(() => (events || []).filter((e) => inBdMonth(e.timestamp, ym.y, ym.m)), [events, ym]);
   const stats = useMemo(() => {
-    const s = canonicalStats(events || []);
+    const s = canonicalStats(monthEvents);
     const rate = s.presentDays ? Math.round((s.onTimeDays / s.presentDays) * 100) : 0;
     return { ...s, rate };
-  }, [events]);
+  }, [monthEvents]);
 
   if (!user) return null;
 
@@ -180,7 +183,7 @@ export default function MyProfilePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="My Profile" subtitle="Your account and attendance summary" />
+      <PageHeader title="My Profile" subtitle="Your account and attendance summary" actions={<MonthNav value={ym} onChange={setYm} />} />
 
       <div className="relative rounded-2xl overflow-hidden mb-2 shadow-sm border border-[var(--color-card-border)]">
         <div className="h-32 bg-gradient-to-r from-[rgba(139,92,246,0.15)] to-[rgba(59,130,246,0.15)] dark:from-[rgba(139,92,246,0.2)] dark:to-[rgba(59,130,246,0.2)]"></div>

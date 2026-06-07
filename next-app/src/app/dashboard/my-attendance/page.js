@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import PageHeader from '@/components/PageHeader';
-import { isLateCheckIn, canonicalStats } from '@/lib/attend';
+import MonthNav from '@/components/MonthNav';
+import { isLateCheckIn, canonicalStats, inBdMonth } from '@/lib/attend';
 
 function fmtDateTime(ts) {
   if (!ts) return '—';
@@ -14,13 +15,14 @@ export default function MyAttendancePage() {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/me/attendance?limit=200', {
+      const res = await fetch('/api/me/attendance?limit=1000', {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store',
       });
@@ -38,8 +40,14 @@ export default function MyAttendancePage() {
     load();
   }, [load]);
 
-  const list = events || [];
-  const cstats = canonicalStats(list);
+  const monthEvents = useMemo(
+    () =>
+      (events || [])
+        .filter((e) => inBdMonth(e.timestamp, ym.y, ym.m))
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)),
+    [events, ym],
+  );
+  const cstats = canonicalStats(monthEvents);
 
   const cards = [
     { label: 'Days present', value: cstats.presentDays, color: 'text-[var(--color-text-main)]' },
@@ -52,7 +60,12 @@ export default function MyAttendancePage() {
       <PageHeader
         title="My Attendance"
         subtitle="Your check-in / check-out history from AttendDesk"
-        actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthNav value={ym} onChange={setYm} />
+            <button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>
+          </div>
+        }
       />
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
@@ -79,7 +92,7 @@ export default function MyAttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {list.map((e) => (
+              {monthEvents.map((e) => (
                 <tr key={e.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.02]">
                   <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{fmtDateTime(e.timestamp)}</td>
                   <td className="py-3 px-4 whitespace-nowrap">
@@ -103,8 +116,8 @@ export default function MyAttendancePage() {
                   <td className="py-3 px-4 text-[var(--color-text-muted)] text-xs">{e.clientMode || 'mobile'}</td>
                 </tr>
               ))}
-              {!loading && list.length === 0 && (
-                <tr><td colSpan={5} className="py-8 text-center text-[var(--color-text-muted)]">No attendance records yet.</td></tr>
+              {!loading && monthEvents.length === 0 && (
+                <tr><td colSpan={5} className="py-8 text-center text-[var(--color-text-muted)]">No records for this month.</td></tr>
               )}
               {loading && (
                 <tr><td colSpan={5} className="py-8 text-center text-[var(--color-text-muted)]">Loading…</td></tr>

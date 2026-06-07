@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import EmployeeAvatar from '@/components/EmployeeAvatar';
+import MonthNav from '@/components/MonthNav';
 import { useAttendData } from '@/lib/useAttendData';
-import { perEmployeeStats, fmtTime, onlyEmployees } from '@/lib/attend';
+import { perEmployeeStats, fmtTime, onlyEmployees, inBdMonth } from '@/lib/attend';
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -15,8 +16,10 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
 
-  const stats = useMemo(() => perEmployeeStats(events), [events]);
+  const monthEvents = useMemo(() => (events || []).filter((e) => inBdMonth(e.timestamp, ym.y, ym.m)), [events, ym]);
+  const stats = useMemo(() => perEmployeeStats(monthEvents), [monthEvents]);
 
   const rows = useMemo(
     () =>
@@ -43,7 +46,12 @@ export default function EmployeesPage() {
       <PageHeader
         title="Employees"
         subtitle={`${filtered.length} of ${rows.length} employees`}
-        actions={<button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthNav value={ym} onChange={setYm} />
+            <button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>
+          </div>
+        }
       />
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}

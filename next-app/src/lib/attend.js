@@ -44,6 +44,14 @@ export function bdDateKey(ts) {
   }).format(d);
 }
 
+// True if the timestamp falls in the given office-tz month (month is 0-11).
+export function inBdMonth(ts, year, month) {
+  const k = bdDateKey(ts);
+  if (!k) return false;
+  const [y, m] = k.split('-').map(Number);
+  return y === year && m === month + 1;
+}
+
 export function eventsForUser(events, uid) {
   return (events || []).filter((e) => e.user?.id === uid);
 }
