@@ -73,6 +73,12 @@ export default function MyProfilePage() {
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
+  const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
+  const [showPw, setShowPw] = useState(false);
+
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('user') || 'null');
@@ -171,6 +177,33 @@ export default function MyProfilePage() {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPwError('');
+    setPwSuccess('');
+    if (!pw.current || !pw.next) { setPwError('Enter your current and new password.'); return; }
+    if (pw.next.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+    if (pw.next !== pw.confirm) { setPwError('New password and confirmation do not match.'); return; }
+    setPwBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/me/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: pw.current, newPassword: pw.next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to change password');
+      setPw({ current: '', next: '', confirm: '' });
+      setPwSuccess('Password changed.');
+      setTimeout(() => setPwSuccess(''), 4000);
+    } catch (err) {
+      setPwError(err.message);
+    } finally {
+      setPwBusy(false);
     }
   };
 
@@ -278,6 +311,39 @@ export default function MyProfilePage() {
             </Link>
           </>
         )}
+      </div>
+
+      {/* Change Password — updates the AttendDesk sign-in password */}
+      <div className="card max-w-xl">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold text-lg text-[var(--color-text-main)]">Change Password</h3>
+          <button type="button" onClick={() => setShowPw((v) => !v)} className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">
+            {showPw ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] mb-5">Updates your AttendDesk sign-in password (web, mobile, and kiosk).</p>
+        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-[var(--color-text-muted)]">Current password</label>
+            <input type={showPw ? 'text' : 'password'} autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">New password</label>
+              <input type={showPw ? 'text' : 'password'} autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Confirm new password</label>
+              <input type={showPw ? 'text' : 'password'} autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
+            </div>
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)]">Use at least 8 characters.</p>
+          {pwError && <p className="text-sm text-[var(--color-red)]">{pwError}</p>}
+          {pwSuccess && <p className="text-sm text-[var(--color-green)]">{pwSuccess}</p>}
+          <div>
+            <button type="submit" disabled={pwBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-60">{pwBusy ? 'Saving…' : 'Update password'}</button>
+          </div>
+        </form>
       </div>
     </div>
   );

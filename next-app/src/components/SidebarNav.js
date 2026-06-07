@@ -30,7 +30,6 @@ export default function SidebarNav({ role, isTeamLeader }) {
       {role !== 'employee' && <NavLink href="/dashboard/leave-approvals">Leave Approvals</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/holidays">Holidays</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/attenddesk">AttendDesk</NavLink>}
-      <NavLink href="/dashboard/settings">Settings</NavLink>
     </nav>
   );
 }
