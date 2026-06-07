@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import PageHeader from '@/components/PageHeader';
 import MonthNav from '@/components/MonthNav';
-import { isLateCheckIn, canonicalStats, inBdMonth } from '@/lib/attend';
+import { isLateCheckIn, canonicalStats, inBdMonth, leaveOverlapsMonth } from '@/lib/attend';
 
 function fmtDateTime(ts) {
   if (!ts) return '—';
@@ -13,6 +13,7 @@ function fmtDateTime(ts) {
 
 export default function MyAttendancePage() {
   const [events, setEvents] = useState(null);
+  const [leave, setLeave] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -22,13 +23,16 @@ export default function MyAttendancePage() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/me/attendance?limit=1000', {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: 'no-store',
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      setEvents(json.events || []);
+      const headers = { Authorization: `Bearer ${token}` };
+      const [attRes, lvRes] = await Promise.all([
+        fetch('/api/me/attendance?limit=1000', { headers, cache: 'no-store' }),
+        fetch('/api/me/leave', { headers, cache: 'no-store' }),
+      ]);
+      const attJson = await attRes.json();
+      if (!attRes.ok) throw new Error(attJson.error || `HTTP ${attRes.status}`);
+      setEvents(attJson.events || []);
+      const lvJson = await lvRes.json();
+      if (lvRes.ok) setLeave(lvJson.requests || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -48,11 +52,16 @@ export default function MyAttendancePage() {
     [events, ym],
   );
   const cstats = canonicalStats(monthEvents);
+  const leavesThisMonth = useMemo(
+    () => (leave || []).filter((r) => leaveOverlapsMonth(r, ym.y, ym.m)).length,
+    [leave, ym],
+  );
 
   const cards = [
     { label: 'Days present', value: cstats.presentDays, color: 'text-[var(--color-text-main)]' },
     { label: 'On-time', value: cstats.onTimeDays, color: 'text-[var(--color-green)]' },
     { label: 'Late days', value: cstats.lateDays, color: 'text-[var(--color-yellow)]' },
+    { label: 'Leaves', value: leavesThisMonth, color: 'text-[var(--color-blue)]' },
   ];
 
   return (
@@ -70,7 +79,7 @@ export default function MyAttendancePage() {
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {cards.map((c) => (
           <div key={c.label} className="card">
             <div className="text-xs text-[var(--color-text-muted)]">{c.label}</div>

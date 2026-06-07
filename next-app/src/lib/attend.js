@@ -126,6 +126,16 @@ export function todaySummary(events) {
   return { checkedIn: uids.length, late: uids.filter((u) => first[u].isLate).length };
 }
 
+// True if a leave request's from–to range overlaps the given month (month 0-11).
+// fromDay/toDay are plain YYYY-MM-DD strings, which compare lexicographically.
+export function leaveOverlapsMonth(req, year, month) {
+  if (!req?.fromDay || !req?.toDay) return false;
+  const mm = String(month + 1).padStart(2, '0');
+  const start = `${year}-${mm}-01`;
+  const end = `${year}-${mm}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, '0')}`;
+  return req.fromDay <= end && req.toDay >= start;
+}
+
 // Distinct employees on approved leave covering today (office-tz date).
 export function onLeaveTodayCount(leave) {
   const tk = bdDateKey(new Date());

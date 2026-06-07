@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import PageHeader from '@/components/PageHeader';
 import KpiCard from '@/components/KpiCard';
+import MonthNav from '@/components/MonthNav';
+import { leaveOverlapsMonth } from '@/lib/attend';
 
 const STATUS_BADGE = {
   pending: 'bg-[rgba(234,179,8,0.15)] text-[var(--color-yellow)]',
@@ -49,6 +51,7 @@ export default function MyLeavePage() {
   const [requests, setRequests] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
 
   const [showForm, setShowForm] = useState(false);
   const [fromDay, setFromDay] = useState('');
@@ -126,7 +129,10 @@ export default function MyLeavePage() {
     }
   };
 
-  const list = requests || [];
+  const list = useMemo(
+    () => (requests || []).filter((r) => leaveOverlapsMonth(r, ym.y, ym.m)),
+    [requests, ym],
+  );
   const approved = list.filter((r) => r.status === 'approved').length;
   const pending = list.filter((r) => r.status === 'pending').length;
 
@@ -136,7 +142,8 @@ export default function MyLeavePage() {
         title="My Leave"
         subtitle="Your leave requests from AttendDesk"
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <MonthNav value={ym} onChange={setYm} />
             <button onClick={() => { setShowForm(true); setFormError(''); }} className="btn-primary py-2 px-4 text-sm">
               + Request leave
             </button>
@@ -231,7 +238,7 @@ export default function MyLeavePage() {
                 </tr>
               ))}
               {!loading && list.length === 0 && (
-                <tr><td colSpan={6} className="py-12 text-center text-[var(--color-text-muted)]">No leave requests yet. Click <span className="text-[var(--color-purple)]">+ Request leave</span> to submit one.</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-[var(--color-text-muted)]">No leave requests for this month.</td></tr>
               )}
               {loading && (
                 <tr><td colSpan={6} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>

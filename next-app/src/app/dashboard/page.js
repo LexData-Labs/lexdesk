@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import KpiCard from '@/components/KpiCard';
+import MonthNav from '@/components/MonthNav';
 import { useAttendData } from '@/lib/useAttendData';
-import { todaySummary, onLeaveTodayCount, fmtTime, onlyEmployees, isLateCheckIn } from '@/lib/attend';
+import { todaySummary, onLeaveTodayCount, fmtTime, onlyEmployees, isLateCheckIn, leaveOverlapsMonth } from '@/lib/attend';
 
 export default function DashboardPage() {
   const { employees, events, leave, loading, error, refresh } = useAttendData([
@@ -24,6 +25,15 @@ export default function DashboardPage() {
     [events],
   );
 
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const monthLeave = useMemo(() => (leave || []).filter((r) => leaveOverlapsMonth(r, ym.y, ym.m)), [leave, ym]);
+  const leaveTotals = {
+    total: monthLeave.length,
+    approved: monthLeave.filter((r) => r.status === 'approved').length,
+    pending: monthLeave.filter((r) => r.status === 'pending').length,
+  };
+  const monthLabel = new Date(ym.y, ym.m, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
   const kpis = [
     { label: 'Employees', value: onlyEmployees(employees).length, color: 'purple' },
     { label: 'Checked in today', value: today.checkedIn, color: 'green' },
@@ -36,7 +46,12 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         subtitle="Live overview from AttendDesk"
-        actions={<button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthNav value={ym} onChange={setYm} />
+            <button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>
+          </div>
+        }
       />
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
@@ -45,6 +60,18 @@ export default function DashboardPage() {
         {kpis.map((k) => (
           <KpiCard key={k.label} label={k.label} value={loading ? '…' : k.value} color={k.color} />
         ))}
+      </div>
+
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Leave requests</h2>
+          <span className="text-xs text-[var(--color-text-muted)]">{monthLabel}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="text-center"><p className="text-xs text-[var(--color-text-muted)]">Total</p><p className="text-2xl font-bold text-[var(--color-text-main)] mt-1">{loading ? '…' : leaveTotals.total}</p></div>
+          <div className="text-center"><p className="text-xs text-[var(--color-text-muted)]">Approved</p><p className="text-2xl font-bold text-[var(--color-green)] mt-1">{loading ? '…' : leaveTotals.approved}</p></div>
+          <div className="text-center"><p className="text-xs text-[var(--color-text-muted)]">Pending</p><p className="text-2xl font-bold text-[var(--color-yellow)] mt-1">{loading ? '…' : leaveTotals.pending}</p></div>
+        </div>
       </div>
 
       <div className="card overflow-hidden p-0">
