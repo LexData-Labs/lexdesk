@@ -56,6 +56,20 @@ export const createHoliday = (body) => adk('/holidays', { method: 'POST', body }
 export const deleteHoliday = (id) =>
   adk(`/holidays/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
+// Teams. read = 'teams:read', write = 'teams:write'.
+export const getTeams = () => adk('/teams');
+export const createTeam = (body) => adk('/teams', { method: 'POST', body });
+export const updateTeam = (id, body) =>
+  adk(`/teams/${encodeURIComponent(id)}`, { method: 'PATCH', body });
+export const deleteTeam = (id) =>
+  adk(`/teams/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+// Provision a real employee account (returns a temporary password). 'employees:write'.
+export const createEmployee = (body) => adk('/employees', { method: 'POST', body });
+// Assign/clear an employee's team. 'employees:write'.
+export const setEmployeeTeam = (uid, teamId) =>
+  adk(`/employees/${encodeURIComponent(uid)}`, { method: 'PATCH', body: { teamId } });
+
 // Change a user's password (verifies their current password first).
 // Requires the 'auth:verify' scope.
 export const changePassword = (email, currentPassword, newPassword) =>

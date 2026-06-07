@@ -13,10 +13,21 @@ export default function EmployeeProfilePage() {
   const employeeId = decodeURIComponent(id);
   const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
   const [avatar, setAvatar] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [savingTeam, setSavingTeam] = useState(false);
+  const [teamMsg, setTeamMsg] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') setAvatar(localStorage.getItem('avatar-' + employeeId));
   }, [employeeId]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    fetch('/api/teams', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { teams: [] }))
+      .then((j) => setTeams(j.teams || []))
+      .catch(() => setTeams([]));
+  }, []);
 
   const employee = useMemo(
     () => (employees || []).find((e) => String(e.id) === employeeId) || null,
@@ -49,6 +60,28 @@ export default function EmployeeProfilePage() {
   const removeAvatar = () => {
     localStorage.removeItem('avatar-' + employeeId);
     setAvatar(null);
+  };
+
+  const saveTeam = async (teamId) => {
+    setSavingTeam(true);
+    setTeamMsg('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/employees/${encodeURIComponent(employeeId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ teamId: teamId || null }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setTeamMsg('Team updated.');
+      setTimeout(() => setTeamMsg(''), 3000);
+      refresh();
+    } catch (e) {
+      setTeamMsg(e.message);
+    } finally {
+      setSavingTeam(false);
+    }
   };
 
   return (
@@ -84,6 +117,19 @@ export default function EmployeeProfilePage() {
               <p className="text-xs text-[var(--color-text-muted)] mt-1 capitalize">
                 {(employee.role || '').toLowerCase()}{employee.faceEnrolledAt ? ' · face enrolled' : ''}
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-[var(--color-text-muted)]">Team</span>
+                <select
+                  value={employee.teamId || ''}
+                  onChange={(e) => saveTeam(e.target.value)}
+                  disabled={savingTeam}
+                  className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-2 py-1 text-xs text-[var(--color-text-main)]"
+                >
+                  <option value="">— no team —</option>
+                  {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                {teamMsg && <span className="text-xs text-[var(--color-green)]">{teamMsg}</span>}
+              </div>
               <div className="flex gap-3 mt-3">
                 <label className="btn-outline py-1.5 px-3 text-xs cursor-pointer">
                   Upload Photo
