@@ -10,6 +10,7 @@ export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('dark');
   const [photoUrl, setPhotoUrl] = useState(null);
+  const [isTeamLeader, setIsTeamLeader] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -66,6 +67,19 @@ export default function DashboardLayout({ children }) {
     return () => window.removeEventListener('user-updated', refresh);
   }, []);
 
+  // Only show "Team Approvals" to employees who actually lead a team.
+  useEffect(() => {
+    let stored;
+    try { stored = JSON.parse(localStorage.getItem('user') || 'null'); } catch { stored = null; }
+    if (!stored || stored.role !== 'employee') return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch('/api/teams', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { teams: [] }))
+      .then((d) => setIsTeamLeader((d.teams || []).some((t) => String(t.leaderUid) === String(stored.id))))
+      .catch(() => {});
+  }, []);
+
   const toggleTheme = (newTheme) => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
@@ -92,7 +106,7 @@ export default function DashboardLayout({ children }) {
             LexDesk
           </Link>
 
-          <SidebarNav role={user.role} />
+          <SidebarNav role={user.role} isTeamLeader={isTeamLeader} />
 
           <div className="p-6 border-t border-[var(--color-card-border)] flex flex-col items-start">
             <Link

@@ -13,7 +13,7 @@ function NavLink({ href, children, exact }) {
   );
 }
 
-export default function SidebarNav({ role }) {
+export default function SidebarNav({ role, isTeamLeader }) {
   return (
     <nav className="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
       {role !== 'employee' && <NavLink href="/dashboard" exact>Dashboard</NavLink>}
@@ -22,7 +22,7 @@ export default function SidebarNav({ role }) {
       {role === 'employee' && <NavLink href="/dashboard/my-attendance">My Attendance</NavLink>}
       {role === 'employee' && <NavLink href="/dashboard/my-leave">My Leave</NavLink>}
       {role === 'employee' && <NavLink href="/dashboard/my-calendar">Calendar</NavLink>}
-      {role === 'employee' && <NavLink href="/dashboard/team-approvals">Team Approvals</NavLink>}
+      {role === 'employee' && isTeamLeader && <NavLink href="/dashboard/team-approvals">Team Approvals</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/attendance">Attendance</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/calendar">Calendar</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/analytics">Analytics</NavLink>}
