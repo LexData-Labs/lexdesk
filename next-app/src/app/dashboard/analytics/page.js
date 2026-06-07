@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useAttendData } from '@/lib/useAttendData';
-import { perEmployeeStats, dayKey, onlyEmployees } from '@/lib/attend';
+import { perEmployeeStats, bdDateKey, onlyEmployees } from '@/lib/attend';
 
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -45,23 +45,24 @@ export default function AnalyticsPage() {
   );
 
   const totals = useMemo(() => {
-    const checkIns = rows.reduce((a, r) => a + r.checkIns, 0);
-    const late = rows.reduce((a, r) => a + r.late, 0);
-    const onTimePct = checkIns > 0 ? Math.round(((checkIns - late) / checkIns) * 100) : 0;
-    return { checkIns, late, onTimePct };
+    const presentDays = rows.reduce((a, r) => a + r.presentDays, 0);
+    const lateDays = rows.reduce((a, r) => a + r.lateDays, 0);
+    const onTimeDays = rows.reduce((a, r) => a + r.onTimeDays, 0);
+    const onTimePct = presentDays > 0 ? Math.round((onTimeDays / presentDays) * 100) : 0;
+    return { presentDays, lateDays, onTimePct };
   }, [rows]);
 
   const topLate = useMemo(
-    () => [...rows].filter((r) => r.late > 0).sort((a, b) => b.late - a.late).slice(0, 5),
+    () => [...rows].filter((r) => r.lateDays > 0).sort((a, b) => b.lateDays - a.lateDays).slice(0, 5),
     [rows],
   );
-  const topActive = useMemo(() => [...rows].sort((a, b) => b.checkIns - a.checkIns).slice(0, 5), [rows]);
+  const topActive = useMemo(() => [...rows].sort((a, b) => b.presentDays - a.presentDays).slice(0, 5), [rows]);
 
   const byDay = useMemo(() => {
     const map = {};
     for (const e of monthEvents) {
-      if (e.type !== 'CHECK_IN' || !e.timestamp) continue;
-      const k = dayKey(e.timestamp);
+      if (e.type !== 'CHECK_IN' || e.allChecksPassed === false || !e.timestamp) continue;
+      const k = bdDateKey(e.timestamp);
       (map[k] ||= new Set()).add(e.user?.id);
     }
     return Object.entries(map)
@@ -69,8 +70,8 @@ export default function AnalyticsPage() {
       .sort((a, b) => (a.day < b.day ? -1 : 1));
   }, [monthEvents]);
 
-  const maxLate = Math.max(1, ...topLate.map((e) => e.late));
-  const maxActive = Math.max(1, ...topActive.map((e) => e.checkIns));
+  const maxLate = Math.max(1, ...topLate.map((e) => e.lateDays));
+  const maxActive = Math.max(1, ...topActive.map((e) => e.presentDays));
   const maxDay = Math.max(1, ...byDay.map((d) => d.count));
 
   const prevMonth = () => setYm((p) => { const d = new Date(p.y, p.m - 1, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -79,8 +80,8 @@ export default function AnalyticsPage() {
 
   const kpis = [
     { label: 'Employees', value: onlyEmployees(employees).length, color: 'text-[var(--color-text-main)]' },
-    { label: 'Check-ins', value: totals.checkIns, color: 'text-[var(--color-green)]' },
-    { label: 'Late', value: totals.late, color: 'text-[var(--color-yellow)]' },
+    { label: 'Present days', value: totals.presentDays, color: 'text-[var(--color-green)]' },
+    { label: 'Late', value: totals.lateDays, color: 'text-[var(--color-yellow)]' },
     { label: 'On-time %', value: `${totals.onTimePct}%`, color: 'text-[var(--color-text-main)]' },
   ];
 
@@ -118,8 +119,8 @@ export default function AnalyticsPage() {
             {topLate.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No late check-ins this month</div>}
             {topLate.map((e) => (
               <div key={e.id}>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.late}</span></div>
-                <HBar value={e.late} max={maxLate} color="var(--color-yellow)" />
+                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-yellow)] font-semibold">{e.lateDays}</span></div>
+                <HBar value={e.lateDays} max={maxLate} color="var(--color-yellow)" />
               </div>
             ))}
           </div>
@@ -131,8 +132,8 @@ export default function AnalyticsPage() {
             {topActive.length === 0 && <div className="text-[var(--color-text-muted)] text-sm">No check-ins this month</div>}
             {topActive.map((e) => (
               <div key={e.id}>
-                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.checkIns}</span></div>
-                <HBar value={e.checkIns} max={maxActive} color="var(--color-green)" />
+                <div className="flex justify-between text-sm mb-1"><span className="text-[var(--color-text-main)] truncate">{e.name}</span><span className="text-[var(--color-green)] font-semibold">{e.presentDays}</span></div>
+                <HBar value={e.presentDays} max={maxActive} color="var(--color-green)" />
               </div>
             ))}
           </div>

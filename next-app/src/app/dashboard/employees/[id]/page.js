@@ -23,7 +23,7 @@ export default function EmployeeProfilePage() {
     [employees, employeeId],
   );
   const stats = useMemo(
-    () => perEmployeeStats(events)[employeeId] || { checkIns: 0, late: 0, lastCheckIn: null },
+    () => perEmployeeStats(events)[employeeId] || { presentDays: 0, lateDays: 0, lastCheckIn: null },
     [events, employeeId],
   );
   const myEvents = useMemo(
@@ -95,8 +95,8 @@ export default function EmployeeProfilePage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Check-ins</p><p className="text-2xl font-bold text-[var(--color-green)] mt-1">{stats.checkIns}</p></div>
-            <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Late</p><p className="text-2xl font-bold text-[var(--color-yellow)] mt-1">{stats.late}</p></div>
+            <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Present days</p><p className="text-2xl font-bold text-[var(--color-green)] mt-1">{stats.presentDays}</p></div>
+            <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Late</p><p className="text-2xl font-bold text-[var(--color-yellow)] mt-1">{stats.lateDays}</p></div>
             <div className="card text-center"><p className="text-xs text-[var(--color-text-muted)]">Last seen</p><p className="text-sm font-semibold text-[var(--color-text-main)] mt-2">{stats.lastCheckIn ? fmtTime(stats.lastCheckIn) : '—'}</p></div>
           </div>
 

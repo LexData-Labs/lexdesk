@@ -21,8 +21,8 @@ export default function EmployeesPage() {
   const rows = useMemo(
     () =>
       onlyEmployees(employees).map((e) => {
-        const s = stats[e.id] || { checkIns: 0, late: 0, lastCheckIn: null };
-        return { ...e, checkIns: s.checkIns, late: s.late, lastCheckIn: s.lastCheckIn };
+        const s = stats[e.id] || { presentDays: 0, lateDays: 0, lastCheckIn: null };
+        return { ...e, presentDays: s.presentDays, late: s.lateDays, lastCheckIn: s.lastCheckIn };
       }),
     [employees, stats],
   );
@@ -79,7 +79,7 @@ export default function EmployeesPage() {
                 <tr className="text-left text-[var(--color-text-muted)] text-xs border-b border-[var(--color-card-border)]">
                   <th className="py-3 px-4 font-medium">Employee</th>
                   <th className="py-3 px-4 font-medium">Role</th>
-                  <th className="py-3 px-4 font-medium text-center">Check-ins</th>
+                  <th className="py-3 px-4 font-medium text-center">Present days</th>
                   <th className="py-3 px-4 font-medium text-center">Late</th>
                   <th className="py-3 px-4 font-medium">Last seen</th>
                   <th className="py-3 px-4 font-medium text-center">Face</th>
@@ -98,7 +98,7 @@ export default function EmployeesPage() {
                       </Link>
                     </td>
                     <td className="py-3 px-4 text-[var(--color-text-muted)] capitalize">{(e.role || '').toLowerCase()}</td>
-                    <td className="py-3 px-4 text-center text-[var(--color-green)] font-semibold">{e.checkIns}</td>
+                    <td className="py-3 px-4 text-center text-[var(--color-green)] font-semibold">{e.presentDays}</td>
                     <td className="py-3 px-4 text-center text-[var(--color-yellow)] font-semibold">{e.late}</td>
                     <td className="py-3 px-4 text-xs text-[var(--color-text-muted)] whitespace-nowrap">{e.lastCheckIn ? fmtTime(e.lastCheckIn) : '—'}</td>
                     <td className="py-3 px-4 text-center">{e.faceEnrolledAt ? <span className="text-[var(--color-green)]">✓</span> : <span className="text-[var(--color-text-muted)]">—</span>}</td>
@@ -128,7 +128,7 @@ export default function EmployeesPage() {
                   <div className="font-semibold text-[var(--color-text-main)] truncate max-w-[150px]">{e.name || '—'}</div>
                   <div className="text-xs text-[var(--color-text-muted)] truncate max-w-[150px]">{e.email}</div>
                 </div>
-                <div className="text-xs text-[var(--color-text-muted)]">{e.checkIns} check-ins · <span className="text-[var(--color-yellow)]">{e.late} late</span></div>
+                <div className="text-xs text-[var(--color-text-muted)]">{e.presentDays} present days · <span className="text-[var(--color-yellow)]">{e.late} late</span></div>
               </div>
             </Link>
           ))}

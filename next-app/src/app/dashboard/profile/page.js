@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader';
 import Avatar from '@/components/Avatar';
 import KpiCard from '@/components/KpiCard';
 import Link from 'next/link';
-import { isLateCheckIn } from '@/lib/attend';
+import { canonicalStats } from '@/lib/attend';
 
 function initialsFromName(name) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -105,15 +105,9 @@ export default function MyProfilePage() {
   }, []);
 
   const stats = useMemo(() => {
-    const checkIns = (events || []).filter((e) => e.type === 'CHECK_IN');
-    const late = checkIns.filter(isLateCheckIn).length;
-    const onTime = checkIns.length - late;
-    const lastCheckIn = checkIns.reduce(
-      (m, e) => Math.max(m, e.timestamp ? new Date(e.timestamp).getTime() : 0),
-      0,
-    );
-    const rate = checkIns.length ? Math.round((onTime / checkIns.length) * 100) : 0;
-    return { checkIns: checkIns.length, late, onTime, lastCheckIn, rate };
+    const s = canonicalStats(events || []);
+    const rate = s.presentDays ? Math.round((s.onTimeDays / s.presentDays) * 100) : 0;
+    return { ...s, rate };
   }, [events]);
 
   if (!user) return null;
@@ -178,9 +172,9 @@ export default function MyProfilePage() {
   };
 
   const cards = [
-    { label: 'Check-ins', value: stats.checkIns, color: 'green', icon: ICONS.check },
-    { label: 'Late', value: stats.late, color: 'yellow', icon: ICONS.clock },
-    { label: 'On-time', value: stats.onTime, color: 'blue', icon: ICONS.star },
+    { label: 'Present days', value: stats.presentDays, color: 'green', icon: ICONS.check },
+    { label: 'Late', value: stats.lateDays, color: 'yellow', icon: ICONS.clock },
+    { label: 'On-time', value: stats.onTimeDays, color: 'blue', icon: ICONS.star },
     { label: 'On-time rate', value: `${stats.rate}%`, color: 'purple', icon: ICONS.percent },
   ];
 

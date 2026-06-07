@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
-import { isLateCheckIn } from '@/lib/attend';
+import { isLateCheckIn, canonicalStats } from '@/lib/attend';
 
 function fmtDateTime(ts) {
   if (!ts) return '—';
@@ -39,16 +39,12 @@ export default function MyAttendancePage() {
   }, [load]);
 
   const list = events || [];
-  const checkIns = list.filter((e) => e.type === 'CHECK_IN');
-  const lateCount = checkIns.filter(isLateCheckIn).length;
-  const days = new Set(
-    list.map((e) => (e.timestamp ? new Date(e.timestamp).toDateString() : null)).filter(Boolean),
-  ).size;
+  const cstats = canonicalStats(list);
 
   const cards = [
-    { label: 'Days recorded', value: days, color: 'text-[var(--color-text-main)]' },
-    { label: 'Check-ins', value: checkIns.length, color: 'text-[var(--color-green)]' },
-    { label: 'Late arrivals', value: lateCount, color: 'text-[var(--color-yellow)]' },
+    { label: 'Days present', value: cstats.presentDays, color: 'text-[var(--color-text-main)]' },
+    { label: 'On-time', value: cstats.onTimeDays, color: 'text-[var(--color-green)]' },
+    { label: 'Late days', value: cstats.lateDays, color: 'text-[var(--color-yellow)]' },
   ];
 
   return (
