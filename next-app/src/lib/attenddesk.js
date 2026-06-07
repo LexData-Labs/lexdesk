@@ -52,6 +52,15 @@ export const decideLeave = (id, decision, note) =>
 export const changePassword = (email, currentPassword, newPassword) =>
   adk('/auth/change-password', { method: 'POST', body: { email, currentPassword, newPassword } });
 
+// Update a user's display name. Requires the 'employees:write' scope.
+export const updateName = (email, name) =>
+  adk('/auth/update-profile', { method: 'POST', body: { email, name } });
+
+// Upload a user's profile photo (dataUrl = base64 data URL). Writes to Firebase
+// Storage on the AttendDesk side. Requires the 'employees:write' scope.
+export const uploadPhoto = (email, dataUrl) =>
+  adk('/auth/update-photo', { method: 'POST', body: { email, dataUrl } });
+
 // Verify an employee's email + password against AttendDesk (partner SSO).
 // Requires the API key to hold the 'auth:verify' scope. Resolves to
 // { valid:false } for bad credentials (HTTP 200) and throws (with .status) for

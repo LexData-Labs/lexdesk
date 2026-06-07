@@ -9,6 +9,7 @@ import Avatar from '@/components/Avatar';
 export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState('dark');
+  const [photoUrl, setPhotoUrl] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -42,14 +43,25 @@ export default function DashboardLayout({ children }) {
     }
   }, [router]);
 
-  // Refresh the sidebar's copy of the user when the profile page saves changes.
+  // Refresh the sidebar's copy of the user when the profile page saves changes,
+  // and load the AttendDesk profile photo (fresh signed URL) for the sidebar avatar.
   useEffect(() => {
+    const loadPhoto = () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      fetch('/api/me/profile', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.profile) setPhotoUrl(d.profile.photoUrl || null); })
+        .catch(() => {});
+    };
     const refresh = () => {
       try {
         const stored = localStorage.getItem('user');
         if (stored) setUser(JSON.parse(stored));
       } catch {}
+      loadPhoto();
     };
+    loadPhoto();
     window.addEventListener('user-updated', refresh);
     return () => window.removeEventListener('user-updated', refresh);
   }, []);
@@ -88,7 +100,7 @@ export default function DashboardLayout({ children }) {
               className="flex items-center gap-3 w-full rounded-lg p-2 -m-2 no-underline transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
             >
               <Avatar
-                image={user.avatarImage}
+                image={photoUrl || user.avatarImage}
                 initials={user.avatar}
                 alt={user.name}
                 className="w-9 h-9 font-semibold text-[0.85rem] shrink-0"

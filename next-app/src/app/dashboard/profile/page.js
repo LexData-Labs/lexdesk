@@ -4,8 +4,9 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import Avatar from '@/components/Avatar';
+import KpiCard from '@/components/KpiCard';
 import Link from 'next/link';
-import { fmtTime } from '@/lib/attend';
+import { isLateCheckIn } from '@/lib/attend';
 
 function initialsFromName(name) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -14,8 +15,14 @@ function initialsFromName(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+function fmtLastSeen(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 // Downscale an image to a small JPEG data URL so it fits in localStorage.
-function fileToResizedDataUrl(file, maxSize = 256) {
+function fileToResizedDataUrl(file, maxSize = 512) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -43,15 +50,24 @@ function fileToResizedDataUrl(file, maxSize = 256) {
   });
 }
 
+const ICONS = {
+  check: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>),
+  clock: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>),
+  star: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>),
+  percent: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg>),
+};
+
 export default function MyProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState(null);
   const [attLoading, setAttLoading] = useState(true);
+  const [adProfile, setAdProfile] = useState(null);
 
   const [editing, setEditing] = useState(false);
   const [formName, setFormName] = useState('');
   const [formImage, setFormImage] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
@@ -70,12 +86,15 @@ export default function MyProfilePage() {
     (async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('/api/me/attendance?limit=500', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        const json = await res.json();
-        if (active) setEvents(res.ok ? json.events || [] : []);
+        const [attRes, profRes] = await Promise.all([
+          fetch('/api/me/attendance?limit=500', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }),
+          fetch('/api/me/profile', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }),
+        ]);
+        const attJson = await attRes.json().catch(() => ({}));
+        const profJson = await profRes.json().catch(() => ({}));
+        if (!active) return;
+        setEvents(attRes.ok ? attJson.events || [] : []);
+        if (profRes.ok) setAdProfile(profJson.profile || null);
       } catch {
         if (active) setEvents([]);
       } finally {
@@ -87,7 +106,7 @@ export default function MyProfilePage() {
 
   const stats = useMemo(() => {
     const checkIns = (events || []).filter((e) => e.type === 'CHECK_IN');
-    const late = checkIns.filter((e) => e.isLate).length;
+    const late = checkIns.filter(isLateCheckIn).length;
     const onTime = checkIns.length - late;
     const lastCheckIn = checkIns.reduce(
       (m, e) => Math.max(m, e.timestamp ? new Date(e.timestamp).getTime() : 0),
@@ -99,7 +118,10 @@ export default function MyProfilePage() {
 
   if (!user) return null;
 
-  const startEdit = () => { setFormName(user.name || ''); setFormImage(user.avatarImage || null); setError(''); setEditing(true); };
+  const displayName = adProfile?.name || user.name;
+  const photo = adProfile?.photoUrl || user.avatarImage || null;
+
+  const startEdit = () => { setFormName(displayName || ''); setFormImage(null); setError(''); setEditing(true); };
   const cancelEdit = () => { setEditing(false); setError(''); };
 
   const handlePick = async (e) => {
@@ -117,26 +139,49 @@ export default function MyProfilePage() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const name = formName.trim();
     if (!name) { setError('Name cannot be empty.'); return; }
-    const updated = { ...user, name, avatar: initialsFromName(name), avatarImage: formImage || null };
+    setSaving(true);
+    setError('');
     try {
-      localStorage.setItem('user', JSON.stringify(updated));
-    } catch {
-      setError('Could not save — the image may be too large. Try a smaller one.');
-      return;
+      const token = localStorage.getItem('token');
+      const authHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+      // 1) Name — only if it changed.
+      if (name !== displayName) {
+        const res = await fetch('/api/me/profile', { method: 'POST', headers: authHeaders, body: JSON.stringify({ name }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save name');
+      }
+
+      // 2) Photo — only if a new one was picked (a data URL) → uploads to AttendDesk.
+      let newPhotoUrl = null;
+      if (formImage && formImage.startsWith('data:')) {
+        const res = await fetch('/api/me/photo', { method: 'POST', headers: authHeaders, body: JSON.stringify({ dataUrl: formImage }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to upload photo');
+        newPhotoUrl = data.photoUrl || null;
+      }
+
+      const updated = { ...user, name, avatar: initialsFromName(name) };
+      try { localStorage.setItem('user', JSON.stringify(updated)); } catch { /* ignore */ }
+      setUser(updated);
+      setAdProfile((p) => ({ ...(p || {}), name, photoUrl: newPhotoUrl || p?.photoUrl || null }));
+      setEditing(false);
+      window.dispatchEvent(new Event('user-updated'));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
     }
-    setUser(updated);
-    setEditing(false);
-    window.dispatchEvent(new Event('user-updated'));
   };
 
   const cards = [
-    { label: 'Check-ins', value: stats.checkIns, color: 'text-[var(--color-green)]' },
-    { label: 'Late', value: stats.late, color: 'text-[var(--color-yellow)]' },
-    { label: 'On-time', value: stats.onTime, color: 'text-[var(--color-blue)]' },
-    { label: 'On-time rate', value: `${stats.rate}%`, color: 'text-[var(--color-text-main)]' },
+    { label: 'Check-ins', value: stats.checkIns, color: 'green', icon: ICONS.check },
+    { label: 'Late', value: stats.late, color: 'yellow', icon: ICONS.clock },
+    { label: 'On-time', value: stats.onTime, color: 'blue', icon: ICONS.star },
+    { label: 'On-time rate', value: `${stats.rate}%`, color: 'purple', icon: ICONS.percent },
   ];
 
   return (
@@ -149,9 +194,9 @@ export default function MyProfilePage() {
         <div className="bg-[var(--color-card-bg)] px-8 pb-8 pt-0 flex flex-col sm:flex-row items-center sm:items-end gap-5">
           <div className="relative -mt-12 z-10">
             <Avatar
-              image={editing ? formImage : user.avatarImage}
-              initials={editing ? initialsFromName(formName) : user.avatar}
-              alt={user.name}
+              image={editing ? (formImage || photo) : photo}
+              initials={editing ? initialsFromName(formName) : (user.avatar || initialsFromName(displayName))}
+              alt={displayName}
               className="w-24 h-24 font-bold text-white text-3xl shadow-lg ring-4 ring-[var(--color-card-bg)]"
             />
             {editing && (
@@ -176,21 +221,30 @@ export default function MyProfilePage() {
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
                 placeholder="Your name"
+                maxLength={80}
                 className="w-full max-w-sm bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-2xl font-bold text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]"
               />
             ) : (
-              <h2 className="text-2xl font-bold text-[var(--color-text-main)]">{user.name}</h2>
+              <h2 className="text-2xl font-bold text-[var(--color-text-main)]">{displayName}</h2>
             )}
-            <div className="flex items-center justify-center sm:justify-start gap-3 mt-1.5">
+            <div className="flex items-center justify-center sm:justify-start gap-3 mt-1.5 flex-wrap">
               <span className="text-sm text-[var(--color-text-muted)]">{user.email}</span>
               <span className="inline-block px-2.5 py-0.5 rounded-full bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] text-xs font-bold uppercase tracking-wider">
                 {user.role}
               </span>
+              {adProfile?.faceEnrolledAt && (
+                <span className="inline-block px-2.5 py-0.5 rounded-full bg-[rgba(34,197,94,0.15)] text-[var(--color-green)] text-xs font-semibold">
+                  Face enrolled
+                </span>
+              )}
             </div>
-            {editing && formImage && (
-              <button type="button" onClick={() => setFormImage(null)} className="mt-2 text-xs text-[var(--color-red)] hover:underline">
-                Remove photo
-              </button>
+            {editing && (
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                Name and photo are saved to AttendDesk and sync everywhere.
+                {formImage && (
+                  <button type="button" onClick={() => setFormImage(null)} className="ml-2 text-[var(--color-red)] hover:underline">Clear selection</button>
+                )}
+              </p>
             )}
             {error && <p className="mt-2 text-xs text-[var(--color-red)]">{error}</p>}
           </div>
@@ -198,8 +252,8 @@ export default function MyProfilePage() {
           <div className="flex gap-2 sm:self-end shrink-0">
             {editing ? (
               <>
-                <button onClick={handleSave} className="btn-primary py-2 px-4 text-sm">Save</button>
-                <button onClick={cancelEdit} className="btn-outline py-2 px-4 text-sm">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="btn-primary py-2 px-4 text-sm disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
+                <button onClick={cancelEdit} disabled={saving} className="btn-outline py-2 px-4 text-sm">Cancel</button>
               </>
             ) : (
               <button onClick={startEdit} className="btn-outline py-2 px-4 text-sm">Edit Profile</button>
@@ -216,14 +270,11 @@ export default function MyProfilePage() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               {cards.map((c) => (
-                <div key={c.label} className="card">
-                  <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">{c.label}</p>
-                  <p className={`text-3xl font-bold ${c.color}`}>{c.value}</p>
-                </div>
+                <KpiCard key={c.label} label={c.label} value={c.value} color={c.color} icon={c.icon} />
               ))}
             </div>
             <p className="text-sm text-[var(--color-text-muted)] mb-4">
-              Last check-in: <span className="text-[var(--color-text-main)]">{stats.lastCheckIn ? fmtTime(stats.lastCheckIn) : '—'}</span>
+              Last check-in: <span className="text-[var(--color-text-main)]">{fmtLastSeen(stats.lastCheckIn)}</span>
             </p>
             <Link href="/dashboard/my-attendance" className="btn-primary py-2 px-4 text-sm self-start inline-block">
               View my attendance
