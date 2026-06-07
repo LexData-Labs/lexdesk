@@ -47,6 +47,11 @@ export const submitLeave = (body) => adk('/leave-requests', { method: 'POST', bo
 export const decideLeave = (id, decision, note) =>
   adk(`/leave-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { decision, note } });
 
+// Change a user's password (verifies their current password first).
+// Requires the 'auth:verify' scope.
+export const changePassword = (email, currentPassword, newPassword) =>
+  adk('/auth/change-password', { method: 'POST', body: { email, currentPassword, newPassword } });
+
 // Verify an employee's email + password against AttendDesk (partner SSO).
 // Requires the API key to hold the 'auth:verify' scope. Resolves to
 // { valid:false } for bad credentials (HTTP 200) and throws (with .status) for

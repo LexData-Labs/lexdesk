@@ -9,10 +9,13 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// List all accounts — any signed-in user may view (employees are read-only).
+// List all accounts — admin/superadmin only (employees must not see other users).
 export async function GET(request) {
   const actor = getUserFromRequest(request);
   if (!actor) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (actor.role !== 'admin' && actor.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
   return NextResponse.json({ users: getAllUsers(), defaultPassword: DEFAULT_NEW_USER_PASSWORD });
 }
 
