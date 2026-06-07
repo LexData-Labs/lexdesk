@@ -32,7 +32,9 @@ export async function adk(path, { method = 'GET', query, body } = {}) {
 // Convenience wrappers — your key must hold the scope shown in each comment.
 export const getMe = () => adk('/me');
 export const getPolicy = () => adk('/policy'); // policy:read
+export const updatePolicy = (body) => adk('/policy', { method: 'POST', body }); // policy:write
 export const getOffice = () => adk('/office'); // office:read
+export const updateOffice = (body) => adk('/office', { method: 'POST', body }); // office:write
 export const getEmployees = () => adk('/employees'); // employees:read
 export const getAttendance = (query = {}) => adk('/attendance', { query }); // attendance:read
 export const checkIn = (body) => adk('/attendance/check-in', { method: 'POST', body }); // attendance:write
