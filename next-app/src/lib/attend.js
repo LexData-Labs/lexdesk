@@ -195,6 +195,30 @@ export function approvedLeaveCovers(leave, dayKey) {
   return null;
 }
 
+// "Leave taken" days for APPROVED requests in a given year, EXCLUDING weekly-off
+// days (Friday) and custom holidays. Days the employee still checked in ARE
+// counted (the leave was granted). Each calendar day in a request's [fromDay,toDay]
+// range is counted at most once toward that request.
+export function approvedLeaveDays(leave, holidays, year, opts = {}) {
+  const weeklyOff = opts.weeklyOff || WEEKLY_OFF;
+  const yr = String(year);
+  let count = 0;
+  for (const r of leave || []) {
+    if (r?.status !== 'approved' || !r.fromDay || !r.toDay) continue;
+    const start = new Date(`${r.fromDay}T00:00:00`);
+    const end = new Date(`${r.toDay}T00:00:00`);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) continue;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      if (String(d.getFullYear()) !== yr) continue;
+      if (weeklyOff.includes(d.getDay())) continue; // weekly off (Friday)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (holidayCovers(holidays, key)) continue; // custom holiday
+      count += 1;
+    }
+  }
+  return count;
+}
+
 // Classify every day of a month for ONE employee. `events` must already be that
 // employee's attendance events (e.g. from /api/me/attendance). Returns
 // { year, month, daysInMonth, firstWeekday, days: { [d]: { status, name?, subject? } }, counts }.

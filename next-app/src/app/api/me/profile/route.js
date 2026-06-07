@@ -22,6 +22,8 @@ export async function GET(request) {
         name: me.name || '',
         email: me.email || user.email || '',
         role: me.role || '',
+        teamName: me.teamName || null,
+        joiningDate: me.createdAt || null,
         photoUrl: me.photoUrl || null,
         faceEnrolledAt: me.faceEnrolledAt || null,
       },
