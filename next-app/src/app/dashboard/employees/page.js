@@ -14,12 +14,12 @@ const inputCls =
   'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
 
 export default function EmployeesPage() {
-  const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
   const [view, setView] = useState('list');
   const [search, setSearch] = useState('');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance'], { month: ym });
   const [teams, setTeams] = useState([]);
 
   // Add-employee modal state.

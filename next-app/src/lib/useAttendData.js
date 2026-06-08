@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 
 // Fetches org-wide AttendDesk data through the (admin-gated) /api/attenddesk
 // proxy. Pass the resources a page needs, e.g. useAttendData(['employees','attendance']).
+// Pass { month: { y, m } } (m 0-11) to scope the attendance fetch to one month
+// instead of pulling the latest 1000 events org-wide.
 const RESOURCE_QUERY = {
   employees: 'resource=employees',
   attendance: 'resource=attendance&limit=1000',
@@ -12,8 +14,23 @@ const RESOURCE_QUERY = {
   office: 'resource=office',
 };
 
-export function useAttendData(resources = ['employees', 'attendance']) {
-  const key = resources.join(',');
+// ISO range covering an office-tz month, widened ±1 day so the Asia/Dhaka
+// offset never clips edge days (callers filter to the exact month client-side).
+function attendanceQuery(monthKey) {
+  if (!monthKey) return RESOURCE_QUERY.attendance;
+  const [y, m] = monthKey.split('-').map(Number);
+  const from = new Date(Date.UTC(y, m, 1));
+  from.setUTCDate(from.getUTCDate() - 1);
+  const to = new Date(Date.UTC(y, m + 1, 1));
+  to.setUTCDate(to.getUTCDate() + 1);
+  return `resource=attendance&limit=1000&from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
+}
+
+export function useAttendData(resources = ['employees', 'attendance'], opts = {}) {
+  const month = opts.month || null;
+  const monthKey = month ? `${month.y}-${month.m}` : '';
+  const key = `${resources.join(',')}|${monthKey}`;
+
   const [state, setState] = useState({
     employees: [],
     events: [],
@@ -26,10 +43,11 @@ export function useAttendData(resources = ['employees', 'attendance']) {
     setState((s) => ({ ...s, loading: true, error: '' }));
     try {
       const token = localStorage.getItem('token');
-      const list = key.split(',').filter(Boolean);
+      const [listStr, mk] = key.split('|');
+      const list = listStr.split(',').filter(Boolean);
       const results = await Promise.all(
         list.map(async (r) => {
-          const q = RESOURCE_QUERY[r] || `resource=${r}`;
+          const q = r === 'attendance' ? attendanceQuery(mk) : (RESOURCE_QUERY[r] || `resource=${r}`);
           const res = await fetch(`/api/attenddesk?${q}`, {
             headers: { Authorization: `Bearer ${token}` },
             cache: 'no-store',

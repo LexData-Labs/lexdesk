@@ -9,15 +9,38 @@ function key() {
   return k;
 }
 
+// Tiny in-memory TTL cache for GETs that are identical across all users
+// (employees roster, holidays, office, policy). Dedupes bursts (e.g. the 9am
+// peak) so 10 admins + many employees don't each re-pull the same org data.
+// Caveat: per warm serverless instance only — not shared across instances; a
+// shared cache (Redis/Upstash) is the next step if you outgrow this. ANY
+// mutating call (POST/PATCH/DELETE) flushes the whole cache so admin actions
+// reflect immediately.
+const _cache = new Map(); // urlString -> { expires, data }
+function cacheGet(urlStr) {
+  const e = _cache.get(urlStr);
+  if (e && e.expires > Date.now()) return e.data;
+  if (e) _cache.delete(urlStr);
+  return undefined;
+}
+
 /**
  * Call an AttendDesk external endpoint.
  * @param {string} path  e.g. "/attendance" (relative to ATTENDDESK_API_BASE)
- * @param {{ method?: string, query?: Record<string, unknown>, body?: unknown }} [opts]
+ * @param {{ method?: string, query?: Record<string, unknown>, body?: unknown, ttl?: number }} [opts]
+ *   ttl (ms) caches the GET response in-memory; mutations always flush the cache.
  * @returns parsed JSON; throws Error (with .status and .body) on non-2xx.
  */
-export async function adk(path, { method = 'GET', query, body } = {}) {
+export async function adk(path, { method = 'GET', query, body, ttl = 0 } = {}) {
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v != null) url.searchParams.set(k, String(v));
+  const urlStr = url.toString();
+
+  if (method === 'GET' && ttl > 0) {
+    const hit = cacheGet(urlStr);
+    if (hit !== undefined) return hit;
+  }
+
   const res = await fetch(url, {
     method,
     headers: { Authorization: `Bearer ${key()}`, ...(body ? { 'content-type': 'application/json' } : {}) },
@@ -26,16 +49,23 @@ export async function adk(path, { method = 'GET', query, body } = {}) {
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) throw Object.assign(new Error(data?.error || `attenddesk_${res.status}`), { status: res.status, body: data });
+
+  if (method === 'GET') {
+    if (ttl > 0) _cache.set(urlStr, { expires: Date.now() + ttl, data });
+  } else {
+    _cache.clear(); // a write happened — drop all cached reads
+  }
   return data;
 }
 
 // Convenience wrappers — your key must hold the scope shown in each comment.
 export const getMe = () => adk('/me');
-export const getPolicy = () => adk('/policy'); // policy:read
+export const getPolicy = () => adk('/policy', { ttl: 300000 }); // policy:read (5 min)
 export const updatePolicy = (body) => adk('/policy', { method: 'POST', body }); // policy:write
-export const getOffice = () => adk('/office'); // office:read
+export const getOffice = () => adk('/office', { ttl: 300000 }); // office:read (5 min)
 export const updateOffice = (body) => adk('/office', { method: 'POST', body }); // office:write
-export const getEmployees = () => adk('/employees'); // employees:read
+export const getEmployees = () => adk('/employees', { ttl: 30000 }); // employees:read (30s)
+export const getEmployee = (uid) => adk(`/employees/${encodeURIComponent(uid)}`); // employees:read (single)
 export const getAttendance = (query = {}) => adk('/attendance', { query }); // attendance:read
 export const checkIn = (body) => adk('/attendance/check-in', { method: 'POST', body }); // attendance:write
 export const getLeaveRequests = (query = {}) => adk('/leave-requests', { query }); // leaves:read
@@ -51,7 +81,7 @@ export const decideLeave = (id, decision, note) =>
 
 // Custom org holidays (pink on the calendar). Each is an inclusive [fromDay,toDay]
 // day range (YYYY-MM-DD) + name. read = 'holidays:read', write = 'holidays:write'.
-export const getHolidays = () => adk('/holidays');
+export const getHolidays = () => adk('/holidays', { ttl: 60000 }); // 60s
 export const createHoliday = (body) => adk('/holidays', { method: 'POST', body });
 export const deleteHoliday = (id) =>
   adk(`/holidays/${encodeURIComponent(id)}`, { method: 'DELETE' });

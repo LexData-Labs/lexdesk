@@ -8,11 +8,13 @@ import { useAttendData } from '@/lib/useAttendData';
 import { todaySummary, onLeaveTodayCount, fmtTime, onlyEmployees, isLateCheckIn, leaveOverlapsMonth } from '@/lib/attend';
 
 export default function DashboardPage() {
-  const { employees, events, leave, loading, error, refresh } = useAttendData([
-    'employees',
-    'attendance',
-    'leaveRequests',
-  ]);
+  // Today's KPIs/recent feed only need the current month's events (today is in
+  // it); the MonthNav below drives the leave panel, not attendance.
+  const thisMonth = useMemo(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; }, []);
+  const { employees, events, leave, loading, error, refresh } = useAttendData(
+    ['employees', 'attendance', 'leaveRequests'],
+    { month: thisMonth },
+  );
 
   const today = useMemo(() => todaySummary(events), [events]);
   const onLeave = useMemo(() => onLeaveTodayCount(leave), [leave]);

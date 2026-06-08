@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { getEmployees, updateName } from '@/lib/attenddesk';
+import { getEmployee, updateName } from '@/lib/attenddesk';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +13,13 @@ export async function GET(request) {
   if (!user.id) return NextResponse.json({ error: 'no_linked_attenddesk_user' }, { status: 400 });
 
   try {
-    const data = await getEmployees();
-    const me = (data.employees || []).find((e) => String(e.id) === String(user.id));
+    let me = null;
+    try {
+      const data = await getEmployee(String(user.id));
+      me = data.employee || null;
+    } catch (e) {
+      if (e.status !== 404) throw e; // 404 → treat as "no linked record"
+    }
     if (!me) return NextResponse.json({ profile: null });
     return NextResponse.json({
       profile: {

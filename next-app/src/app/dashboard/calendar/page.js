@@ -9,10 +9,10 @@ import { employeeCalendarMonth, eventsForUser, onlyEmployees } from '@/lib/atten
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export default function CalendarPage() {
-  const { employees, events, leave, loading, error, refresh } = useAttendData(['employees', 'attendance', 'leaveRequests']);
   const [selected, setSelected] = useState('');
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth()); // 0-11
+  const { employees, events, leave, loading, error, refresh } = useAttendData(['employees', 'attendance', 'leaveRequests'], { month: { y: year, m: month } });
   const [holidays, setHolidays] = useState([]);
 
   const staff = useMemo(() => onlyEmployees(employees), [employees]);

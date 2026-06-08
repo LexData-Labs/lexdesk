@@ -17,11 +17,11 @@ function HBar({ value, max, color }) {
 }
 
 export default function AnalyticsPage() {
-  const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
   const [ym, setYm] = useState(() => {
     const d = new Date();
     return { y: d.getFullYear(), m: d.getMonth() };
   });
+  const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance'], { month: ym });
 
   // Scope every metric to the selected month.
   const monthEvents = useMemo(
