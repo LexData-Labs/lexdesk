@@ -127,3 +127,7 @@ export const uploadPhoto = (email, dataUrl) =>
 // scope/rate-limit/upstream errors (403/429/502/503).
 export const verifyCredentials = (email, password) =>
   adk('/auth/verify-credentials', { method: 'POST', body: { email, password } });
+
+// Trigger Firebase's password-reset email (delivered by Firebase). 'auth:verify'.
+export const forgotPassword = (email) =>
+  adk('/auth/forgot-password', { method: 'POST', body: { email } });
