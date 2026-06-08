@@ -22,6 +22,7 @@ export async function GET(request) {
         name: me.name || '',
         email: me.email || user.email || '',
         role: me.role || '',
+        employeeId: me.employeeId || null,
         teamName: me.teamName || null,
         joiningDate: me.createdAt || null,
         photoUrl: me.photoUrl || null,

@@ -114,6 +114,7 @@ export default function EmployeeProfilePage() {
             <div className="flex-1 min-w-[240px]">
               <h2 className="text-xl font-semibold text-[var(--color-text-main)]">{employee.name}</h2>
               <p className="text-sm text-[var(--color-text-muted)]">{employee.email}</p>
+              {employee.employeeId && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">ID: {employee.employeeId}</p>}
               <p className="text-xs text-[var(--color-text-muted)] mt-1 capitalize">
                 {(employee.role || '').toLowerCase()}{employee.faceEnrolledAt ? ' · face enrolled' : ''}
               </p>

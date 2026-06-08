@@ -6,7 +6,6 @@ import PageHeader from '@/components/PageHeader';
 import Avatar from '@/components/Avatar';
 import KpiCard from '@/components/KpiCard';
 import MonthNav from '@/components/MonthNav';
-import Link from 'next/link';
 import { canonicalStats, inBdMonth } from '@/lib/attend';
 
 function initialsFromName(name) {
@@ -303,12 +302,9 @@ export default function MyProfilePage() {
                 <KpiCard key={c.label} label={c.label} value={c.value} color={c.color} icon={c.icon} />
               ))}
             </div>
-            <p className="text-sm text-[var(--color-text-muted)] mb-4">
+            <p className="text-sm text-[var(--color-text-muted)]">
               Last check-in: <span className="text-[var(--color-text-main)]">{fmtLastSeen(stats.lastCheckIn)}</span>
             </p>
-            <Link href="/dashboard/my-attendance" className="btn-primary py-2 px-4 text-sm self-start inline-block">
-              View my attendance
-            </Link>
           </>
         )}
       </div>

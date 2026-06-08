@@ -24,7 +24,7 @@ export default function EmployeesPage() {
 
   // Add-employee modal state.
   const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', email: '', teamId: '' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', employeeId: '', teamId: '' });
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const [created, setCreated] = useState(null); // { email, temporaryPassword }
@@ -79,6 +79,7 @@ export default function EmployeesPage() {
         body: JSON.stringify({
           name: addForm.name.trim(),
           email: addForm.email.trim(),
+          employeeId: addForm.employeeId.trim() || null,
           teamId: addForm.teamId || null,
         }),
       });
@@ -86,7 +87,7 @@ export default function EmployeesPage() {
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       const emp = json.employee || {};
       setCreated({ email: emp.email || addForm.email.trim(), temporaryPassword: emp.temporaryPassword || '' });
-      setAddForm({ name: '', email: '', teamId: '' });
+      setAddForm({ name: '', email: '', employeeId: '', teamId: '' });
       refresh();
     } catch (err) {
       setAddError(err.message);
@@ -145,6 +146,10 @@ export default function EmployeesPage() {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[var(--color-text-muted)]">Email</label>
                   <input type="email" value={addForm.email} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} className={inputCls} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
+                  <input type="text" maxLength={50} value={addForm.employeeId} onChange={(e) => setAddForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={inputCls} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[var(--color-text-muted)]">Team</label>

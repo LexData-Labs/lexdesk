@@ -127,6 +127,7 @@ export default function MyDashboardPage() {
             </div>
           </div>
           <div className="flex flex-col gap-2 text-sm">
+            <Row label="Employee ID" value={profile?.employeeId || '—'} />
             <Row label="Department" value={profile?.teamName || '—'} />
             <Row label="Branch" value={office?.name || '—'} />
             <Row label="Joining date" value={fmtDate(profile?.joiningDate)} />

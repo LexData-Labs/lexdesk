@@ -23,12 +23,13 @@ export async function POST(request) {
   const name = (body?.name || '').trim();
   const role = body?.role === 'ADMIN' ? 'ADMIN' : 'EMPLOYEE';
   const teamId = body?.teamId || null;
+  const employeeId = (body?.employeeId || '').trim() || null;
   if (!email || !name) {
     return NextResponse.json({ error: 'name and email are required' }, { status: 400 });
   }
 
   try {
-    const result = await createEmployee({ email, name, role, teamId });
+    const result = await createEmployee({ email, name, role, teamId, employeeId });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(
