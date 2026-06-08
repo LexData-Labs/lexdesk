@@ -36,15 +36,15 @@ export default function MonthCalendar({ cal, loading, compact = false }) {
   const isTodayCell = (day) =>
     today.getFullYear() === cal.year && today.getMonth() === cal.month && today.getDate() === day;
 
-  const gap = compact ? 'gap-1' : 'gap-1.5';
-  const cellMinH = compact ? 'min-h-[34px]' : 'min-h-[64px]';
+  const gap = compact ? 'gap-1' : 'gap-1 sm:gap-1.5';
+  const cellMinH = compact ? 'min-h-[34px]' : 'min-h-[44px] sm:min-h-[64px]';
   const cellPad = compact ? 'p-0.5' : 'p-1';
-  const dayText = compact ? 'text-[10px]' : 'text-xs';
-  const markText = compact ? 'text-[8px]' : 'text-[9px]';
+  const dayText = compact ? 'text-[10px]' : 'text-[9px] sm:text-xs';
+  const markText = compact ? 'text-[8px]' : 'text-[7px] sm:text-[9px]';
 
   return (
     <div className={`card flex flex-col ${compact ? 'gap-3' : 'gap-4'}`}>
-      <div className={`flex flex-wrap items-center ${compact ? 'gap-x-4 gap-y-1.5 text-[11px]' : 'gap-x-5 gap-y-2 text-sm'}`}>
+      <div className={`flex flex-wrap items-center ${compact ? 'gap-x-4 gap-y-1.5 text-[11px]' : 'gap-x-3 sm:gap-x-5 gap-y-2 text-[11px] sm:text-sm'}`}>
         {LEGEND.map((l) => (
           <span key={l.label} className="flex items-center gap-1.5">
             <span className="inline-block w-3 h-3 rounded-[4px]" style={{ background: l.color }} />

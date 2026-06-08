@@ -67,22 +67,22 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.15),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_50%)] bg-[var(--color-bg)]">
-      <nav className="px-16 py-6 flex justify-between items-center border-b border-[var(--color-card-border)] bg-[rgba(7,11,20,0.6)] backdrop-blur-md">
+      <nav className="px-4 sm:px-8 md:px-16 py-6 flex justify-between items-center border-b border-[var(--color-card-border)] bg-[rgba(7,11,20,0.6)] backdrop-blur-md">
         <div className="flex items-center gap-3 text-2xl font-bold text-[var(--color-text-main)]">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">L</div>
           LexDesk
         </div>
       </nav>
 
-      <div className="flex-1 flex items-center justify-between px-16 max-w-[1400px] mx-auto w-full gap-16">
-        <div className="flex-1 max-w-[600px]">
-          <h1 className="text-6xl font-extrabold leading-[1.1] mb-6 bg-gradient-to-br from-[var(--color-text-main)] to-[var(--color-text-muted)] text-transparent bg-clip-text">
+      <div className="flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-8 md:py-0">
+        <div className="flex-1 max-w-[600px] text-center md:text-left">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] mb-4 sm:mb-6 bg-gradient-to-br from-[var(--color-text-main)] to-[var(--color-text-muted)] text-transparent bg-clip-text">
             Next-Gen Attendance Management
           </h1>
-          <p className="text-xl text-[var(--color-text-muted)] mb-10 leading-relaxed">
+          <p className="text-base sm:text-xl text-[var(--color-text-muted)] mb-6 md:mb-10 leading-relaxed">
             A high-fidelity platform for employee attendance, leave, and team management with robust role-based access.
           </p>
-          <div className="flex gap-8 text-[0.95rem] text-[var(--color-text-muted)] font-medium">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-8 justify-center md:justify-start text-[0.95rem] text-[var(--color-text-muted)] font-medium">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
               Real-time Sync
@@ -98,7 +98,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="w-[450px] p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl">
+        <div className="w-full sm:max-w-[450px] p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">{mode === 'forgot' ? 'Reset password' : 'Sign In'}</h2>
             <p className="text-[var(--color-text-muted)] text-[0.95rem]">{mode === 'forgot' ? 'We’ll email you a reset link' : 'Access your workspace based on your role'}</p>

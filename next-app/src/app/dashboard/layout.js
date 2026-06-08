@@ -11,6 +11,7 @@ export default function DashboardLayout({ children }) {
   const [theme, setTheme] = useState('dark');
   const [photoUrl, setPhotoUrl] = useState(null);
   const [isTeamLeader, setIsTeamLeader] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -98,19 +99,51 @@ export default function DashboardLayout({ children }) {
     router.push('/');
   };
 
+  const homeHref = user.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';
+
   return (
-    <div className="grid grid-cols-[260px_1fr] h-screen bg-[var(--color-bg)]">
-        <aside className="bg-[var(--color-bg)] border-r border-[var(--color-card-border)] flex flex-col">
-          <Link href={user.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard'} className="p-6 flex items-center gap-3 text-xl font-bold text-[var(--color-text-main)] no-underline">
+    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr] lg:h-screen lg:overflow-hidden bg-[var(--color-bg)]">
+        {/* Mobile top bar */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between gap-3 px-4 h-14 bg-[var(--color-bg)]/95 backdrop-blur border-b border-[var(--color-card-border)]">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            className="w-9 h-9 -ml-1 rounded-lg flex items-center justify-center text-[var(--color-text-main)] hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <Link href={homeHref} className="flex items-center gap-2 text-lg font-bold text-[var(--color-text-main)] no-underline">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-xs text-white">L</div>
+            LexDesk
+          </Link>
+          <button
+            onClick={() => toggleTheme(theme === 'light' ? 'dark' : 'light')}
+            aria-label="Toggle theme"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            {theme === 'light'
+              ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>}
+          </button>
+        </div>
+
+        {/* Mobile overlay */}
+        {sidebarOpen && (
+          <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
+
+        <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[var(--color-bg)] border-r border-[var(--color-card-border)] flex flex-col transform transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <Link href={homeHref} onClick={() => setSidebarOpen(false)} className="p-6 flex items-center gap-3 text-xl font-bold text-[var(--color-text-main)] no-underline">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">L</div>
             LexDesk
           </Link>
 
-          <SidebarNav role={user.role} isTeamLeader={isTeamLeader} />
+          <SidebarNav role={user.role} isTeamLeader={isTeamLeader} onNavigate={() => setSidebarOpen(false)} />
 
           <div className="p-6 border-t border-[var(--color-card-border)] flex flex-col items-start">
             <Link
               href="/dashboard/profile"
+              onClick={() => setSidebarOpen(false)}
               className="flex items-center gap-3 w-full rounded-lg p-2 -m-2 no-underline transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
             >
               <Avatar
@@ -133,10 +166,10 @@ export default function DashboardLayout({ children }) {
           </div>
         </aside>
 
-        <main className="flex flex-col flex-1 bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.1),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.05),transparent_50%)] overflow-hidden relative">
-          
-          {/* Top Right Theme Toggle */}
-          <div className="absolute top-6 right-8 z-50">
+        <main className="flex flex-col flex-1 bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.1),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.05),transparent_50%)] lg:overflow-hidden relative">
+
+          {/* Top Right Theme Toggle (desktop) */}
+          <div className="hidden lg:block absolute top-6 right-8 z-50">
             <div className="bg-white dark:bg-[#1a1f2e] p-1 rounded-full flex items-center shadow-[0_2px_10px_rgba(0,0,0,0.08)] border border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => toggleTheme('light')}
@@ -161,7 +194,7 @@ export default function DashboardLayout({ children }) {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto p-8 pt-20">
+          <div className="flex-1 lg:overflow-auto p-4 lg:p-8 lg:pt-20">
             {children}
           </div>
         </main>

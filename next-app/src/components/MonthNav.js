@@ -9,12 +9,12 @@ export default function MonthNav({ value, onChange }) {
     onChange({ y: d.getFullYear(), m: d.getMonth() });
   };
   return (
-    <div className="flex items-center gap-2">
-      <button type="button" onClick={() => step(-1)} className="btn-outline py-2 px-3 text-sm" aria-label="Previous month">←</button>
-      <span className="text-sm font-semibold text-[var(--color-text-main)] min-w-[140px] text-center">
+    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+      <button type="button" onClick={() => step(-1)} className="btn-outline py-1.5 px-2.5 text-xs sm:text-sm" aria-label="Previous month">←</button>
+      <span className="text-xs sm:text-sm font-semibold text-[var(--color-text-main)] min-w-[110px] sm:min-w-[140px] text-center">
         {MONTHS[value.m]} {value.y}
       </span>
-      <button type="button" onClick={() => step(1)} className="btn-outline py-2 px-3 text-sm" aria-label="Next month">→</button>
+      <button type="button" onClick={() => step(1)} className="btn-outline py-1.5 px-2.5 text-xs sm:text-sm" aria-label="Next month">→</button>
     </div>
   );
 }

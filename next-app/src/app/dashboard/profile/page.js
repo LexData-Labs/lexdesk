@@ -220,7 +220,7 @@ export default function MyProfilePage() {
       <div className="relative rounded-2xl overflow-hidden mb-2 shadow-sm border border-[var(--color-card-border)]">
         <div className="h-32 bg-gradient-to-r from-[rgba(139,92,246,0.15)] to-[rgba(59,130,246,0.15)] dark:from-[rgba(139,92,246,0.2)] dark:to-[rgba(59,130,246,0.2)]"></div>
 
-        <div className="bg-[var(--color-card-bg)] px-8 pb-8 pt-0 flex flex-col sm:flex-row items-center sm:items-end gap-5">
+        <div className="bg-[var(--color-card-bg)] px-4 sm:px-8 pb-8 pt-0 flex flex-col sm:flex-row items-center sm:items-end gap-5">
           <div className="relative -mt-12 z-10">
             <Avatar
               image={editing ? (formImage || photo) : photo}

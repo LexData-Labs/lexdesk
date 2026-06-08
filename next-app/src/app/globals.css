@@ -24,7 +24,7 @@
   }
   
   body {
-    @apply bg-[var(--color-bg)] text-[var(--color-text-main)] min-h-screen overflow-hidden;
+    @apply bg-[var(--color-bg)] text-[var(--color-text-main)] min-h-screen;
     font-family: 'Inter', sans-serif;
   }
 }
@@ -50,7 +50,7 @@
   }
 
   .nav-item {
-    @apply flex items-center gap-3 px-4 py-3 text-[var(--color-text-muted)] rounded-[8px] cursor-pointer transition-all duration-200 font-medium text-[0.9rem] hover:text-[var(--color-text-main)] hover:bg-black/5 dark:hover:bg-[rgba(255,255,255,0.03)];
+    @apply flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-[var(--color-text-muted)] rounded-[8px] cursor-pointer transition-all duration-200 font-medium text-[0.85rem] sm:text-[0.9rem] hover:text-[var(--color-text-main)] hover:bg-black/5 dark:hover:bg-[rgba(255,255,255,0.03)];
   }
   
   .nav-item.active {
