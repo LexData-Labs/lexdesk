@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
+
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -186,6 +188,15 @@ export default function Home() {
                 </button>
               </div>
             </form>
+          )}
+
+          {APP_DOWNLOAD_URL && mode === 'signin' && (
+            <div className="mt-6 pt-5 border-t border-[var(--color-card-border)] text-center text-sm text-[var(--color-text-muted)]">
+              Use the mobile app to check in ·{' '}
+              <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" download className="text-[var(--color-purple)] hover:underline font-medium">
+                Download the app
+              </a>
+            </div>
           )}
         </div>
       </div>
