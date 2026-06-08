@@ -29,7 +29,7 @@ function timeFmt(ms) {
 
 function Row({ label, value }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[var(--color-card-border)] py-1.5 last:border-0">
+    <div className="flex items-center justify-between gap-3 border-b border-[var(--color-card-border)] py-1 last:border-0">
       <span className="text-[var(--color-text-muted)]">{label}</span>
       <span className="text-[var(--color-text-main)] truncate max-w-[60%] text-right">{value}</span>
     </div>
@@ -106,7 +106,7 @@ export default function MyDashboardPage() {
   }, [leave, holidays, ym]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageHeader
         title="My Dashboard"
         subtitle="Your attendance & leave at a glance"
@@ -120,8 +120,8 @@ export default function MyDashboardPage() {
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="card flex flex-col gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="card flex flex-col gap-3">
           <div className="flex items-center gap-4">
             <Avatar image={profile?.photoUrl} initials={initials(profile?.name)} alt={profile?.name || ''} className="w-16 h-16 text-lg shrink-0" />
             <div className="min-w-0">
@@ -173,8 +173,8 @@ export default function MyDashboardPage() {
       </div>
 
       <div>
-        <h2 className="text-base font-semibold text-[var(--color-text-main)] mb-3">Attendance Overview</h2>
-        <MonthCalendar cal={cal} loading={loading} />
+        <h2 className="text-base font-semibold text-[var(--color-text-main)] mb-2">Attendance Overview</h2>
+        <MonthCalendar cal={cal} loading={loading} compact />
       </div>
     </div>
   );

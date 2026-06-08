@@ -22,9 +22,10 @@ const LEGEND = [
   { key: 'holiday', label: 'Holiday', color: '#EC4899' },
 ];
 
-// Renders a compact, color-coded month grid from an `employeeCalendarMonth`
-// result ({ year, month, daysInMonth, firstWeekday, days, counts }).
-export default function MonthCalendar({ cal, loading }) {
+// Renders a color-coded month grid from an `employeeCalendarMonth` result
+// ({ year, month, daysInMonth, firstWeekday, days, counts }). Pass `compact`
+// for a shorter grid (e.g. embedded on the employee dashboard).
+export default function MonthCalendar({ cal, loading, compact = false }) {
   if (!cal) return null;
 
   const cells = [];
@@ -35,9 +36,15 @@ export default function MonthCalendar({ cal, loading }) {
   const isTodayCell = (day) =>
     today.getFullYear() === cal.year && today.getMonth() === cal.month && today.getDate() === day;
 
+  const gap = compact ? 'gap-1' : 'gap-1.5';
+  const cellMinH = compact ? 'min-h-[34px]' : 'min-h-[64px]';
+  const cellPad = compact ? 'p-0.5' : 'p-1';
+  const dayText = compact ? 'text-[10px]' : 'text-xs';
+  const markText = compact ? 'text-[8px]' : 'text-[9px]';
+
   return (
-    <div className="card flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+    <div className={`card flex flex-col ${compact ? 'gap-3' : 'gap-4'}`}>
+      <div className={`flex flex-wrap items-center ${compact ? 'gap-x-4 gap-y-1.5 text-[11px]' : 'gap-x-5 gap-y-2 text-sm'}`}>
         {LEGEND.map((l) => (
           <span key={l.label} className="flex items-center gap-1.5">
             <span className="inline-block w-3 h-3 rounded-[4px]" style={{ background: l.color }} />
@@ -47,12 +54,12 @@ export default function MonthCalendar({ cal, loading }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className={`grid grid-cols-7 ${gap}`}>
         {WEEKDAYS.map((d) => (
-          <div key={d} className="text-xs text-[var(--color-text-muted)] text-center font-semibold py-1">{d}</div>
+          <div key={d} className={`${compact ? 'text-[10px] py-0.5' : 'text-xs py-1'} text-[var(--color-text-muted)] text-center font-semibold`}>{d}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className={`grid grid-cols-7 ${gap}`}>
         {cells.map((day, i) => {
           if (!day) return <div key={i} />;
           const cell = cal.days[day];
@@ -63,11 +70,11 @@ export default function MonthCalendar({ cal, loading }) {
             <div
               key={i}
               title={tip}
-              className="min-h-[64px] rounded-lg flex flex-col items-center justify-center gap-0.5 p-1"
+              className={`${cellMinH} rounded-lg flex flex-col items-center justify-center gap-0.5 ${cellPad}`}
               style={{ background: st.bg, border }}
             >
-              <span className="text-xs font-semibold text-[var(--color-text-main)]">{day}</span>
-              {st.mark && <span className="text-[9px] font-bold leading-none" style={{ color: st.color }}>{st.mark}</span>}
+              <span className={`${dayText} font-semibold text-[var(--color-text-main)]`}>{day}</span>
+              {st.mark && <span className={`${markText} font-bold leading-none`} style={{ color: st.color }}>{st.mark}</span>}
             </div>
           );
         })}
