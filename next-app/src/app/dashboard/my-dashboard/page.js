@@ -42,6 +42,7 @@ export default function MyDashboardPage() {
   const [leave, setLeave] = useState([]);
   const [holidays, setHolidays] = useState([]);
   const [office, setOffice] = useState(null);
+  const [assets, setAssets] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -52,12 +53,13 @@ export default function MyDashboardPage() {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [pRes, aRes, lRes, hRes, oRes] = await Promise.all([
+      const [pRes, aRes, lRes, hRes, oRes, asRes] = await Promise.all([
         fetch('/api/me/profile', { headers, cache: 'no-store' }),
         fetch('/api/me/attendance?limit=1000', { headers, cache: 'no-store' }),
         fetch('/api/me/leave', { headers, cache: 'no-store' }),
         fetch('/api/holidays', { headers, cache: 'no-store' }),
         fetch('/api/me/office', { headers, cache: 'no-store' }),
+        fetch('/api/me/asset', { headers, cache: 'no-store' }),
       ]);
       const aJson = await aRes.json();
       if (!aRes.ok) throw new Error(aJson.error || `HTTP ${aRes.status}`);
@@ -66,6 +68,7 @@ export default function MyDashboardPage() {
       const lJson = await lRes.json(); if (lRes.ok) setLeave(lJson.requests || []);
       const hJson = await hRes.json(); if (hRes.ok) setHolidays(hJson.holidays || []);
       const oJson = await oRes.json(); if (oRes.ok) setOffice(oJson || null);
+      const asJson = await asRes.json(); if (asRes.ok) setAssets(asJson.requests || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -142,7 +145,7 @@ export default function MyDashboardPage() {
             <KpiCard label="Visit Taken" value={0} color="blue" />
             <KpiCard label="Missed Attendance" value={loading ? '…' : cal.counts.missed} color="red" />
             <KpiCard label="Pending Approval" value={loading ? '…' : leaveStats.pending} color="yellow" />
-            <KpiCard label="Asset Assigned" value={0} color="green" />
+            <KpiCard label="Asset Assigned" value={loading ? '…' : (assets || []).filter((a) => a.status === 'approved').length} color="green" />
           </div>
         </div>
       </div>
