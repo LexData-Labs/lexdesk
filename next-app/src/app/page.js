@@ -41,8 +41,8 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.15),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_50%)] bg-[var(--color-bg)]">
       <nav className="px-16 py-6 flex justify-between items-center border-b border-[var(--color-card-border)] bg-[rgba(7,11,20,0.6)] backdrop-blur-md">
         <div className="flex items-center gap-3 text-2xl font-bold text-[var(--color-text-main)]">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">A</div>
-          Attendance Pro
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">L</div>
+          LexDesk
         </div>
       </nav>
 
@@ -52,7 +52,7 @@ export default function Home() {
             Next-Gen Attendance Management
           </h1>
           <p className="text-xl text-[var(--color-text-muted)] mb-10 leading-relaxed">
-            Experience a stunning, high-fidelity platform designed to streamline employee tracking, dynamic reporting, and robust role-based access control. Powered by AI and seamless Excel integration.
+            A high-fidelity platform for employee attendance, leave, and team management with robust role-based access.
           </p>
           <div className="flex gap-8 text-[0.95rem] text-[var(--color-text-muted)] font-medium">
             <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export default function Home() {
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
+                placeholder="you@company.com"
                 required
                 className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(139,92,246,0.2)] transition-all"
               />

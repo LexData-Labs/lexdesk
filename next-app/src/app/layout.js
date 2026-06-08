@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Attendance Pro',
-  description: 'Next-Gen Attendance Management Platform with Role-Based Access Control',
+  title: 'LexDesk',
+  description: 'Attendance, leave, and team management with role-based access',
 };
 
 export default function RootLayout({ children }) {
