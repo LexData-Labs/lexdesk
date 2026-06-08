@@ -106,6 +106,9 @@ export const createEmployee = (body) => adk('/employees', { method: 'POST', body
 // Assign/clear an employee's team. 'employees:write'.
 export const setEmployeeTeam = (uid, teamId) =>
   adk(`/employees/${encodeURIComponent(uid)}`, { method: 'PATCH', body: { teamId } });
+// Delete an employee account (Firebase Auth login + user doc). 'employees:write'.
+export const deleteEmployee = (uid) =>
+  adk(`/employees/${encodeURIComponent(uid)}`, { method: 'DELETE' });
 
 // Change a user's password (verifies their current password first).
 // Requires the 'auth:verify' scope.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import EmployeeAvatar from '@/components/EmployeeAvatar';
@@ -10,12 +10,19 @@ import { eventsForUser, perEmployeeStats, fmtTime, isLateCheckIn } from '@/lib/a
 
 export default function EmployeeProfilePage() {
   const { id } = useParams();
+  const router = useRouter();
   const employeeId = decodeURIComponent(id);
   const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
   const [avatar, setAvatar] = useState(null);
   const [teams, setTeams] = useState([]);
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamMsg, setTeamMsg] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    try { setCurrentUserId(JSON.parse(localStorage.getItem('user') || 'null')?.id ?? null); } catch { setCurrentUserId(null); }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') setAvatar(localStorage.getItem('avatar-' + employeeId));
@@ -62,6 +69,24 @@ export default function EmployeeProfilePage() {
     setAvatar(null);
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete ${employee?.name || 'this employee'}? This permanently removes their sign-in account. Past attendance/leave/asset records are kept.`)) return;
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/employees/${encodeURIComponent(employeeId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      router.push('/dashboard/employees');
+    } catch (e) {
+      alert(e.message);
+      setDeleting(false);
+    }
+  };
+
   const saveTeam = async (teamId) => {
     setSavingTeam(true);
     setTeamMsg('');
@@ -93,6 +118,11 @@ export default function EmployeeProfilePage() {
           <div className="flex items-center gap-3">
             <Link href="/dashboard/employees" className="btn-outline py-1.5 px-3 text-sm">Back</Link>
             <button onClick={refresh} className="btn-outline py-1.5 px-3 text-sm">Refresh</button>
+            {employee && String(employeeId) !== String(currentUserId) && (
+              <button onClick={handleDelete} disabled={deleting} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-red)] border-[rgba(239,68,68,0.3)] hover:bg-[rgba(239,68,68,0.05)] disabled:opacity-50">
+                {deleting ? 'Deleting…' : 'Delete employee'}
+              </button>
+            )}
           </div>
         }
       />

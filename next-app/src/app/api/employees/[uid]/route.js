@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { setEmployeeTeam } from '@/lib/attenddesk';
+import { setEmployeeTeam, deleteEmployee } from '@/lib/attenddesk';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +23,31 @@ export async function PATCH(request, ctx) {
 
   try {
     const result = await setEmployeeTeam(uid, teamId);
+    return NextResponse.json(result);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err.message, upstream: err.body ?? null },
+      { status: err.status || 502 },
+    );
+  }
+}
+
+// DELETE: admins only — permanently remove an employee's account. Blocks
+// self-deletion (the AttendDesk external delete can't see the real actor).
+export async function DELETE(request, ctx) {
+  const user = getUserFromRequest(request);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role !== 'admin' && user.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const { uid } = await ctx.params;
+  if (String(uid) === String(user.id)) {
+    return NextResponse.json({ error: 'You can’t delete your own account.' }, { status: 403 });
+  }
+
+  try {
+    const result = await deleteEmployee(uid);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
