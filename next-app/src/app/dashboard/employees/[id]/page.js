@@ -19,6 +19,11 @@ export default function EmployeeProfilePage() {
   const [teamMsg, setTeamMsg] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState(null);
+  const [resetError, setResetError] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     try { setCurrentUserId(JSON.parse(localStorage.getItem('user') || 'null')?.id ?? null); } catch { setCurrentUserId(null); }
@@ -87,6 +92,35 @@ export default function EmployeeProfilePage() {
     }
   };
 
+  const confirmReset = async () => {
+    setResetting(true);
+    setResetError('');
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/employees/${encodeURIComponent(employeeId)}/reset-password`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setResetResult({ email: json.email, temporaryPassword: json.temporaryPassword });
+    } catch (e) {
+      setResetError(e.message);
+    } finally {
+      setResetting(false);
+    }
+  };
+  const copyResetPw = async () => {
+    try {
+      await navigator.clipboard.writeText(resetResult.temporaryPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — user can select manually */
+    }
+  };
+  const closeReset = () => { setResetOpen(false); setResetResult(null); setResetError(''); setCopied(false); };
+
   const saveTeam = async (teamId) => {
     setSavingTeam(true);
     setTeamMsg('');
@@ -118,6 +152,11 @@ export default function EmployeeProfilePage() {
           <div className="flex items-center gap-3">
             <Link href="/dashboard/employees" className="btn-outline py-1.5 px-3 text-sm">Back</Link>
             <button onClick={refresh} className="btn-outline py-1.5 px-3 text-sm">Refresh</button>
+            {employee && String(employee.role || '').toUpperCase() === 'EMPLOYEE' && (
+              <button onClick={() => { setResetResult(null); setResetError(''); setResetOpen(true); }} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-purple)] border-[rgba(139,92,246,0.3)] hover:bg-[rgba(139,92,246,0.05)]">
+                Reset password
+              </button>
+            )}
             {employee && String(employeeId) !== String(currentUserId) && (
               <button onClick={handleDelete} disabled={deleting} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-red)] border-[rgba(239,68,68,0.3)] hover:bg-[rgba(239,68,68,0.05)] disabled:opacity-50">
                 {deleting ? 'Deleting…' : 'Delete employee'}
@@ -126,6 +165,42 @@ export default function EmployeeProfilePage() {
           </div>
         }
       />
+
+      {resetOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeReset}>
+          <div className="card w-full max-w-sm sm:max-w-md flex flex-col gap-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {resetResult ? (
+              <>
+                <h3 className="font-semibold text-lg text-[var(--color-text-main)]">Password reset</h3>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  Share this temporary password with <span className="text-[var(--color-text-main)]">{resetResult.email}</span>. They should change it after signing in (My Profile → Change Password).
+                </p>
+                <div className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-3 flex items-center justify-between gap-3">
+                  <code className="font-mono text-sm text-[var(--color-text-main)] break-all">{resetResult.temporaryPassword}</code>
+                  <button onClick={copyResetPw} className="btn-outline py-1 px-2.5 text-xs shrink-0">{copied ? 'Copied' : 'Copy'}</button>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button onClick={closeReset} className="btn-primary py-2 px-5 text-sm">Done</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="font-semibold text-lg text-[var(--color-text-main)]">Reset password?</h3>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  This generates a new temporary password for <span className="text-[var(--color-text-main)]">{employee?.name || 'this employee'}</span> and signs them out of all sessions.
+                </p>
+                {resetError && <div className="text-sm text-[var(--color-red)]">{resetError}</div>}
+                <div className="flex gap-2 justify-end pt-1">
+                  <button onClick={closeReset} disabled={resetting} className="btn-outline py-2 px-4 text-sm">Cancel</button>
+                  <button onClick={confirmReset} disabled={resetting} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">
+                    {resetting ? 'Resetting…' : 'Reset password'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
       {loading && !employee && <div className="card text-[var(--color-text-muted)] text-sm">Loading…</div>}

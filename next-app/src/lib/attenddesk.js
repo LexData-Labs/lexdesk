@@ -148,9 +148,11 @@ export const resolveOrg = (email) => adk('/organizations/resolve', { query: { em
 // always reflects the current set (incl. a just-created org on any instance).
 export const listOrganizations = () => adk('/organizations');
 
-// Reset an org ADMIN's password (scoped to `orgId` via X-Org-Id), returning a
-// fresh temp password. Uses 'orgs:admin'. For the LexDesk system admin console.
-export const adminResetOrgAdmin = (email, orgId) =>
+// Reset a user's password (scoped to `orgId` via X-Org-Id), returning a fresh
+// temp password. Uses 'orgs:admin'. AttendDesk resets any user in that org; the
+// LexDesk caller enforces who-can-reset-whom (system admin → org admins; org
+// admin → employees). Used by the system console + per-employee reset.
+export const resetUserPassword = (email, orgId) =>
   adk('/auth/admin-reset-password', { method: 'POST', body: { email }, orgId });
 
 // Verify an employee's email + password against AttendDesk (partner SSO), scoped

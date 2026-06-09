@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { adminResetOrgAdmin } from '@/lib/attenddesk';
+import { resetUserPassword } from '@/lib/attenddesk';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,7 @@ export async function POST(request) {
   }
 
   try {
-    const result = await adminResetOrgAdmin(email, orgId);
+    const result = await resetUserPassword(email, orgId);
     return NextResponse.json(result);
   } catch (err) {
     // 404 from upstream → the email isn't an admin of that org.
