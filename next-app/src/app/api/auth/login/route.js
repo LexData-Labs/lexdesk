@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { signToken, publicUser } from '@/lib/auth';
 import { resolveOrg, verifyCredentials } from '@/lib/attenddesk';
 
@@ -26,6 +27,35 @@ export async function POST(request) {
   const { email, password } = body || {};
   if (!email || !password) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
+  }
+
+  // 0) LexDesk system admin — a platform-level super admin (org-admin password
+  //    reset console), checked against env-configured creds BEFORE org login.
+  //    Inert unless both env vars are set. Bypasses AttendDesk entirely. The
+  //    password is compared in constant time; it lives in env at the same trust
+  //    level as JWT_SECRET / ATTENDDESK_API_KEY in this file.
+  const sysEmail = process.env.LEXDESK_SYSADMIN_EMAIL;
+  const sysPassword = process.env.LEXDESK_SYSADMIN_PASSWORD;
+  if (sysEmail && sysPassword && String(email).toLowerCase() === sysEmail.toLowerCase()) {
+    const a = Buffer.from(String(password));
+    const b = Buffer.from(String(sysPassword));
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    const sysUser = {
+      id: 'lexsysadmin',
+      email: sysEmail,
+      name: 'LexDesk System Admin',
+      role: 'lexsysadmin',
+      avatar: 'LS',
+      employeeId: null,
+      orgId: null,
+    };
+    try {
+      const token = signToken(sysUser);
+      return NextResponse.json({ token, user: publicUser(sysUser) });
+    } catch (err) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
   }
 
   // 1) Resolve which org this email belongs to (the provisioning key can target

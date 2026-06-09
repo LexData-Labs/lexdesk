@@ -143,6 +143,16 @@ export const createOrganization = (body) => adk('/organizations', { method: 'POS
 // at login (before we know which org to target) and throws 404 if unknown.
 export const resolveOrg = (email) => adk('/organizations/resolve', { query: { email } });
 
+// List LexDesk-provisioned orgs + their admins (cross-org, 'orgs:admin'). For
+// the system admin console. No X-Org-Id (spans all orgs); uncached so Refresh
+// always reflects the current set (incl. a just-created org on any instance).
+export const listOrganizations = () => adk('/organizations');
+
+// Reset an org ADMIN's password (scoped to `orgId` via X-Org-Id), returning a
+// fresh temp password. Uses 'orgs:admin'. For the LexDesk system admin console.
+export const adminResetOrgAdmin = (email, orgId) =>
+  adk('/auth/admin-reset-password', { method: 'POST', body: { email }, orgId });
+
 // Verify an employee's email + password against AttendDesk (partner SSO), scoped
 // to `orgId` (forwarded as X-Org-Id). Requires the 'auth:verify' scope. Resolves
 // to { valid:false } for bad credentials (HTTP 200) and throws (with .status)

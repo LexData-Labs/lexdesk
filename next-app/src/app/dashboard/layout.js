@@ -32,6 +32,10 @@ export default function DashboardLayout({ children }) {
           router.replace('/dashboard/my-dashboard');
         }
       }
+      // LexDesk system admin is locked to the system console.
+      if (parsed.role === 'lexsysadmin' && window.location.pathname !== '/dashboard/system') {
+        router.replace('/dashboard/system');
+      }
     } catch {
       router.push('/');
     }
@@ -51,6 +55,9 @@ export default function DashboardLayout({ children }) {
     const loadPhoto = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
+      let role;
+      try { role = JSON.parse(localStorage.getItem('user') || 'null')?.role; } catch { role = null; }
+      if (role === 'lexsysadmin') return; // no org profile for the platform admin
       fetch('/api/me/profile', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => { if (d?.profile) setPhotoUrl(d.profile.photoUrl || null); })
@@ -99,7 +106,12 @@ export default function DashboardLayout({ children }) {
     router.push('/');
   };
 
-  const homeHref = user.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';
+  const homeHref =
+    user.role === 'lexsysadmin'
+      ? '/dashboard/system'
+      : user.role === 'employee'
+        ? '/dashboard/my-dashboard'
+        : '/dashboard';
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr] lg:h-screen lg:overflow-hidden bg-[var(--color-bg)]">
