@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { signToken, publicUser } from '@/lib/auth';
-import { verifyCredentials } from '@/lib/attenddesk';
+import { resolveOrg, verifyCredentials } from '@/lib/attenddesk';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,12 +28,39 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
   }
 
-  // Credentials are verified by AttendDesk's external API (server-side, with the
-  // adk_live_ key). next-app no longer checks passwords locally — it only mints
-  // the session JWT once AttendDesk confirms the login.
+  // 1) Resolve which org this email belongs to (the provisioning key can target
+  //    any org, but verify-credentials must be scoped to the right one).
+  let orgId;
+  try {
+    const resolved = await resolveOrg(email);
+    orgId = resolved?.orgId;
+  } catch (err) {
+    if (err?.status === 404) {
+      return NextResponse.json(
+        { error: 'No organization is registered for this email. Create an organization or ask your admin to add you.' },
+        { status: 401 },
+      );
+    }
+    const status =
+      Number.isInteger(err?.status) && err.status >= 400 && err.status < 600 ? err.status : 502;
+    return NextResponse.json(
+      { error: 'Authentication service unavailable', detail: err?.message || 'resolve_error' },
+      { status },
+    );
+  }
+  if (!orgId) {
+    return NextResponse.json(
+      { error: 'No organization is registered for this email.' },
+      { status: 401 },
+    );
+  }
+
+  // 2) Credentials are verified by AttendDesk's external API (server-side, with
+  //    the adk_live_ key), scoped to the resolved org. next-app no longer checks
+  //    passwords locally — it only mints the session JWT once AttendDesk confirms.
   let result;
   try {
-    result = await verifyCredentials(email, password);
+    result = await verifyCredentials(email, password, orgId);
   } catch (err) {
     // Non-2xx from AttendDesk: missing 'auth:verify' scope (403), rate-limited
     // (429), not-configured/upstream (502/503). Surface as a service error so
@@ -59,6 +86,7 @@ export async function POST(request) {
     role: ROLE_MAP[ad.role] || 'employee',
     avatar: initialsFromName(name),
     employeeId: null,
+    orgId,
   };
 
   try {

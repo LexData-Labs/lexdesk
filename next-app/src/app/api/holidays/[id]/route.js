@@ -14,7 +14,7 @@ export async function DELETE(request, ctx) {
 
   const { id } = await ctx.params;
   try {
-    const result = await deleteHoliday(id);
+    const result = await deleteHoliday(id, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(

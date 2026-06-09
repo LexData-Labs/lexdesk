@@ -10,7 +10,7 @@ export async function GET(request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!user.id) return NextResponse.json({ error: 'no_linked_attenddesk_user' }, { status: 400 });
   try {
-    const data = await getAssetRequests();
+    const data = await getAssetRequests({}, user.orgId);
     const mine = (data.requests || []).filter((r) => String(r.uid) === String(user.id));
     return NextResponse.json({ requests: mine });
   } catch (err) {
@@ -45,10 +45,10 @@ export async function POST(request) {
   // must also approve. Resolved here so the dual-approval gate is self-contained.
   let requiresLead = false;
   try {
-    const emp = await getEmployee(String(user.id));
+    const emp = await getEmployee(String(user.id), user.orgId);
     const teamId = emp?.employee?.teamId || null;
     if (teamId) {
-      const teamsData = await getTeams();
+      const teamsData = await getTeams(user.orgId);
       const team = (teamsData.teams || []).find((t) => String(t.id) === String(teamId));
       if (team && team.leaderUid && String(team.leaderUid) !== String(user.id)) requiresLead = true;
     }
@@ -65,7 +65,7 @@ export async function POST(request) {
       fromDay,
       toDay,
       requiresLead,
-    });
+    }, user.orgId);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });

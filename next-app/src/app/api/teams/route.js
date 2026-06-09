@@ -11,7 +11,7 @@ export async function GET(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const data = await getTeams();
+    const data = await getTeams(user.orgId);
     return NextResponse.json({ teams: data.teams || [] });
   } catch (err) {
     return NextResponse.json(
@@ -38,7 +38,7 @@ export async function POST(request) {
   if (!name) return NextResponse.json({ error: 'name is required' }, { status: 400 });
 
   try {
-    const result = await createTeam({ name, leaderUid });
+    const result = await createTeam({ name, leaderUid }, user.orgId);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

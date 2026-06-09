@@ -25,7 +25,7 @@ export async function POST(request, ctx) {
   }
 
   try {
-    const data = await decideLeave(id, decision, note || undefined);
+    const data = await decideLeave(id, decision, note || undefined, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(

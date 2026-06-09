@@ -11,7 +11,7 @@ export async function GET(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const data = await getHolidays();
+    const data = await getHolidays(user.orgId);
     return NextResponse.json({ holidays: data.holidays || [] });
   } catch (err) {
     return NextResponse.json(
@@ -44,7 +44,7 @@ export async function POST(request) {
   }
 
   try {
-    const result = await createHoliday({ fromDay, toDay, name });
+    const result = await createHoliday({ fromDay, toDay, name }, user.orgId);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

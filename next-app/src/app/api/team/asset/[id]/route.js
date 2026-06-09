@@ -25,21 +25,21 @@ export async function POST(request, ctx) {
   }
 
   try {
-    const data = await getAssetRequests();
+    const data = await getAssetRequests({}, user.orgId);
     const req = (data.requests || []).find((r) => String(r.id) === String(id));
     if (!req) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    const empData = await getEmployees();
+    const empData = await getEmployees(user.orgId);
     const emp = (empData.employees || []).find((e) => String(e.id) === String(req.uid));
     const teamId = emp?.teamId || null;
 
-    const teamsData = await getTeams();
+    const teamsData = await getTeams(user.orgId);
     const team = (teamsData.teams || []).find((t) => String(t.id) === String(teamId));
     if (!team || String(team.leaderUid) !== String(user.id)) {
       return NextResponse.json({ error: 'Forbidden — not this employee’s team leader' }, { status: 403 });
     }
 
-    const result = await decideAssetRequest(id, 'lead', decision, note || undefined);
+    const result = await decideAssetRequest(id, 'lead', decision, note || undefined, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });

@@ -15,7 +15,7 @@ export async function GET(request) {
   const status = sp.get('status') || undefined;
 
   try {
-    const teamsData = await getTeams();
+    const teamsData = await getTeams(user.orgId);
     const myTeamIds = new Set(
       (teamsData.teams || [])
         .filter((t) => String(t.leaderUid) === String(user.id))
@@ -24,13 +24,13 @@ export async function GET(request) {
     if (myTeamIds.size === 0) {
       return NextResponse.json({ isLeader: false, requests: [] });
     }
-    const empData = await getEmployees();
+    const empData = await getEmployees(user.orgId);
     const memberUids = new Set(
       (empData.employees || [])
         .filter((e) => e.teamId && myTeamIds.has(e.teamId))
         .map((e) => String(e.id)),
     );
-    const data = await getAssetRequests(status ? { status } : {});
+    const data = await getAssetRequests(status ? { status } : {}, user.orgId);
     const requests = (data.requests || []).filter((r) => memberUids.has(String(r.uid)));
     return NextResponse.json({ isLeader: true, requests });
   } catch (err) {

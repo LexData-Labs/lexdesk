@@ -133,7 +133,7 @@ export async function verifyPassword(plain, hash) {
 
 export function signToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name, avatar: user.avatar, employeeId: user.employeeId ?? null },
+    { id: user.id, email: user.email, role: user.role, name: user.name, avatar: user.avatar, employeeId: user.employeeId ?? null, orgId: user.orgId ?? null },
     getSecret(),
     { expiresIn: process.env.JWT_EXPIRES || '8h' }
   );
@@ -154,5 +154,5 @@ export function getUserFromRequest(request) {
 }
 
 export function publicUser(user) {
-  return { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar, employeeId: user.employeeId ?? null };
+  return { id: user.id, name: user.name, email: user.email, role: user.role, avatar: user.avatar, employeeId: user.employeeId ?? null, orgId: user.orgId ?? null };
 }

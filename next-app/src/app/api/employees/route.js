@@ -29,7 +29,7 @@ export async function POST(request) {
   }
 
   try {
-    const result = await createEmployee({ email, name, role, teamId, employeeId });
+    const result = await createEmployee({ email, name, role, teamId, employeeId }, user.orgId);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

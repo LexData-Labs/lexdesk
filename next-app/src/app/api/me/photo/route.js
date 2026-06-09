@@ -23,7 +23,7 @@ export async function POST(request) {
   }
 
   try {
-    const data = await uploadPhoto(user.email, dataUrl);
+    const data = await uploadPhoto(user.email, dataUrl, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });

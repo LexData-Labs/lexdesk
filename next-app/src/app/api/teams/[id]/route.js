@@ -24,7 +24,7 @@ export async function PATCH(request, ctx) {
   if (body && 'leaderUid' in body) patch.leaderUid = body.leaderUid || null;
 
   try {
-    const result = await updateTeam(id, patch);
+    const result = await updateTeam(id, patch, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
@@ -42,7 +42,7 @@ export async function DELETE(request, ctx) {
 
   const { id } = await ctx.params;
   try {
-    const result = await deleteTeam(id);
+    const result = await deleteTeam(id, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(

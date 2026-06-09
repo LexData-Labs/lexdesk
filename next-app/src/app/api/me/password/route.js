@@ -26,7 +26,7 @@ export async function POST(request) {
   }
 
   try {
-    const data = await changePassword(user.email, currentPassword, newPassword);
+    const data = await changePassword(user.email, currentPassword, newPassword, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     // Map the upstream's invalid-current-password (401) to a clear message.

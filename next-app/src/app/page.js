@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
 
@@ -157,6 +158,11 @@ export default function Home() {
             >
               {loading ? 'Authenticating...' : 'Access Dashboard'}
             </button>
+
+            <div className="mt-5 text-center text-sm text-[var(--color-text-muted)]">
+              New here?{' '}
+              <Link href="/signup" className="text-[var(--color-purple)] hover:underline font-medium">Create an organization</Link>
+            </div>
           </form>
 
           {mode === 'forgot' && (

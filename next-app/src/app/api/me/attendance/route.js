@@ -14,7 +14,7 @@ export async function GET(request) {
 
   const sp = new URL(request.url).searchParams;
   try {
-    const data = await getAttendance({ userId: String(user.id), limit: sp.get('limit') ?? 200 });
+    const data = await getAttendance({ userId: String(user.id), limit: sp.get('limit') ?? 200 }, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(

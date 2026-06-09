@@ -14,7 +14,7 @@ export async function GET(request) {
   const sp = new URL(request.url).searchParams;
   const status = sp.get('status') || undefined;
   try {
-    const data = await getAssetRequests(status ? { status } : {});
+    const data = await getAssetRequests(status ? { status } : {}, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });

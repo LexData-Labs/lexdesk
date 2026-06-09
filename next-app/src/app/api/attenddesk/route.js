@@ -8,17 +8,20 @@ export const dynamic = 'force-dynamic';
 // leaves the server; the browser calls this gated route instead.
 const RESOURCES = {
   me: () => attenddesk.getMe(),
-  policy: () => attenddesk.getPolicy(),
-  office: () => attenddesk.getOffice(),
-  employees: () => attenddesk.getEmployees(),
-  attendance: (sp) =>
-    attenddesk.getAttendance({
-      limit: sp.get('limit') ?? 50,
-      from: sp.get('from'),
-      to: sp.get('to'),
-      userId: sp.get('userId'),
-    }),
-  leaveRequests: () => attenddesk.getLeaveRequests(),
+  policy: (sp, orgId) => attenddesk.getPolicy(orgId),
+  office: (sp, orgId) => attenddesk.getOffice(orgId),
+  employees: (sp, orgId) => attenddesk.getEmployees(orgId),
+  attendance: (sp, orgId) =>
+    attenddesk.getAttendance(
+      {
+        limit: sp.get('limit') ?? 50,
+        from: sp.get('from'),
+        to: sp.get('to'),
+        userId: sp.get('userId'),
+      },
+      orgId,
+    ),
+  leaveRequests: (sp, orgId) => attenddesk.getLeaveRequests({}, orgId),
 };
 
 export async function GET(request) {
@@ -34,7 +37,7 @@ export async function GET(request) {
   if (!run) return NextResponse.json({ error: 'unknown_resource' }, { status: 400 });
 
   try {
-    return NextResponse.json(await run(sp));
+    return NextResponse.json(await run(sp, user.orgId));
   } catch (err) {
     return NextResponse.json(
       { error: err.message, upstream: err.body ?? null },

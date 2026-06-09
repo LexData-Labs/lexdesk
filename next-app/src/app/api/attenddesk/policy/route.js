@@ -20,7 +20,7 @@ export async function POST(request) {
   }
 
   try {
-    const result = await updatePolicy(body);
+    const result = await updatePolicy(body, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(

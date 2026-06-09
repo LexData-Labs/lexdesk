@@ -26,21 +26,21 @@ export async function POST(request, ctx) {
   }
 
   try {
-    const leaveData = await getLeaveRequests();
+    const leaveData = await getLeaveRequests({}, user.orgId);
     const req = (leaveData.requests || []).find((r) => String(r.id) === String(id));
     if (!req) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-    const empData = await getEmployees();
+    const empData = await getEmployees(user.orgId);
     const emp = (empData.employees || []).find((e) => String(e.id) === String(req.uid));
     const teamId = emp?.teamId || null;
 
-    const teamsData = await getTeams();
+    const teamsData = await getTeams(user.orgId);
     const team = (teamsData.teams || []).find((t) => String(t.id) === String(teamId));
     if (!team || String(team.leaderUid) !== String(user.id)) {
       return NextResponse.json({ error: 'Forbidden — not this employee’s team leader' }, { status: 403 });
     }
 
-    const result = await decideLeave(id, decision, note);
+    const result = await decideLeave(id, decision, note, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(

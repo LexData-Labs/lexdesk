@@ -31,19 +31,26 @@ function cacheGet(urlStr) {
  *   ttl (ms) caches the GET response in-memory; mutations always flush the cache.
  * @returns parsed JSON; throws Error (with .status and .body) on non-2xx.
  */
-export async function adk(path, { method = 'GET', query, body, ttl = 0 } = {}) {
+export async function adk(path, { method = 'GET', query, body, ttl = 0, orgId } = {}) {
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v != null) url.searchParams.set(k, String(v));
   const urlStr = url.toString();
+  // Cache is per-org: the same URL targeted at different orgs (via X-Org-Id)
+  // must never collide, or one tenant would serve another tenant's data.
+  const cacheKey = orgId ? `${orgId}|${urlStr}` : urlStr;
 
   if (method === 'GET' && ttl > 0) {
-    const hit = cacheGet(urlStr);
+    const hit = cacheGet(cacheKey);
     if (hit !== undefined) return hit;
   }
 
+  const headers = { Authorization: `Bearer ${key()}` };
+  if (orgId) headers['X-Org-Id'] = orgId; // target this org (key must hold 'orgs:admin')
+  if (body) headers['content-type'] = 'application/json';
+
   const res = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${key()}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
     cache: 'no-store',
   });
@@ -51,7 +58,7 @@ export async function adk(path, { method = 'GET', query, body, ttl = 0 } = {}) {
   if (!res.ok) throw Object.assign(new Error(data?.error || `attenddesk_${res.status}`), { status: res.status, body: data });
 
   if (method === 'GET') {
-    if (ttl > 0) _cache.set(urlStr, { expires: Date.now() + ttl, data });
+    if (ttl > 0) _cache.set(cacheKey, { expires: Date.now() + ttl, data });
   } else {
     _cache.clear(); // a write happened — drop all cached reads
   }
@@ -59,77 +66,89 @@ export async function adk(path, { method = 'GET', query, body, ttl = 0 } = {}) {
 }
 
 // Convenience wrappers — your key must hold the scope shown in each comment.
+// Most take a trailing `orgId`: with the cross-org provisioning key it's
+// forwarded as X-Org-Id so the call targets that specific tenant. (Routes pass
+// the logged-in user's orgId, read from their session JWT.)
 export const getMe = () => adk('/me');
-export const getPolicy = () => adk('/policy', { ttl: 300000 }); // policy:read (5 min)
-export const updatePolicy = (body) => adk('/policy', { method: 'POST', body }); // policy:write
-export const getOffice = () => adk('/office', { ttl: 300000 }); // office:read (5 min)
-export const updateOffice = (body) => adk('/office', { method: 'POST', body }); // office:write
-export const getEmployees = () => adk('/employees', { ttl: 30000 }); // employees:read (30s)
-export const getEmployee = (uid) => adk(`/employees/${encodeURIComponent(uid)}`); // employees:read (single)
-export const getAttendance = (query = {}) => adk('/attendance', { query }); // attendance:read
-export const checkIn = (body) => adk('/attendance/check-in', { method: 'POST', body }); // attendance:write
-export const getLeaveRequests = (query = {}) => adk('/leave-requests', { query }); // leaves:read
+export const getPolicy = (orgId) => adk('/policy', { ttl: 300000, orgId }); // policy:read (5 min)
+export const updatePolicy = (body, orgId) => adk('/policy', { method: 'POST', body, orgId }); // policy:write
+export const getOffice = (orgId) => adk('/office', { ttl: 300000, orgId }); // office:read (5 min)
+export const updateOffice = (body, orgId) => adk('/office', { method: 'POST', body, orgId }); // office:write
+export const getEmployees = (orgId) => adk('/employees', { ttl: 30000, orgId }); // employees:read (30s)
+export const getEmployee = (uid, orgId) => adk(`/employees/${encodeURIComponent(uid)}`, { orgId }); // employees:read (single)
+export const getAttendance = (query = {}, orgId) => adk('/attendance', { query, orgId }); // attendance:read
+export const checkIn = (body, orgId) => adk('/attendance/check-in', { method: 'POST', body, orgId }); // attendance:write
+export const getLeaveRequests = (query = {}, orgId) => adk('/leave-requests', { query, orgId }); // leaves:read
 
 // Submit a leave request. Body: { userId, fromDay, toDay, subject, details? }
 // (days are YYYY-MM-DD). Requires the 'leaves:write' scope.
-export const submitLeave = (body) => adk('/leave-requests', { method: 'POST', body });
+export const submitLeave = (body, orgId) => adk('/leave-requests', { method: 'POST', body, orgId });
 
 // Approve/reject a pending leave request (admin). decision: 'approved'|'rejected'.
 // Requires the 'leaves:approve' scope.
-export const decideLeave = (id, decision, note) =>
-  adk(`/leave-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { decision, note } });
+export const decideLeave = (id, decision, note, orgId) =>
+  adk(`/leave-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { decision, note }, orgId });
 
 // Asset requests (dual approval: team lead + admin). read='assets:read',
 // write='assets:write', approve='assets:approve'.
-export const getAssetRequests = (query = {}) => adk('/asset-requests', { query });
-export const createAssetRequest = (body) => adk('/asset-requests', { method: 'POST', body });
-export const decideAssetRequest = (id, side, decision, note) =>
-  adk(`/asset-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { side, decision, note } });
+export const getAssetRequests = (query = {}, orgId) => adk('/asset-requests', { query, orgId });
+export const createAssetRequest = (body, orgId) => adk('/asset-requests', { method: 'POST', body, orgId });
+export const decideAssetRequest = (id, side, decision, note, orgId) =>
+  adk(`/asset-requests/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { side, decision, note }, orgId });
 
 // Custom org holidays (pink on the calendar). Each is an inclusive [fromDay,toDay]
 // day range (YYYY-MM-DD) + name. read = 'holidays:read', write = 'holidays:write'.
-export const getHolidays = () => adk('/holidays', { ttl: 60000 }); // 60s
-export const createHoliday = (body) => adk('/holidays', { method: 'POST', body });
-export const deleteHoliday = (id) =>
-  adk(`/holidays/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const getHolidays = (orgId) => adk('/holidays', { ttl: 60000, orgId }); // 60s
+export const createHoliday = (body, orgId) => adk('/holidays', { method: 'POST', body, orgId });
+export const deleteHoliday = (id, orgId) =>
+  adk(`/holidays/${encodeURIComponent(id)}`, { method: 'DELETE', orgId });
 
 // Teams. read = 'teams:read', write = 'teams:write'.
-export const getTeams = () => adk('/teams');
-export const createTeam = (body) => adk('/teams', { method: 'POST', body });
-export const updateTeam = (id, body) =>
-  adk(`/teams/${encodeURIComponent(id)}`, { method: 'PATCH', body });
-export const deleteTeam = (id) =>
-  adk(`/teams/${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const getTeams = (orgId) => adk('/teams', { orgId });
+export const createTeam = (body, orgId) => adk('/teams', { method: 'POST', body, orgId });
+export const updateTeam = (id, body, orgId) =>
+  adk(`/teams/${encodeURIComponent(id)}`, { method: 'PATCH', body, orgId });
+export const deleteTeam = (id, orgId) =>
+  adk(`/teams/${encodeURIComponent(id)}`, { method: 'DELETE', orgId });
 
 // Provision a real employee account (returns a temporary password). 'employees:write'.
-export const createEmployee = (body) => adk('/employees', { method: 'POST', body });
+export const createEmployee = (body, orgId) => adk('/employees', { method: 'POST', body, orgId });
 // Assign/clear an employee's team. 'employees:write'.
-export const setEmployeeTeam = (uid, teamId) =>
-  adk(`/employees/${encodeURIComponent(uid)}`, { method: 'PATCH', body: { teamId } });
+export const setEmployeeTeam = (uid, teamId, orgId) =>
+  adk(`/employees/${encodeURIComponent(uid)}`, { method: 'PATCH', body: { teamId }, orgId });
 // Delete an employee account (Firebase Auth login + user doc). 'employees:write'.
-export const deleteEmployee = (uid) =>
-  adk(`/employees/${encodeURIComponent(uid)}`, { method: 'DELETE' });
+export const deleteEmployee = (uid, orgId) =>
+  adk(`/employees/${encodeURIComponent(uid)}`, { method: 'DELETE', orgId });
 
 // Change a user's password (verifies their current password first).
 // Requires the 'auth:verify' scope.
-export const changePassword = (email, currentPassword, newPassword) =>
-  adk('/auth/change-password', { method: 'POST', body: { email, currentPassword, newPassword } });
+export const changePassword = (email, currentPassword, newPassword, orgId) =>
+  adk('/auth/change-password', { method: 'POST', body: { email, currentPassword, newPassword }, orgId });
 
 // Update a user's display name. Requires the 'employees:write' scope.
-export const updateName = (email, name) =>
-  adk('/auth/update-profile', { method: 'POST', body: { email, name } });
+export const updateName = (email, name, orgId) =>
+  adk('/auth/update-profile', { method: 'POST', body: { email, name }, orgId });
 
 // Upload a user's profile photo (dataUrl = base64 data URL). Writes to Firebase
 // Storage on the AttendDesk side. Requires the 'employees:write' scope.
-export const uploadPhoto = (email, dataUrl) =>
-  adk('/auth/update-photo', { method: 'POST', body: { email, dataUrl } });
+export const uploadPhoto = (email, dataUrl, orgId) =>
+  adk('/auth/update-photo', { method: 'POST', body: { email, dataUrl }, orgId });
 
-// Verify an employee's email + password against AttendDesk (partner SSO).
-// Requires the API key to hold the 'auth:verify' scope. Resolves to
-// { valid:false } for bad credentials (HTTP 200) and throws (with .status) for
-// scope/rate-limit/upstream errors (403/429/502/503).
-export const verifyCredentials = (email, password) =>
-  adk('/auth/verify-credentials', { method: 'POST', body: { email, password } });
+// Provision a brand-new organization + its first admin. Uses the provisioning
+// key's 'orgs:create' scope — no X-Org-Id (the org doesn't exist yet).
+// Body: { companyName, companyDomain, adminName, adminEmail, password, designation? }.
+export const createOrganization = (body) => adk('/organizations', { method: 'POST', body });
+
+// Resolve an email -> its { orgId, role }. Uses the 'orgs:admin' scope; called
+// at login (before we know which org to target) and throws 404 if unknown.
+export const resolveOrg = (email) => adk('/organizations/resolve', { query: { email } });
+
+// Verify an employee's email + password against AttendDesk (partner SSO), scoped
+// to `orgId` (forwarded as X-Org-Id). Requires the 'auth:verify' scope. Resolves
+// to { valid:false } for bad credentials (HTTP 200) and throws (with .status)
+// for scope/rate-limit/upstream errors (403/429/502/503).
+export const verifyCredentials = (email, password, orgId) =>
+  adk('/auth/verify-credentials', { method: 'POST', body: { email, password }, orgId });
 
 // Trigger Firebase's password-reset email (delivered by Firebase). 'auth:verify'.
 export const forgotPassword = (email) =>

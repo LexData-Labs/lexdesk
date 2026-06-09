@@ -25,7 +25,7 @@ export async function POST(request, ctx) {
   }
 
   try {
-    const data = await decideAssetRequest(id, 'admin', decision, note || undefined);
+    const data = await decideAssetRequest(id, 'admin', decision, note || undefined, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });

@@ -15,7 +15,7 @@ export async function GET(request) {
   try {
     let me = null;
     try {
-      const data = await getEmployee(String(user.id));
+      const data = await getEmployee(String(user.id), user.orgId);
       me = data.employee || null;
     } catch (e) {
       if (e.status !== 404) throw e; // 404 → treat as "no linked record"
@@ -56,7 +56,7 @@ export async function POST(request) {
   if (name.length > 80) return NextResponse.json({ error: 'Name is too long (max 80)' }, { status: 400 });
 
   try {
-    const data = await updateName(user.email, name);
+    const data = await updateName(user.email, name, user.orgId);
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });

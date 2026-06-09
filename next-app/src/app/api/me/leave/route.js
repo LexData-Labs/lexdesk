@@ -15,7 +15,7 @@ export async function GET(request) {
   const sp = new URL(request.url).searchParams;
   const status = sp.get('status') || undefined;
   try {
-    const data = await getLeaveRequests(status ? { status } : {});
+    const data = await getLeaveRequests(status ? { status } : {}, user.orgId);
     const mine = (data.requests || []).filter((r) => String(r.uid) === String(user.id));
     return NextResponse.json({ requests: mine });
   } catch (err) {
@@ -50,7 +50,7 @@ export async function POST(request) {
       toDay,
       subject,
       details: details || '',
-    });
+    }, user.orgId);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

@@ -10,7 +10,7 @@ export async function GET(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const data = await getOffice();
+    const data = await getOffice(user.orgId);
     return NextResponse.json({ name: data?.office?.name || null });
   } catch {
     return NextResponse.json({ name: null });
