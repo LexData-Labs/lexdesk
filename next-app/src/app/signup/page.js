@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AuthDecor, FeatureChip, SyncIcon, ChartIcon, ShieldIcon, UsersIcon } from '@/components/authDecor';
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -63,14 +64,7 @@ export default function SignupPage() {
     <div className="min-h-screen lg:grid lg:grid-cols-5 bg-[var(--color-bg)]">
       {/* Left — brand panel */}
       <aside className="relative hidden lg:flex lg:col-span-2 flex-col overflow-hidden border-r border-[var(--color-card-border)]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_20%,rgba(139,92,246,0.28),transparent_60%),radial-gradient(50%_40%_at_80%_90%,rgba(30,58,138,0.32),transparent_60%)]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.10] [background-image:radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] [background-size:18px_18px]"
-        />
+        <AuthDecor />
         <div className="relative flex flex-1 flex-col p-10">
           <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] no-underline w-fit">
             <span aria-hidden>←</span> Back to home
@@ -194,47 +188,5 @@ export default function SignupPage() {
         </div>
       </section>
     </div>
-  );
-}
-
-function FeatureChip({ icon, label }) {
-  return (
-    <li className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-text-main)] backdrop-blur">
-      <span className="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-[var(--color-purple)] shrink-0">{icon}</span>
-      {label}
-    </li>
-  );
-}
-
-const svgProps = {
-  width: 14,
-  height: 14,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
-  'aria-hidden': true,
-};
-
-function SyncIcon() {
-  return (
-    <svg {...svgProps}><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
-  );
-}
-function ChartIcon() {
-  return (
-    <svg {...svgProps}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
-  );
-}
-function ShieldIcon() {
-  return (
-    <svg {...svgProps}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-  );
-}
-function UsersIcon() {
-  return (
-    <svg {...svgProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AuthDecor, FeatureChip, SyncIcon, ChartIcon, ShieldIcon, UsersIcon } from '@/components/authDecor';
 
 const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
 
@@ -41,36 +42,28 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.15),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.1),transparent_50%)] bg-[var(--color-bg)]">
-      <nav className="px-4 sm:px-8 md:px-16 py-6 flex justify-between items-center border-b border-[var(--color-card-border)] bg-[rgba(7,11,20,0.6)] backdrop-blur-md">
-        <div className="flex items-center gap-3 text-2xl font-bold text-[var(--color-text-main)]">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">L</div>
-          LexDesk
-        </div>
-      </nav>
+    <div className="relative overflow-hidden flex flex-col min-h-screen bg-[var(--color-bg)]">
+      <AuthDecor />
 
-      <div className="flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-8 md:py-0">
+      <div className="relative flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-10 md:py-0">
         <div className="flex-1 max-w-[600px] text-center md:text-left">
+          <div className="inline-flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-white font-bold">L</div>
+            <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">LexDesk</span>
+          </div>
+
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] mb-4 sm:mb-6 bg-gradient-to-br from-[var(--color-text-main)] to-[var(--color-text-muted)] text-transparent bg-clip-text">
             Next-Gen Attendance Management
           </h1>
           <p className="text-base sm:text-xl text-[var(--color-text-muted)] mb-6 md:mb-10 leading-relaxed">
             A high-fidelity platform for employee attendance, leave, and team management with robust role-based access.
           </p>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-8 justify-center md:justify-start text-[0.95rem] text-[var(--color-text-muted)] font-medium">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
-              Real-time Sync
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
-              Advanced Analytics
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-[rgba(34,197,94,0.15)] flex items-center justify-center text-[var(--color-green)] text-xs">✓</div>
-              Role Based Views
-            </div>
-          </div>
+          <ul className="flex flex-wrap gap-3 justify-center md:justify-start max-w-lg mx-auto md:mx-0 list-none p-0">
+            <FeatureChip label="Real-time Sync" icon={<SyncIcon />} />
+            <FeatureChip label="Advanced Analytics" icon={<ChartIcon />} />
+            <FeatureChip label="Role-based Access" icon={<ShieldIcon />} />
+            <FeatureChip label="Leave & Teams" icon={<UsersIcon />} />
+          </ul>
         </div>
 
         <div className="w-full sm:max-w-[450px] p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl">
