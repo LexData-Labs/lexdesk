@@ -12,11 +12,6 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('signin'); // 'signin' | 'forgot'
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetMsg, setResetMsg] = useState('');
-  const [resetError, setResetError] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e) => {
@@ -42,27 +37,6 @@ export default function Home() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleForgot = async (e) => {
-    e.preventDefault();
-    setResetError('');
-    setResetMsg('');
-    setResetLoading(true);
-    try {
-      const res = await fetch('/api/auth/forgot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: resetEmail.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not send reset link');
-      setResetMsg('If an account exists for that email, we’ve sent a password reset link — check your inbox.');
-    } catch (err) {
-      setResetError(err.message);
-    } finally {
-      setResetLoading(false);
     }
   };
 
@@ -101,11 +75,11 @@ export default function Home() {
 
         <div className="w-full sm:max-w-[450px] p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">{mode === 'forgot' ? 'Reset password' : 'Sign In'}</h2>
-            <p className="text-[var(--color-text-muted)] text-[0.95rem]">{mode === 'forgot' ? 'We’ll email you a reset link' : 'Access your workspace based on your role'}</p>
+            <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">Sign In</h2>
+            <p className="text-[var(--color-text-muted)] text-[0.95rem]">Access your workspace based on your role</p>
           </div>
 
-          <form onSubmit={handleLogin} className={mode === 'forgot' ? 'hidden' : undefined}>
+          <form onSubmit={handleLogin}>
             {error && <div className="mb-4 text-sm text-[var(--color-red)] text-center">{error}</div>}
             
             <div className="mb-6">
@@ -145,12 +119,6 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mb-4 text-right -mt-4">
-              <button type="button" onClick={() => { setMode('forgot'); setResetEmail(email); setResetMsg(''); setResetError(''); }} className="text-xs text-[var(--color-purple)] hover:underline">
-                Forgot password?
-              </button>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
@@ -165,38 +133,7 @@ export default function Home() {
             </div>
           </form>
 
-          {mode === 'forgot' && (
-            <form onSubmit={handleForgot}>
-              {resetError && <div className="mb-4 text-sm text-[var(--color-red)] text-center">{resetError}</div>}
-              {resetMsg ? (
-                <div className="mb-6 text-sm text-[var(--color-green)] text-center">{resetMsg}</div>
-              ) : (
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold mb-2 text-[var(--color-text-muted)]">Email Address</label>
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    required
-                    className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(139,92,246,0.2)] transition-all"
-                  />
-                </div>
-              )}
-              {!resetMsg && (
-                <button type="submit" disabled={resetLoading} className="w-full btn-primary py-3.5 text-[0.95rem] flex justify-center items-center">
-                  {resetLoading ? 'Sending…' : 'Send reset link'}
-                </button>
-              )}
-              <div className="mt-4 text-center">
-                <button type="button" onClick={() => { setMode('signin'); setResetMsg(''); setResetError(''); }} className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">
-                  ← Back to sign in
-                </button>
-              </div>
-            </form>
-          )}
-
-          {APP_DOWNLOAD_URL && mode === 'signin' && (
+          {APP_DOWNLOAD_URL && (
             <div className="mt-6 pt-5 border-t border-[var(--color-card-border)] text-center text-sm text-[var(--color-text-muted)]">
               Use the mobile app to check in ·{' '}
               <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" download className="text-[var(--color-purple)] hover:underline font-medium">

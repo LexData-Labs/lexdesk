@@ -24,6 +24,7 @@ export async function POST(request) {
   const companyName = String(body?.companyName || '').trim();
   const companyDomain = String(body?.companyDomain || '').trim().toLowerCase();
   const adminName = String(body?.adminName || '').trim();
+  const designation = String(body?.designation || '').trim();
   const adminEmail = String(body?.adminEmail || '').trim().toLowerCase();
   const password = String(body?.password || '');
 
@@ -36,7 +37,7 @@ export async function POST(request) {
 
   let org;
   try {
-    const res = await createOrganization({ companyName, companyDomain, adminName, adminEmail, password });
+    const res = await createOrganization({ companyName, companyDomain, adminName, adminEmail, password, designation: designation || null });
     org = res?.organization;
   } catch (err) {
     const code = err?.body?.error;
