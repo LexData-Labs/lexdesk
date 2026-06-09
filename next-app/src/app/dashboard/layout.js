@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import SidebarNav from '@/components/SidebarNav';
 import Avatar from '@/components/Avatar';
@@ -13,6 +13,7 @@ export default function DashboardLayout({ children }) {
   const [isTeamLeader, setIsTeamLeader] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -32,10 +33,6 @@ export default function DashboardLayout({ children }) {
           router.replace('/dashboard/my-dashboard');
         }
       }
-      // LexDesk system admin is locked to the system console.
-      if (parsed.role === 'lexsysadmin' && window.location.pathname !== '/dashboard/system') {
-        router.replace('/dashboard/system');
-      }
     } catch {
       router.push('/');
     }
@@ -48,6 +45,14 @@ export default function DashboardLayout({ children }) {
       document.documentElement.classList.remove('light');
     }
   }, [router]);
+
+  // Lock the LexDesk system admin to the console — re-checked on every
+  // navigation (the mount effect above doesn't re-run on client-side routing).
+  useEffect(() => {
+    if (user?.role === 'lexsysadmin' && pathname && pathname !== '/dashboard/system') {
+      router.replace('/dashboard/system');
+    }
+  }, [user, pathname, router]);
 
   // Refresh the sidebar's copy of the user when the profile page saves changes,
   // and load the AttendDesk profile photo (fresh signed URL) for the sidebar avatar.
@@ -153,22 +158,34 @@ export default function DashboardLayout({ children }) {
           <SidebarNav role={user.role} isTeamLeader={isTeamLeader} onNavigate={() => setSidebarOpen(false)} />
 
           <div className="p-6 border-t border-[var(--color-card-border)] flex flex-col items-start">
-            <Link
-              href="/dashboard/profile"
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-3 w-full rounded-lg p-2 -m-2 no-underline transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
-            >
-              <Avatar
-                image={photoUrl || user.avatarImage}
-                initials={user.avatar}
-                alt={user.name}
-                className="w-9 h-9 font-semibold text-[0.85rem] shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-[0.85rem] font-semibold text-[var(--color-text-main)] truncate">{user.name}</div>
-                <div className="text-[0.75rem] text-[var(--color-text-muted)] truncate">{user.email}</div>
-              </div>
-            </Link>
+            {(() => {
+              const inner = (
+                <>
+                  <Avatar
+                    image={photoUrl || user.avatarImage}
+                    initials={user.avatar}
+                    alt={user.name}
+                    className="w-9 h-9 font-semibold text-[0.85rem] shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[0.85rem] font-semibold text-[var(--color-text-main)] truncate">{user.name}</div>
+                    <div className="text-[0.75rem] text-[var(--color-text-muted)] truncate">{user.email}</div>
+                  </div>
+                </>
+              );
+              // The system admin has no org profile page — show identity, not a link.
+              return user.role === 'lexsysadmin' ? (
+                <div className="flex items-center gap-3 w-full rounded-lg p-2 -m-2">{inner}</div>
+              ) : (
+                <Link
+                  href="/dashboard/profile"
+                  onClick={() => setSidebarOpen(false)}
+                  className="flex items-center gap-3 w-full rounded-lg p-2 -m-2 no-underline transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                >
+                  {inner}
+                </Link>
+              );
+            })()}
             <button
               onClick={handleLogout}
               className="btn-outline w-full mt-3 py-1.5 text-xs text-[var(--color-red)] border-[rgba(239,68,68,0.3)] hover:bg-[rgba(239,68,68,0.05)]"
