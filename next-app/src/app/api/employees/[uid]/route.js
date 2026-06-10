@@ -22,7 +22,7 @@ export async function PATCH(request, ctx) {
   const teamId = body?.teamId || null;
 
   try {
-    const result = await setEmployeeTeam(uid, teamId);
+    const result = await setEmployeeTeam(uid, teamId, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(
@@ -47,7 +47,7 @@ export async function DELETE(request, ctx) {
   }
 
   try {
-    const result = await deleteEmployee(uid);
+    const result = await deleteEmployee(uid, user.orgId);
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json(

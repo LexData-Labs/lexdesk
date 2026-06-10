@@ -24,6 +24,8 @@ export default function EmployeeProfilePage() {
   const [resetResult, setResetResult] = useState(null);
   const [resetError, setResetError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [faceResetting, setFaceResetting] = useState(false);
+  const [faceMsg, setFaceMsg] = useState(null); // { ok, text }
 
   useEffect(() => {
     try { setCurrentUserId(JSON.parse(localStorage.getItem('user') || 'null')?.id ?? null); } catch { setCurrentUserId(null); }
@@ -121,6 +123,27 @@ export default function EmployeeProfilePage() {
   };
   const closeReset = () => { setResetOpen(false); setResetResult(null); setResetError(''); setCopied(false); };
 
+  const handleResetFace = async () => {
+    if (!window.confirm(`Reset face enrollment for ${employee?.name || 'this employee'}? They'll need to enroll their face again before face check-ins work.`)) return;
+    setFaceResetting(true);
+    setFaceMsg(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/employees/${encodeURIComponent(employeeId)}/reset-face`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setFaceMsg({ ok: true, text: 'Face enrollment cleared — they can enroll again now.' });
+      refresh();
+    } catch (e) {
+      setFaceMsg({ ok: false, text: e.message });
+    } finally {
+      setFaceResetting(false);
+    }
+  };
+
   const saveTeam = async (teamId) => {
     setSavingTeam(true);
     setTeamMsg('');
@@ -155,6 +178,11 @@ export default function EmployeeProfilePage() {
             {employee && String(employee.role || '').toUpperCase() === 'EMPLOYEE' && (
               <button onClick={() => { setResetResult(null); setResetError(''); setResetOpen(true); }} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-purple)] border-[rgba(139,92,246,0.3)] hover:bg-[rgba(139,92,246,0.05)]">
                 Reset password
+              </button>
+            )}
+            {employee && String(employee.role || '').toUpperCase() === 'EMPLOYEE' && employee.faceEnrolledAt && (
+              <button onClick={handleResetFace} disabled={faceResetting} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-yellow)] border-[rgba(234,179,8,0.3)] hover:bg-[rgba(234,179,8,0.05)] disabled:opacity-50">
+                {faceResetting ? 'Resetting…' : 'Reset face'}
               </button>
             )}
             {employee && String(employeeId) !== String(currentUserId) && (
@@ -203,6 +231,7 @@ export default function EmployeeProfilePage() {
       )}
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
+      {faceMsg && <div className={`card text-sm ${faceMsg.ok ? 'text-[var(--color-green)]' : 'text-[var(--color-red)]'}`}>{faceMsg.text}</div>}
       {loading && !employee && <div className="card text-[var(--color-text-muted)] text-sm">Loading…</div>}
       {!loading && !employee && <div className="card text-[var(--color-text-muted)] text-sm">Employee not found.</div>}
 

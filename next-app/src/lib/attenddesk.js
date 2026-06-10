@@ -120,6 +120,17 @@ export const setEmployeeTeam = (uid, teamId, orgId) =>
 export const deleteEmployee = (uid, orgId) =>
   adk(`/employees/${encodeURIComponent(uid)}`, { method: 'DELETE', orgId });
 
+// Enroll a user's face from 3-10 raw capture embeddings (base64 float32 LE).
+// ONE-TIME upstream: returns 409 already_enrolled if the user has an
+// enrollment; an admin resetFace() clears it. Requires 'employees:write'.
+export const enrollFace = (uid, embeddings, orgId) =>
+  adk(`/employees/${encodeURIComponent(uid)}/face`, { method: 'POST', body: { embeddings }, orgId });
+
+// Clear a user's face enrollment so they can enroll again (admin remediation).
+// Idempotent; returns { ok, wasEnrolled }. Requires 'employees:write'.
+export const resetFace = (uid, orgId) =>
+  adk(`/employees/${encodeURIComponent(uid)}/face`, { method: 'DELETE', orgId });
+
 // Change a user's password (verifies their current password first).
 // Requires the 'auth:verify' scope.
 export const changePassword = (email, currentPassword, newPassword, orgId) =>

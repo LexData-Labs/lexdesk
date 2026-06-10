@@ -4,13 +4,17 @@ import { checkIn } from '@/lib/attenddesk';
 
 export const dynamic = 'force-dynamic';
 
-// GPS-verified check-in/out from the browser. The uid comes from the VERIFIED
-// token and the upstream payload is rebuilt from a whitelist, so a client can
-// never check in as someone else or smuggle trust-elevating fields (clientMode,
-// qrToken, faceEmbeddingB64). clientMode is omitted on purpose: AttendDesk
-// defaults it to 'mobile', which runs the full server-side policy validation.
-// isMockLocation is also omitted — a browser can't detect mocking, and sending
-// false would assert something we never verified.
+// GPS- and face-verified check-in/out from the browser. The uid comes from the
+// VERIFIED token and the upstream payload is rebuilt from a whitelist, so a
+// client can never check in as someone else or smuggle trust-elevating fields
+// (clientMode, qrToken). clientMode is omitted on purpose: AttendDesk defaults
+// it to 'mobile', which runs the full server-side policy validation.
+// isMockLocation is omitted — a browser can't detect mocking, and sending
+// false would assert something we never verified. faceLivenessOk is omitted
+// for the same honesty reason (the server passes liveness on null; we do no
+// browser liveness). faceEmbeddingB64 is the one optional extra: it's
+// validated to be exactly a 512-byte float32 embedding, then matched
+// server-side against the user's enrollment.
 
 export async function POST(request) {
   const user = getUserFromRequest(request);
@@ -42,11 +46,21 @@ export async function POST(request) {
     return NextResponse.json({ error: 'lat, lng and accuracyMeters are required' }, { status: 400 });
   }
 
+  const payload = { userId: String(user.id), type, lat, lng, accuracyMeters };
+  const face = body?.faceEmbeddingB64;
+  if (face != null) {
+    const validFace =
+      typeof face === 'string' &&
+      face.length <= 700 && // 512-byte embedding = exactly 684 base64 chars
+      Buffer.from(face, 'base64').length === 512;
+    if (!validFace) {
+      return NextResponse.json({ error: 'invalid_face_embedding' }, { status: 400 });
+    }
+    payload.faceEmbeddingB64 = face;
+  }
+
   try {
-    const result = await checkIn(
-      { userId: String(user.id), type, lat, lng, accuracyMeters },
-      user.orgId,
-    );
+    const result = await checkIn(payload, user.orgId);
     // AttendDesk returns 2xx even when checks fail (ok:false, per-check
     // results) — pass it through as data so the UI can render each check.
     return NextResponse.json(result);

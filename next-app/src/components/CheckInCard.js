@@ -1,6 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+// Loaded on demand only — pulls the webcam + ML pipeline, which must never
+// weigh down the dashboard bundle.
+const FaceCaptureModal = dynamic(() => import('./FaceCaptureModal'), { ssr: false });
 
 // AttendDesk failure reasons → friendly text. Unknown reasons fall through raw
 // so new upstream checks still surface something meaningful.
@@ -13,11 +18,16 @@ const REASON_TEXT = {
   missing_qr_token: 'QR scan required — use the mobile app',
   invalid_qr_token: 'QR code invalid or expired — use the mobile app',
   qr_token_already_used: 'QR code already used — use the mobile app',
-  face_not_enrolled: 'Face not enrolled — enroll from the mobile app',
-  missing_face_embedding: 'Face verification required — use the mobile app',
-  liveness_failed: 'Face liveness check failed — use the mobile app',
-  similarity_below_threshold: "Face didn't match — use the mobile app",
+  face_not_enrolled: 'Face not enrolled — use Enroll face below',
+  missing_face_embedding: 'Face verification required — click Verify face',
+  liveness_failed: 'Face liveness check failed — try again',
+  similarity_below_threshold: "Face didn't match — try again with better lighting",
+  bad_embedding_dim: 'Face data mismatch — re-enroll required',
 };
+
+// Captured face embeddings are valid this long before re-verification
+// (mirrors the Android app's 60 s freshness window).
+const FACE_TTL_MS = 60_000;
 
 const CHECK_LABEL = { wifi: 'Wi-Fi', geo: 'Location', qr: 'QR code', face: 'Face' };
 
@@ -61,6 +71,10 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
   const [info, setInfo] = useState(null); // { policy, office } — pre-warnings only, non-fatal if missing
   const [result, setResult] = useState(null); // last check-in response + { type, dist }
   const [error, setError] = useState('');
+  const [faceEnrolledAt, setFaceEnrolledAt] = useState(null);
+  const [face, setFace] = useState(null); // { b64, at } — fresh capture, 60 s TTL
+  const [modal, setModal] = useState(null); // null | 'verify' | 'enroll'
+  const [pendingType, setPendingType] = useState(null); // submit to resume after verify
 
   useEffect(() => {
     let cancelled = false;
@@ -77,15 +91,53 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
     return () => { cancelled = true; };
   }, []);
 
+  // Face is browser-supported now; only WiFi (impossible in browsers) and QR
+  // remain mobile-only.
   const mobileOnly = [
     info?.policy?.requireWifi && 'Wi-Fi',
     info?.policy?.requireQr && 'QR',
-    info?.policy?.requireFace && 'Face',
   ].filter(Boolean);
 
-  async function submit(type) {
+  const requireFace = !!info?.policy?.requireFace;
+
+  // Enrollment status drives which face button to show; fetched only when the
+  // org actually requires the face check.
+  useEffect(() => {
+    if (!requireFace) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/me/profile', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+        const json = await res.json();
+        if (!cancelled && res.ok) setFaceEnrolledAt(json?.profile?.faceEnrolledAt ?? null);
+      } catch {
+        // non-fatal — worst case the user sees Verify instead of Enroll and
+        // the server replies face_not_enrolled
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [requireFace]);
+
+  const freshFaceB64 = (override) => {
+    if (override) return override;
+    if (face && Date.now() - face.at < FACE_TTL_MS) return face.b64;
+    return null;
+  };
+
+  async function submit(type, faceOverride) {
     setError('');
     setResult(null);
+    // Face gate first (before spending time on a GPS fix): enrolled users with
+    // no fresh capture verify their face, then submit resumes automatically.
+    // Un-enrolled users aren't blocked — the server's face_not_enrolled result
+    // plus the Enroll button below tell them what to do.
+    const faceB64 = freshFaceB64(faceOverride);
+    if (requireFace && faceEnrolledAt && !faceB64) {
+      setPendingType(type);
+      setModal('verify');
+      return;
+    }
     if (!('geolocation' in navigator) || window.isSecureContext === false) {
       setError('Location needs a secure connection — open this page over https:// (or localhost).');
       return;
@@ -105,7 +157,13 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
       const res = await fetch('/api/me/check-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ type, lat: coords.latitude, lng: coords.longitude, accuracyMeters: coords.accuracy }),
+        body: JSON.stringify({
+          type,
+          lat: coords.latitude,
+          lng: coords.longitude,
+          accuracyMeters: coords.accuracy,
+          ...(faceB64 ? { faceEmbeddingB64: faceB64 } : {}),
+        }),
       });
       if (res.status === 401) {
         setError('Session expired — please sign in again.');
@@ -121,6 +179,11 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
           ? distanceMeters(coords.latitude, coords.longitude, info.office.lat, info.office.lng)
           : null;
       setResult({ ...json, type, dist });
+      // A capture that failed the server-side match can never succeed — drop
+      // it so the Verify button returns, instead of resending the identical
+      // embedding from cache for the rest of its 60 s TTL.
+      const faceCheck = (json.results || []).find((r) => r.name === 'face');
+      if (faceCheck && faceCheck.passed === false) setFace(null);
       if (json.ok) onSuccess?.();
     } catch (e) {
       setError(e.message || 'Network error');
@@ -170,6 +233,25 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
         </button>
       </div>
 
+      {requireFace && (
+        <div className="flex items-center justify-between gap-2 text-xs">
+          {!faceEnrolledAt ? (
+            <>
+              <span className="text-[var(--color-text-muted)]">Face check required — enroll once to enable it (your admin can reset it later).</span>
+              <button onClick={() => setModal('enroll')} disabled={busy} className="btn-outline py-1.5 px-3 text-xs shrink-0">Enroll face</button>
+            </>
+          ) : freshFaceB64() ? (
+            // "captured", not "verified" — matching happens server-side at submit
+            <span className="text-[var(--color-green)]">Face captured ✓ — valid for the next minute</span>
+          ) : (
+            <>
+              <span className="text-[var(--color-text-muted)]">Face check required — verify before checking in.</span>
+              <button onClick={() => setModal('verify')} disabled={busy} className="btn-outline py-1.5 px-3 text-xs shrink-0">Verify face</button>
+            </>
+          )}
+        </div>
+      )}
+
       {error && <p className="text-sm text-[var(--color-red)]">{error}</p>}
 
       {result && (
@@ -203,11 +285,34 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
                   {!r.passed && r.reason ? (
                     <span className="text-[var(--color-text-muted)]"> — {REASON_TEXT[r.reason] || r.reason}</span>
                   ) : null}
+                  {r.name === 'face' && r.details?.score != null && localStorage.getItem('lexdesk:faceDebug') === '1' ? (
+                    <span className="text-[var(--color-text-muted)]"> · match {Number(r.details.score).toFixed(2)} / {r.details.threshold}</span>
+                  ) : null}
                 </span>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {modal && (
+        <FaceCaptureModal
+          mode={modal}
+          onClose={() => { setModal(null); setPendingType(null); }}
+          onDone={({ b64, enrolledAt }) => {
+            setModal(null);
+            if (b64) {
+              // Verified: stash the capture and resume the submit that
+              // triggered the modal (state may not have flushed — pass b64).
+              setFace({ b64, at: Date.now() });
+              const t = pendingType;
+              setPendingType(null);
+              if (t) submit(t, b64);
+            } else if (enrolledAt) {
+              setFaceEnrolledAt(enrolledAt);
+            }
+          }}
+        />
       )}
     </div>
   );
