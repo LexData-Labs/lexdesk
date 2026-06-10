@@ -6,6 +6,7 @@ import MonthNav from '@/components/MonthNav';
 import MonthCalendar from '@/components/MonthCalendar';
 import KpiCard from '@/components/KpiCard';
 import Avatar from '@/components/Avatar';
+import CheckInCard from '@/components/CheckInCard';
 import { employeeCalendarMonth, bdDateKey, approvedLeaveDays } from '@/lib/attend';
 
 function initials(name) {
@@ -150,7 +151,9 @@ export default function MyDashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <CheckInCard onSuccess={load} todayIn={today.inTs} todayOut={today.outTs} />
+
         <div className="card flex items-center justify-between">
           <div>
             <p className="text-xs text-[var(--color-text-muted)]">In Time (today)</p>
