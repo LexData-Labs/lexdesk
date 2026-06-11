@@ -33,6 +33,7 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
       {role === 'employee' && <NavLink href="/dashboard/my-leave" onNavigate={onNavigate}>My Leave</NavLink>}
       {role === 'employee' && <NavLink href="/dashboard/my-assets" onNavigate={onNavigate}>Assets</NavLink>}
       {role === 'employee' && isTeamLeader && <NavLink href="/dashboard/team-approvals" onNavigate={onNavigate}>Team Approvals</NavLink>}
+      {role === 'employee' && isTeamLeader && <NavLink href="/dashboard/team-attendance" onNavigate={onNavigate}>Team Attendance</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/attendance" onNavigate={onNavigate}>Attendance</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/calendar" onNavigate={onNavigate}>Calendar</NavLink>}
       {role !== 'employee' && <NavLink href="/dashboard/analytics" onNavigate={onNavigate}>Analytics</NavLink>}
