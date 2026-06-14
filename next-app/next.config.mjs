@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // firebase-admin must NOT be bundled by Turbopack — its native/optional deps
+  // (gRPC, etc.) break in the bundled output and crash route handlers at
+  // runtime on Vercel (works in `next dev`, 500s in production). Externalizing
+  // it makes the server require() it from node_modules instead.
+  serverExternalPackages: ['firebase-admin'],
   // Dev-only: lets devices on the LAN (e.g. a phone) load the dev server's
   // /_next resources. Production builds ignore this.
   allowedDevOrigins: ['192.168.140.62'],

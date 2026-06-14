@@ -36,31 +36,31 @@ export async function POST(request) {
   }
 
   // The user must belong to this LexDesk org (single tenant). Their profile doc
-  // is the source of truth for role/name.
-  const { db } = firebaseAdmin();
-  const snap = await db.doc(Paths.user(ORG_ID, verified.uid)).get();
-  if (!snap.exists) {
-    return NextResponse.json(
-      { error: 'This account is not part of your organization. Ask your admin to add you.' },
-      { status: 401 },
-    );
-  }
-  const data = snap.data();
-  const name = data.name || verified.email || email;
-  const user = {
-    id: verified.uid,
-    email: verified.email || email,
-    name,
-    role: roleToLexdesk(data.role),
-    avatar: initialsFromName(name),
-    employeeId: data.employeeId ?? null,
-    orgId: ORG_ID,
-  };
-
+  // is the source of truth for role/name. Wrapped so any Firestore/config
+  // failure returns JSON (not an unhandled HTML 500 the client can't parse).
   try {
+    const { db } = firebaseAdmin();
+    const snap = await db.doc(Paths.user(ORG_ID, verified.uid)).get();
+    if (!snap.exists) {
+      return NextResponse.json(
+        { error: 'This account is not part of your organization. Ask your admin to add you.' },
+        { status: 401 },
+      );
+    }
+    const data = snap.data();
+    const name = data.name || verified.email || email;
+    const user = {
+      id: verified.uid,
+      email: verified.email || email,
+      name,
+      role: roleToLexdesk(data.role),
+      avatar: initialsFromName(name),
+      employeeId: data.employeeId ?? null,
+      orgId: ORG_ID,
+    };
     const token = signToken(user);
     return NextResponse.json({ token, user: publicUser(user) });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'login_failed' }, { status: 500 });
   }
 }
