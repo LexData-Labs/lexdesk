@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { getAssetRequests, createAssetRequest, getEmployee, getTeams } from '@/lib/attenddesk';
+import { getAssetRequests, createAssetRequest, getEmployee, getTeams } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 

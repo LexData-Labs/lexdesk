@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server';
-import crypto from 'node:crypto';
-import { signToken, publicUser } from '@/lib/auth';
-import { resolveOrg, verifyCredentials } from '@/lib/attenddesk';
+import { signToken, publicUser, verifyFirebasePassword, roleToLexdesk, initialsFromName } from '@/lib/auth';
+import { firebaseAdmin } from '@/lib/firebase';
+import { Paths } from '@/lib/paths';
+import { ORG_ID } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
-// AttendDesk roles -> next-app roles. SUPER_ADMIN can't actually reach here
-// (the verify-credentials endpoint rejects super admins) but is mapped defensively.
-const ROLE_MAP = { ADMIN: 'admin', EMPLOYEE: 'employee', SUPER_ADMIN: 'superadmin' };
-
-function initialsFromName(name) {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
+// Login: verify the password against Firebase Auth (shared project), then read
+// the role from the org's Firestore user doc and mint LexDesk's own JWT. The
+// frontend's localStorage + Bearer flow is unchanged.
 export async function POST(request) {
   let body;
   try {
@@ -29,94 +22,39 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
   }
 
-  // 0) LexDesk system admin — a platform-level super admin (org-admin password
-  //    reset console), checked against env-configured creds BEFORE org login.
-  //    Inert unless both env vars are set. Bypasses AttendDesk entirely. The
-  //    password is compared in constant time; it lives in env at the same trust
-  //    level as JWT_SECRET / ATTENDDESK_API_KEY in this file.
-  const sysEmail = process.env.LEXDESK_SYSADMIN_EMAIL;
-  const sysPassword = process.env.LEXDESK_SYSADMIN_PASSWORD;
-  if (sysEmail && sysPassword && String(email).toLowerCase() === sysEmail.toLowerCase()) {
-    const a = Buffer.from(String(password));
-    const b = Buffer.from(String(sysPassword));
-    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
-    if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    const sysUser = {
-      id: 'lexsysadmin',
-      email: sysEmail,
-      name: 'LexDesk System Admin',
-      role: 'lexsysadmin',
-      avatar: 'LS',
-      employeeId: null,
-      orgId: null,
-    };
-    try {
-      const token = signToken(sysUser);
-      return NextResponse.json({ token, user: publicUser(sysUser) });
-    } catch (err) {
-      return NextResponse.json({ error: err.message }, { status: 500 });
-    }
-  }
-
-  // 1) Resolve which org this email belongs to (the provisioning key can target
-  //    any org, but verify-credentials must be scoped to the right one).
-  let orgId;
+  let verified;
   try {
-    const resolved = await resolveOrg(email);
-    orgId = resolved?.orgId;
+    verified = await verifyFirebasePassword(email, password);
   } catch (err) {
-    if (err?.status === 404) {
-      return NextResponse.json(
-        { error: 'No organization is registered for this email. Create an organization or ask your admin to add you.' },
-        { status: 401 },
-      );
-    }
-    const status =
-      Number.isInteger(err?.status) && err.status >= 400 && err.status < 600 ? err.status : 502;
     return NextResponse.json(
-      { error: 'Authentication service unavailable', detail: err?.message || 'resolve_error' },
-      { status },
+      { error: 'Authentication service unavailable', detail: err?.message || 'auth_error' },
+      { status: 502 },
     );
   }
-  if (!orgId) {
-    return NextResponse.json(
-      { error: 'No organization is registered for this email.' },
-      { status: 401 },
-    );
-  }
-
-  // 2) Credentials are verified by AttendDesk's external API (server-side, with
-  //    the adk_live_ key), scoped to the resolved org. next-app no longer checks
-  //    passwords locally — it only mints the session JWT once AttendDesk confirms.
-  let result;
-  try {
-    result = await verifyCredentials(email, password, orgId);
-  } catch (err) {
-    // Non-2xx from AttendDesk: missing 'auth:verify' scope (403), rate-limited
-    // (429), not-configured/upstream (502/503). Surface as a service error so
-    // it's distinguishable from a plain wrong-password.
-    const status =
-      Number.isInteger(err?.status) && err.status >= 400 && err.status < 600 ? err.status : 502;
-    return NextResponse.json(
-      { error: 'Authentication service unavailable', detail: err?.message || 'upstream_error' },
-      { status },
-    );
-  }
-
-  if (!result?.valid) {
+  if (!verified) {
     return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
-  const ad = result.user || {};
-  const name = ad.name || ad.email || email;
+  // The user must belong to this LexDesk org (single tenant). Their profile doc
+  // is the source of truth for role/name.
+  const { db } = firebaseAdmin();
+  const snap = await db.doc(Paths.user(ORG_ID, verified.uid)).get();
+  if (!snap.exists) {
+    return NextResponse.json(
+      { error: 'This account is not part of your organization. Ask your admin to add you.' },
+      { status: 401 },
+    );
+  }
+  const data = snap.data();
+  const name = data.name || verified.email || email;
   const user = {
-    id: ad.id,
-    email: ad.email || email,
+    id: verified.uid,
+    email: verified.email || email,
     name,
-    role: ROLE_MAP[ad.role] || 'employee',
+    role: roleToLexdesk(data.role),
     avatar: initialsFromName(name),
-    employeeId: null,
-    orgId,
+    employeeId: data.employeeId ?? null,
+    orgId: ORG_ID,
   };
 
   try {

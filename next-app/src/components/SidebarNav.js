@@ -16,14 +16,6 @@ function NavLink({ href, children, exact, onNavigate }) {
 }
 
 export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
-  // LexDesk system admin: a locked-down console — only the System link.
-  if (role === 'lexsysadmin') {
-    return (
-      <nav className="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
-        <NavLink href="/dashboard/system" exact onNavigate={onNavigate}>System</NavLink>
-      </nav>
-    );
-  }
   return (
     <nav className="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
       {role !== 'employee' && <NavLink href="/dashboard" exact onNavigate={onNavigate}>Dashboard</NavLink>}

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { enrollFace } from '@/lib/attenddesk';
+import { enrollFace } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 

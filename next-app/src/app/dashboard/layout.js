@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SidebarNav from '@/components/SidebarNav';
 import Avatar from '@/components/Avatar';
@@ -13,7 +13,6 @@ export default function DashboardLayout({ children }) {
   const [isTeamLeader, setIsTeamLeader] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -45,14 +44,6 @@ export default function DashboardLayout({ children }) {
       document.documentElement.classList.remove('light');
     }
   }, [router]);
-
-  // Lock the LexDesk system admin to the console — re-checked on every
-  // navigation (the mount effect above doesn't re-run on client-side routing).
-  useEffect(() => {
-    if (user?.role === 'lexsysadmin' && pathname && pathname !== '/dashboard/system') {
-      router.replace('/dashboard/system');
-    }
-  }, [user, pathname, router]);
 
   // Refresh the sidebar's copy of the user when the profile page saves changes,
   // and load the AttendDesk profile photo (fresh signed URL) for the sidebar avatar.
@@ -111,12 +102,7 @@ export default function DashboardLayout({ children }) {
     router.push('/');
   };
 
-  const homeHref =
-    user.role === 'lexsysadmin'
-      ? '/dashboard/system'
-      : user.role === 'employee'
-        ? '/dashboard/my-dashboard'
-        : '/dashboard';
+  const homeHref = user.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr] lg:h-screen lg:overflow-hidden bg-[var(--color-bg)]">

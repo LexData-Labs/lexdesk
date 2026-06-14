@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { uploadPhoto } from '@/lib/attenddesk';
+import { uploadPhoto } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 

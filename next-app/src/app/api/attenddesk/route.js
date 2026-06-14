@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import * as attenddesk from '@/lib/attenddesk';
+import * as backend from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 
-// Server-side proxy to the AttendDesk external API. The adk_live_ key never
-// leaves the server; the browser calls this gated route instead.
+// Admin-gated org-wide reads, now served straight from Firestore (the browser
+// can't reach the Admin SDK). Feeds the useAttendData hook.
 const RESOURCES = {
-  me: () => attenddesk.getMe(),
-  policy: (sp, orgId) => attenddesk.getPolicy(orgId),
-  office: (sp, orgId) => attenddesk.getOffice(orgId),
-  employees: (sp, orgId) => attenddesk.getEmployees(orgId),
+  policy: (sp, orgId) => backend.getPolicy(orgId),
+  office: (sp, orgId) => backend.getOffice(orgId),
+  employees: (sp, orgId) => backend.getEmployees(orgId),
   attendance: (sp, orgId) =>
-    attenddesk.getAttendance(
+    backend.getAttendance(
       {
         limit: sp.get('limit') ?? 50,
         from: sp.get('from'),
@@ -21,7 +20,7 @@ const RESOURCES = {
       },
       orgId,
     ),
-  leaveRequests: (sp, orgId) => attenddesk.getLeaveRequests({}, orgId),
+  leaveRequests: (sp, orgId) => backend.getLeaveRequests({}, orgId),
 };
 
 export async function GET(request) {
@@ -33,7 +32,7 @@ export async function GET(request) {
   }
 
   const sp = new URL(request.url).searchParams;
-  const run = RESOURCES[sp.get('resource') || 'me'];
+  const run = RESOURCES[sp.get('resource')];
   if (!run) return NextResponse.json({ error: 'unknown_resource' }, { status: 400 });
 
   try {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { forgotPassword } from '@/lib/attenddesk';
+import { forgotPassword } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 

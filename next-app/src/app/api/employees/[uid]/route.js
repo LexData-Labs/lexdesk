@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { setEmployeeTeam, deleteEmployee } from '@/lib/attenddesk';
+import { setEmployeeTeam, deleteEmployee } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 
