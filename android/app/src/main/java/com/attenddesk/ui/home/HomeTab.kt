@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.attenddesk.AppContainer
 import com.attenddesk.BuildConfig
 import com.attenddesk.data.api.HistoryEvent
+import com.attenddesk.data.api.MeResponse
 import com.attenddesk.ui.Routes
 import com.attenddesk.ui.attendance.computeMonthStats
 import com.attenddesk.ui.attendance.todayCanon
@@ -78,12 +79,18 @@ fun HomeTab(
     var refreshing by remember { mutableStateOf(false) }
     val role by container.profileStore.roleFlow.collectAsState(initial = null)
     val email by container.profileStore.emailFlow.collectAsState(initial = null)
-    val firstName = remember(email) { email?.substringBefore('@')?.replaceFirstChar { it.titlecase() } }
+    var me by remember { mutableStateOf<MeResponse?>(null) }
+    // Prefer the real name; fall back to the email prefix only until me() loads.
+    val displayName = me?.name?.takeIf { it.isNotBlank() }
+        ?: email?.substringBefore('@')?.replaceFirstChar { it.titlecase() }
 
     suspend fun load() {
         try { events = container.api.history(200).events } catch (_: Throwable) { if (events == null) events = emptyList() }
     }
-    LaunchedEffect(Unit) { scope.launch { load() } }
+    LaunchedEffect(Unit) {
+        scope.launch { load() }
+        scope.launch { runCatching { me = container.api.me() } }
+    }
 
     val today = LocalDate.now(DhakaZone)
     val canon = remember(events) { todayCanon(events.orEmpty(), today, DhakaZone) }
@@ -105,10 +112,12 @@ fun HomeTab(
             bottomContent = {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        firstName?.let { "Hi, $it" } ?: "Welcome",
+                        displayName?.let { "Hi, $it" } ?: "Welcome",
                         style = MaterialTheme.typography.headlineSmall,
                         color = androidx.compose.ui.graphics.Color.White,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                     Text(
                         "${formatWeekday(today)}, ${formatDay(today)}",
