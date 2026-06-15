@@ -253,32 +253,57 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
   };
 }
 
-// History list — same nested-user shape AttendDesk's external /attendance returns.
+// Doc → the nested-user row shape AttendDesk's external /attendance returns.
+function mapEventDoc(d) {
+  const data = d.data();
+  return {
+    id: d.id,
+    user: { id: data.uid, email: data.userEmail, name: data.userName ?? data.userEmail },
+    type: data.type,
+    timestamp: data.timestamp?.toDate?.()?.toISOString() ?? null,
+    allChecksPassed: data.allChecksPassed,
+    clientMode: data.clientMode ?? 'mobile',
+    apiKeyId: data.apiKeyId ?? null,
+    isLate: data.isLate ?? false,
+    isEarly: data.isEarly ?? false,
+    scheduledStart: data.scheduledStart ?? null,
+    scheduledEnd: data.scheduledEnd ?? null,
+  };
+}
+
+// History list. When scoped to ONE user we use an equality-only query (no
+// composite index) and sort/filter/slice client-side — mirrors listMyHistory.
+// The org-wide path keeps the server-side timestamp orderBy (+ same-field range),
+// which only needs the automatic single-field index.
 export async function listAttendance(organizationId, { from, to, userId, limit = 200 } = {}) {
   const { db } = firebaseAdmin();
-  let query = db.collection(Paths.events(organizationId));
-  if (userId) query = query.where('uid', '==', userId);
+  const cap = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+  const col = db.collection(Paths.events(organizationId));
+
+  if (userId) {
+    const snap = await col.where('uid', '==', userId).get();
+    const fromMs = from ? new Date(from).getTime() : null;
+    const toMs = to ? new Date(to).getTime() : null;
+    const events = snap.docs
+      .map(mapEventDoc)
+      .filter((e) => {
+        if (!e.timestamp) return false;
+        const t = new Date(e.timestamp).getTime();
+        if (fromMs != null && t < fromMs) return false;
+        if (toMs != null && t > toMs) return false;
+        return true;
+      })
+      .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
+      .slice(0, cap);
+    return { events };
+  }
+
+  let query = col;
   if (from) query = query.where('timestamp', '>=', new Date(from));
   if (to) query = query.where('timestamp', '<=', new Date(to));
-  query = query.orderBy('timestamp', 'desc').limit(Math.min(Math.max(Number(limit) || 200, 1), 1000));
+  query = query.orderBy('timestamp', 'desc').limit(cap);
   const snap = await query.get();
-  const events = snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id: d.id,
-      user: { id: data.uid, email: data.userEmail, name: data.userName ?? data.userEmail },
-      type: data.type,
-      timestamp: data.timestamp?.toDate?.()?.toISOString() ?? null,
-      allChecksPassed: data.allChecksPassed,
-      clientMode: data.clientMode ?? 'mobile',
-      apiKeyId: data.apiKeyId ?? null,
-      isLate: data.isLate ?? false,
-      isEarly: data.isEarly ?? false,
-      scheduledStart: data.scheduledStart ?? null,
-      scheduledEnd: data.scheduledEnd ?? null,
-    };
-  });
-  return { events };
+  return { events: snap.docs.map(mapEventDoc) };
 }
 
 // Mobile history for one uid → the app's HistoryEvent shape. Uses an
