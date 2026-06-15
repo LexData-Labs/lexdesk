@@ -8,6 +8,7 @@ import com.attenddesk.checks.WifiCheck
 import com.attenddesk.data.AuthRepository
 import com.attenddesk.data.PolicyRepository
 import com.attenddesk.data.ProfileStore
+import com.attenddesk.data.ReminderPreferences
 import com.attenddesk.data.ThemePreferences
 import com.attenddesk.data.api.AttendApi
 import com.attenddesk.data.api.ApiClient
@@ -24,6 +25,7 @@ val Context.dataStore by preferencesDataStore(name = "attenddesk_prefs")
 class AppContainer(private val app: App) {
     val profileStore: ProfileStore = ProfileStore(app.dataStore)
     val themePrefs: ThemePreferences = ThemePreferences(app.dataStore)
+    val reminderPrefs: ReminderPreferences = ReminderPreferences(app.dataStore)
     val api: AttendApi = ApiClient.build(BuildConfig.API_BASE)
     val authRepo: AuthRepository = AuthRepository(api, profileStore)
     val policyRepo: PolicyRepository = PolicyRepository(api)

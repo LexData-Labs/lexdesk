@@ -50,4 +50,55 @@ interface AttendApi {
 
     @POST("me/location-ping")
     suspend fun locationPing(@Body body: LocationPingRequest): LocationPingResponse
+
+    // ── Coming-soon modules ──────────────────────────────────────────────────
+
+    // Claims
+    @GET("me/claims") suspend fun listMyClaims(): ClaimListResponse
+    @POST("me/claims") suspend fun submitClaim(@Body body: ClaimSubmitRequest): IdResponse
+    @DELETE("me/claims/{id}") suspend fun cancelClaim(@Path("id") id: String)
+
+    // Visits
+    @GET("me/visits") suspend fun listMyVisits(): VisitListResponse
+    @POST("me/visits") suspend fun submitVisit(@Body body: VisitSubmitRequest): IdResponse
+    @DELETE("me/visits/{id}") suspend fun cancelVisit(@Path("id") id: String)
+
+    // Reconciliation
+    @GET("me/recon") suspend fun listMyRecon(): ReconListResponse
+    @POST("me/recon") suspend fun submitRecon(@Body body: ReconSubmitRequest): IdResponse
+    @DELETE("me/recon/{id}") suspend fun cancelRecon(@Path("id") id: String)
+
+    // Remote attendance
+    @GET("me/remote") suspend fun listMyRemote(): RemoteListResponse
+    @POST("me/remote") suspend fun submitRemote(@Body body: RemoteSubmitRequest): IdResponse
+    @DELETE("me/remote/{id}") suspend fun cancelRemote(@Path("id") id: String)
+
+    // Assets
+    @GET("me/assets") suspend fun listMyAssets(): AssetListResponse
+    @POST("me/assets") suspend fun createAsset(@Body body: AssetCreateRequest): IdResponse
+
+    // Break time
+    @POST("me/break") suspend fun recordBreak(@Body body: BreakActionRequest): BreakRecordResponse
+    @GET("me/breaks") suspend fun listMyBreaks(): BreaksResponse
+
+    // Directory / notices / team summary
+    @GET("directory") suspend fun directory(): DirectoryResponse
+    @GET("notices") suspend fun notices(): NoticeListResponse
+    @GET("me/team-summary") suspend fun teamSummary(): TeamSummaryResponse
+
+    // Manager approval queues
+    @GET("manage/leave") suspend fun manageLeave(@Query("status") status: String? = "pending"): LeaveManageResponse
+    @GET("manage/asset") suspend fun manageAsset(@Query("status") status: String? = "pending"): AssetListResponse
+    @GET("manage/claim") suspend fun manageClaim(@Query("status") status: String? = "pending"): ClaimListResponse
+    @GET("manage/visit") suspend fun manageVisit(@Query("status") status: String? = "pending"): VisitListResponse
+    @GET("manage/recon") suspend fun manageRecon(@Query("status") status: String? = "pending"): ReconListResponse
+    @GET("manage/remote") suspend fun manageRemote(@Query("status") status: String? = "pending"): RemoteListResponse
+
+    // Manager decisions
+    @POST("manage/leave/{id}") suspend fun decideLeave(@Path("id") id: String, @Body body: DecisionRequest): DecisionResponse
+    @POST("manage/asset/{id}") suspend fun decideAsset(@Path("id") id: String, @Body body: DecisionRequest): DecisionResponse
+    @POST("manage/claim/{id}") suspend fun decideClaim(@Path("id") id: String, @Body body: DecisionRequest): DecisionResponse
+    @POST("manage/visit/{id}") suspend fun decideVisit(@Path("id") id: String, @Body body: DecisionRequest): DecisionResponse
+    @POST("manage/recon/{id}") suspend fun decideRecon(@Path("id") id: String, @Body body: DecisionRequest): DecisionResponse
+    @POST("manage/remote/{id}") suspend fun decideRemote(@Path("id") id: String, @Body body: DecisionRequest): DecisionResponse
 }

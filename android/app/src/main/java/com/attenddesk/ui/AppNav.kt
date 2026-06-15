@@ -11,21 +11,31 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.attenddesk.AppContainer
+import com.attenddesk.ui.approvals.ApprovalsScreen
 import com.attenddesk.ui.assets.AssetsScreen
 import com.attenddesk.ui.attendance.MyAttendanceScreen
+import com.attenddesk.ui.attendance.TeamScreen
+import com.attenddesk.ui.breaks.BreakTimeScreen
+import com.attenddesk.ui.claim.ClaimScreen
 import com.attenddesk.ui.comingsoon.ComingSoonScreen
+import com.attenddesk.ui.directory.DirectoryScreen
 import com.attenddesk.ui.faceenroll.FaceEnrollScreen
 import com.attenddesk.ui.faceverify.FaceVerifyScreen
 import com.attenddesk.ui.leaves.LeaveBalanceScreen
 import com.attenddesk.ui.login.LoginScreen
 import com.attenddesk.ui.main.MainScreen
+import com.attenddesk.ui.notices.NoticeBoardScreen
 import com.attenddesk.ui.notifications.NotificationsScreen
 import com.attenddesk.ui.permissions.PermissionsScreen
 import com.attenddesk.ui.profile.ProfileScreen
 import com.attenddesk.ui.qr.MyQrScreen
 import com.attenddesk.ui.qrscan.QrScanScreen
+import com.attenddesk.ui.recon.ReconScreen
+import com.attenddesk.ui.reminder.ReminderSettingsScreen
+import com.attenddesk.ui.remote.RemoteScreen
 import com.attenddesk.ui.setpw.SetPasswordScreen
 import com.attenddesk.ui.verification.CheckInScreen
+import com.attenddesk.ui.visit.VisitScreen
 import com.google.firebase.auth.FirebaseAuth
 
 object Routes {
@@ -37,13 +47,24 @@ object Routes {
     const val MY_ATTENDANCE = "my-attendance"
     const val LEAVE_BALANCE = "leave-balance"
     const val ASSETS = "assets"
+    const val DIRECTORY = "directory"
+    const val NOTICES = "notices"
+    const val BREAK_TIME = "break-time"
+    const val CLAIM = "claim"
+    const val VISIT = "visit"
+    const val RECON = "recon"
+    const val REMOTE = "remote"
+    const val TEAM = "team"
+    const val ATT_REMINDER = "attendance-reminder"
     const val NOTIFICATIONS = "notifications"
     const val PROFILE = "profile"
     const val MY_QR = "my-qr"
     const val FACE_ENROLL = "face-enroll"
     const val FACE_VERIFY = "face-verify"
     const val QR_SCAN = "qr-scan"
+    const val APPROVALS = "approvals/{tab}"
     const val COMING_SOON = "coming-soon/{title}"
+    fun approvals(tab: Int) = "approvals/$tab"
     fun comingSoon(title: String) = "coming-soon/${Uri.encode(title)}"
 }
 
@@ -52,6 +73,9 @@ fun AppNav(container: AppContainer) {
     val navController = rememberNavController()
     val signedIn = remember { mutableStateOf(FirebaseAuth.getInstance().currentUser != null) }
     val start = if (signedIn.value) Routes.HOME else Routes.LOGIN
+
+    fun back() = navController.popBackStack()
+    val toLogin: () -> Unit = { navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } } }
 
     NavHost(navController = navController, startDestination = start) {
         composable(Routes.LOGIN) {
@@ -65,10 +89,7 @@ fun AppNav(container: AppContainer) {
             )
         }
         composable(Routes.SET_PW) {
-            SetPasswordScreen(
-                container = container,
-                onDone = { navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } } },
-            )
+            SetPasswordScreen(container = container, onDone = toLogin)
         }
         composable(Routes.PERMISSIONS) {
             PermissionsScreen(onGranted = { navController.popBackStack() })
@@ -76,77 +97,65 @@ fun AppNav(container: AppContainer) {
         composable(Routes.HOME) {
             MainScreen(
                 container = container,
-                onCheckIn = { navController.navigate(Routes.CHECK_IN) },
-                onMyAttendance = { navController.navigate(Routes.MY_ATTENDANCE) },
-                onOpenLeaveBalance = { navController.navigate(Routes.LEAVE_BALANCE) },
-                onOpenAssets = { navController.navigate(Routes.ASSETS) },
-                onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                onOpenProfile = { navController.navigate(Routes.PROFILE) },
-                onOpenMyQr = { navController.navigate(Routes.MY_QR) },
-                onComingSoon = { title -> navController.navigate(Routes.comingSoon(title)) },
-                onChangePassword = { navController.navigate(Routes.SET_PW) },
-                onLoggedOut = { navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } } },
+                onNavigate = { route -> navController.navigate(route) },
+                onLoggedOut = toLogin,
             )
         }
         composable(Routes.CHECK_IN) {
             CheckInScreen(
                 container = container,
-                onBack = { navController.popBackStack() },
+                onBack = { back() },
                 onOpenPermissions = { navController.navigate(Routes.PERMISSIONS) },
                 onOpenFaceEnroll = { navController.navigate(Routes.FACE_ENROLL) },
                 onVerifyFace = { navController.navigate(Routes.FACE_VERIFY) },
                 onScanQr = { navController.navigate(Routes.QR_SCAN) },
             )
         }
-        composable(Routes.MY_ATTENDANCE) {
-            MyAttendanceScreen(container = container, onBack = { navController.popBackStack() })
-        }
-        composable(Routes.LEAVE_BALANCE) {
-            LeaveBalanceScreen(container = container, onBack = { navController.popBackStack() })
-        }
-        composable(Routes.ASSETS) {
-            AssetsScreen(onBack = { navController.popBackStack() })
-        }
-        composable(Routes.NOTIFICATIONS) {
-            NotificationsScreen(container = container, onBack = { navController.popBackStack() })
-        }
+        composable(Routes.MY_ATTENDANCE) { MyAttendanceScreen(container = container, onBack = { back() }) }
+        composable(Routes.LEAVE_BALANCE) { LeaveBalanceScreen(container = container, onBack = { back() }) }
+        composable(Routes.ASSETS) { AssetsScreen(container = container, onBack = { back() }) }
+        composable(Routes.DIRECTORY) { DirectoryScreen(container = container, onBack = { back() }) }
+        composable(Routes.NOTICES) { NoticeBoardScreen(container = container, onBack = { back() }) }
+        composable(Routes.BREAK_TIME) { BreakTimeScreen(container = container, onBack = { back() }) }
+        composable(Routes.CLAIM) { ClaimScreen(container = container, onBack = { back() }) }
+        composable(Routes.VISIT) { VisitScreen(container = container, onBack = { back() }) }
+        composable(Routes.RECON) { ReconScreen(container = container, onBack = { back() }) }
+        composable(Routes.REMOTE) { RemoteScreen(container = container, onBack = { back() }) }
+        composable(Routes.TEAM) { TeamScreen(container = container, onBack = { back() }) }
+        composable(Routes.ATT_REMINDER) { ReminderSettingsScreen(container = container, onBack = { back() }) }
+        composable(Routes.NOTIFICATIONS) { NotificationsScreen(container = container, onBack = { back() }) }
+        composable(Routes.MY_QR) { MyQrScreen(container = container, onBack = { back() }) }
         composable(Routes.PROFILE) {
             ProfileScreen(
                 container = container,
-                onBack = { navController.popBackStack() },
+                onBack = { back() },
                 onOpenFaceEnroll = { navController.navigate(Routes.FACE_ENROLL) },
                 onChangePassword = { navController.navigate(Routes.SET_PW) },
-                onLoggedOut = { navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } } },
+                onLoggedOut = toLogin,
             )
         }
-        composable(Routes.MY_QR) {
-            MyQrScreen(container = container, onBack = { navController.popBackStack() })
+        composable(
+            route = Routes.APPROVALS,
+            arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
+        ) { entry ->
+            val tab = entry.arguments?.getInt("tab") ?: 0
+            ApprovalsScreen(container = container, onBack = { back() }, initialTab = tab)
         }
         composable(
             route = Routes.COMING_SOON,
             arguments = listOf(navArgument("title") { type = NavType.StringType }),
         ) { entry ->
             val title = entry.arguments?.getString("title")?.let { Uri.decode(it) } ?: "Coming soon"
-            ComingSoonScreen(title = title, onBack = { navController.popBackStack() })
+            ComingSoonScreen(title = title, onBack = { back() })
         }
         composable(Routes.FACE_ENROLL) {
             FaceEnrollScreen(container = container, onDone = { navController.popBackStack() })
         }
         composable(Routes.FACE_VERIFY) {
-            FaceVerifyScreen(
-                container = container,
-                onDone = { navController.popBackStack() },
-                onCancel = { navController.popBackStack() },
-            )
+            FaceVerifyScreen(container = container, onDone = { navController.popBackStack() }, onCancel = { navController.popBackStack() })
         }
         composable(Routes.QR_SCAN) {
-            QrScanScreen(
-                onResult = { token ->
-                    container.setQrToken(token)
-                    navController.popBackStack()
-                },
-                onCancel = { navController.popBackStack() },
-            )
+            QrScanScreen(onResult = { token -> container.setQrToken(token); navController.popBackStack() }, onCancel = { navController.popBackStack() })
         }
     }
 }

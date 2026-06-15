@@ -46,6 +46,7 @@ import com.attenddesk.AppContainer
 import com.attenddesk.data.api.LeaveRequestDto
 import com.attenddesk.data.api.LeaveRequestSubmitRequest
 import com.attenddesk.data.parseFeatureDisabled
+import com.attenddesk.ui.Routes
 import com.attenddesk.ui.components.ChipTone
 import com.attenddesk.ui.components.GradientHeader
 import com.attenddesk.ui.components.IconChip
@@ -74,8 +75,7 @@ fun LeaveTab(
     container: AppContainer,
     onMenu: () -> Unit,
     onBell: () -> Unit,
-    onOpenBalance: () -> Unit,
-    onComingSoon: (String) -> Unit,
+    onNavigate: (String) -> Unit,
     onFeatureDisabled: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -129,8 +129,8 @@ fun LeaveTab(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LeaveNavCard("My Leave Balance", Icons.Outlined.EventAvailable, onOpenBalance, Modifier.weight(1f))
-                    LeaveNavCard("Visit Applications", Icons.Outlined.Luggage, { onComingSoon("Visit Applications") }, Modifier.weight(1f))
+                    LeaveNavCard("My Leave Balance", Icons.Outlined.EventAvailable, { onNavigate(Routes.LEAVE_BALANCE) }, Modifier.weight(1f))
+                    LeaveNavCard("Visit Applications", Icons.Outlined.Luggage, { onNavigate(Routes.VISIT) }, Modifier.weight(1f))
                 }
 
                 Button(onClick = { showSubmit = true }, modifier = Modifier.fillMaxWidth()) {

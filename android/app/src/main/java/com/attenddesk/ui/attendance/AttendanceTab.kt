@@ -17,10 +17,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EditCalendar
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.material.icons.outlined.PhonelinkRing
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.RuleFolder
+import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.attenddesk.AppContainer
 import com.attenddesk.data.api.HistoryEvent
+import com.attenddesk.ui.Routes
 import com.attenddesk.ui.components.DonutChart
 import com.attenddesk.ui.components.DonutSegment
 import com.attenddesk.ui.components.GradientHeader
@@ -58,9 +61,8 @@ fun AttendanceTab(
     container: AppContainer,
     onMenu: () -> Unit,
     onBell: () -> Unit,
-    onMyAttendance: () -> Unit,
-    onCheckIn: () -> Unit,
-    onComingSoon: (String) -> Unit,
+    onNavigate: (String) -> Unit,
+    isManager: Boolean,
 ) {
     val scope = rememberCoroutineScope()
     var events by remember { mutableStateOf<List<HistoryEvent>?>(null) }
@@ -74,14 +76,18 @@ fun AttendanceTab(
     val today = LocalDate.now(DhakaZone)
     val week = remember(events) { weeklySummary(events.orEmpty(), today) }
 
-    val actions = listOf(
-        ModuleItem("My Attendance", Icons.Outlined.CalendarMonth, onClick = onMyAttendance),
-        ModuleItem("View Attendance", Icons.Outlined.ListAlt, onClick = onMyAttendance),
-        ModuleItem("QR / Face Att.", Icons.Outlined.QrCodeScanner, onClick = onCheckIn),
-        ModuleItem("Recon. Application", Icons.Outlined.EditCalendar, onClick = { onComingSoon("Reconciliation") }),
-        ModuleItem("Recon. Approval", Icons.Outlined.RuleFolder, onClick = { onComingSoon("Recon. Approval") }),
-        ModuleItem("Remote Att. Approval", Icons.Outlined.PhonelinkRing, onClick = { onComingSoon("Remote Approval") }),
-    )
+    val actions = buildList {
+        add(ModuleItem("My Attendance", Icons.Outlined.CalendarMonth, onClick = { onNavigate(Routes.MY_ATTENDANCE) }))
+        add(ModuleItem("View Attendance", Icons.Outlined.ListAlt, onClick = { onNavigate(Routes.MY_ATTENDANCE) }))
+        add(ModuleItem("QR / Face Att.", Icons.Outlined.QrCodeScanner, onClick = { onNavigate(Routes.CHECK_IN) }))
+        add(ModuleItem("Recon. Application", Icons.Outlined.EditCalendar, onClick = { onNavigate(Routes.RECON) }))
+        add(ModuleItem("Remote Attendance", Icons.Outlined.PhonelinkRing, onClick = { onNavigate(Routes.REMOTE) }))
+        if (isManager) {
+            add(ModuleItem("Recon. Approval", Icons.Outlined.RuleFolder, onClick = { onNavigate(Routes.approvals(4)) }))
+            add(ModuleItem("Remote Att. Approval", Icons.Outlined.TaskAlt, onClick = { onNavigate(Routes.approvals(5)) }))
+            add(ModuleItem("Subordinates", Icons.Outlined.Groups, onClick = { onNavigate(Routes.TEAM) }))
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         GradientHeader(title = "Attendance", onMenu = onMenu, onBell = onBell)

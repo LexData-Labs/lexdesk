@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { firebaseAdmin } from './firebase';
 import { Paths } from './paths';
 import { ORG_ID } from './config';
+import { isManager } from './services/teams';
 
 // Mobile auth: the Android app sends a Firebase ID token (Bearer). We verify it
 // with the Admin SDK and resolve the user's role. Single-org, so orgId is
@@ -44,6 +45,13 @@ export async function getMobileUser(request) {
   if (!role) throw new MobileAuthError(403, 'missing_claims');
 
   return { uid, email, role, orgId: ORG_ID };
+}
+
+// Manager gate for /api/v1/manage/* routes. Throws a 403 MobileAuthError when
+// the caller is neither an admin/superadmin nor a team leader.
+export async function requireManager(user) {
+  const ok = await isManager(user.orgId, user.uid, user.role);
+  if (!ok) throw new MobileAuthError(403, 'forbidden');
 }
 
 // Map a thrown error to a JSON response for /api/v1 routes.

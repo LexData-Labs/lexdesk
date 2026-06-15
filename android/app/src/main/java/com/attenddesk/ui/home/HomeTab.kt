@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.attenddesk.AppContainer
 import com.attenddesk.BuildConfig
 import com.attenddesk.data.api.HistoryEvent
+import com.attenddesk.ui.Routes
 import com.attenddesk.ui.attendance.computeMonthStats
 import com.attenddesk.ui.attendance.todayCanon
 import com.attenddesk.ui.components.ChipTone
@@ -69,9 +70,7 @@ fun HomeTab(
     container: AppContainer,
     onMenu: () -> Unit,
     onBell: () -> Unit,
-    onCheckIn: () -> Unit,
-    onOpenAssets: () -> Unit,
-    onComingSoon: (String) -> Unit,
+    onNavigate: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val is24h = LocalIs24Hour.current
@@ -91,11 +90,11 @@ fun HomeTab(
     val stats = remember(events) { computeMonthStats(events.orEmpty(), YearMonth.from(today), DhakaZone) }
 
     val modules = listOf(
-        ModuleItem("Check In / Out", Icons.Outlined.FactCheck, onClick = onCheckIn),
-        ModuleItem("Break Time", Icons.Outlined.FreeBreakfast, onClick = { onComingSoon("Break Time") }),
-        ModuleItem("Claim", Icons.Outlined.ReceiptLong, onClick = { onComingSoon("Claim") }),
-        ModuleItem("Directory", Icons.Outlined.Groups, onClick = { onComingSoon("Directory") }),
-        ModuleItem("Assets", Icons.Outlined.Inventory2, onClick = onOpenAssets),
+        ModuleItem("Check In / Out", Icons.Outlined.FactCheck, onClick = { onNavigate(Routes.CHECK_IN) }),
+        ModuleItem("Break Time", Icons.Outlined.FreeBreakfast, onClick = { onNavigate(Routes.BREAK_TIME) }),
+        ModuleItem("Claim", Icons.Outlined.ReceiptLong, onClick = { onNavigate(Routes.CLAIM) }),
+        ModuleItem("Directory", Icons.Outlined.Groups, onClick = { onNavigate(Routes.DIRECTORY) }),
+        ModuleItem("Assets", Icons.Outlined.Inventory2, onClick = { onNavigate(Routes.ASSETS) }),
     )
 
     Column(modifier = Modifier.fillMaxSize()) {

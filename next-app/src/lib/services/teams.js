@@ -1,5 +1,6 @@
 import { firebaseAdmin, FieldValue } from '../firebase';
 import { Paths } from '../paths';
+import { getEmployees } from './users';
 
 // Teams — ported from AttendDesk. Leader is an employee uid + denormalized name.
 
@@ -75,4 +76,36 @@ export async function deleteTeam(id, orgId) {
   if (!snap.exists) throw Object.assign(new Error('not_found'), { status: 404 });
   await ref.delete();
   return { ok: true };
+}
+
+// Resolve the teams this uid LEADS and the member uids in them. Mirrors the
+// web /api/team/* routes (getTeams + getEmployees filter). Used by mobile
+// manager endpoints for scoping (a lead only acts on their team's members).
+export async function listLedTeamMemberUids(orgId, uid) {
+  const { teams } = await getTeams(orgId);
+  const ledTeamIds = new Set(
+    teams.filter((t) => String(t.leaderUid) === String(uid)).map((t) => t.id),
+  );
+  if (ledTeamIds.size === 0) return { isLeader: false, members: [], memberUids: new Set() };
+  const { employees } = await getEmployees(orgId);
+  const members = employees.filter((e) => e.teamId && ledTeamIds.has(e.teamId));
+  return { isLeader: true, members, memberUids: new Set(members.map((e) => String(e.id))) };
+}
+
+// True when this caller can approve requests at all: an admin/superadmin (any
+// role casing) or the leader of ≥1 team.
+export async function isManager(orgId, uid, role) {
+  const r = String(role ?? '').toUpperCase();
+  if (r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN') return true;
+  const { isLeader } = await listLedTeamMemberUids(orgId, uid);
+  return isLeader;
+}
+
+// True when this caller may act on a SPECIFIC request owner (admin → anyone;
+// lead → only their team members).
+export async function canManageUser(orgId, uid, role, targetUid) {
+  const r = String(role ?? '').toUpperCase();
+  if (r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN') return true;
+  const { memberUids } = await listLedTeamMemberUids(orgId, uid);
+  return memberUids.has(String(targetUid));
 }

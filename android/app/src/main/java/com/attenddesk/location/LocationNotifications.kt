@@ -17,11 +17,14 @@ object LocationNotifications {
     const val CHANNEL_CONTINUOUS = "location_continuous"
     /** Low-importance status/diagnostic notifications. */
     const val CHANNEL_STATUS = "location_status"
+    /** Daily "time to check in" reminder. */
+    const val CHANNEL_REMINDER = "attendance_reminder"
 
     const val NOTIF_ID_GEOFENCE_ENTER = 7001
     const val NOTIF_ID_GEOFENCE_EXIT = 7002
     const val NOTIF_ID_CONTINUOUS_FGS = 7100
     const val NOTIF_ID_STATUS_DEGRADED = 7200
+    const val NOTIF_ID_REMINDER = 8000
 
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return
@@ -58,6 +61,17 @@ object LocationNotifications {
                 ).apply {
                     description = "Diagnostic warnings about background location."
                     setShowBadge(false)
+                },
+            )
+        }
+        if (mgr.getNotificationChannel(CHANNEL_REMINDER) == null) {
+            mgr.createNotificationChannel(
+                NotificationChannel(
+                    CHANNEL_REMINDER,
+                    "Attendance reminder",
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    description = "Daily reminder to mark your attendance."
                 },
             )
         }

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCode2
+import androidx.compose.material.icons.outlined.RuleFolder
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -47,6 +48,7 @@ import com.attenddesk.AppContainer
 import com.attenddesk.BuildConfig
 import com.attenddesk.data.TimeFormat
 import com.attenddesk.data.api.MeResponse
+import com.attenddesk.ui.Routes
 import com.attenddesk.ui.attendance.AttendanceTab
 import com.attenddesk.ui.components.AppDrawer
 import com.attenddesk.ui.components.DrawerItem
@@ -64,15 +66,7 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 @Composable
 fun MainScreen(
     container: AppContainer,
-    onCheckIn: () -> Unit,
-    onMyAttendance: () -> Unit,
-    onOpenLeaveBalance: () -> Unit,
-    onOpenAssets: () -> Unit,
-    onOpenNotifications: () -> Unit,
-    onOpenProfile: () -> Unit,
-    onOpenMyQr: () -> Unit,
-    onComingSoon: (String) -> Unit,
-    onChangePassword: () -> Unit,
+    onNavigate: (String) -> Unit,
     onLoggedOut: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -80,9 +74,13 @@ fun MainScreen(
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var leavesEnabled by remember { mutableStateOf(true) }
     var me by remember { mutableStateOf<MeResponse?>(null) }
+    var isLeader by remember { mutableStateOf(false) }
     val role by container.profileStore.roleFlow.collectAsState(initial = null)
     val email by container.profileStore.emailFlow.collectAsState(initial = null)
     val timeFormat by container.themePrefs.timeFormatFlow.collectAsState(initial = TimeFormat.H12)
+
+    val roleUpper = (role ?: me?.role ?: "").uppercase()
+    val isManager = roleUpper == "ADMIN" || roleUpper == "SUPER_ADMIN" || roleUpper == "SUPERADMIN" || isLeader
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -93,9 +91,9 @@ fun MainScreen(
             } catch (_: Throwable) { }
         }
         scope.launch { runCatching { me = container.api.me() } }
+        scope.launch { runCatching { isLeader = container.api.teamSummary().isLeader } }
     }
 
-    // Resume-triggered policy refresh (pick up admin changes), 60s throttle.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         var lastResumeMs = 0L
@@ -116,44 +114,40 @@ fun MainScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val visibleTabs = remember(leavesEnabled) {
-        Tab.entries.filter { it != Tab.Leave || leavesEnabled }
-    }
+    val visibleTabs = remember(leavesEnabled) { Tab.entries.filter { it != Tab.Leave || leavesEnabled } }
     if (selected >= visibleTabs.size) selected = 0
     val tab = visibleTabs[selected]
 
-    fun closeDrawerThen(action: () -> Unit) {
+    fun closeThen(route: String) {
         scope.launch { drawerState.close() }
-        action()
+        onNavigate(route)
     }
 
-    val drawerItems = listOf(
-        DrawerItem("Home", Icons.Outlined.Home) {
-            val idx = visibleTabs.indexOf(Tab.Home)
-            if (idx >= 0) selected = idx
+    val drawerItems = buildList {
+        add(DrawerItem("Home", Icons.Outlined.Home) {
+            val idx = visibleTabs.indexOf(Tab.Home); if (idx >= 0) selected = idx
             scope.launch { drawerState.close() }
-        },
-        DrawerItem("Break Time", Icons.Outlined.FreeBreakfast) { closeDrawerThen { onComingSoon("Break Time") } },
-        DrawerItem("Attendance Reminder", Icons.Outlined.NotificationsActive) { closeDrawerThen { onComingSoon("Attendance Reminder") } },
-        DrawerItem("Directory", Icons.Outlined.Groups) { closeDrawerThen { onComingSoon("Directory") } },
-        DrawerItem("My QR Code", Icons.Outlined.QrCode2) { closeDrawerThen(onOpenMyQr) },
-        DrawerItem("My Profile", Icons.Outlined.Person) { closeDrawerThen(onOpenProfile) },
-        DrawerItem("My Notice Board", Icons.Outlined.Campaign) { closeDrawerThen { onComingSoon("Notice Board") } },
-        DrawerItem("Change Password", Icons.Outlined.Lock) { closeDrawerThen(onChangePassword) },
-    )
+        })
+        add(DrawerItem("Break Time", Icons.Outlined.FreeBreakfast) { closeThen(Routes.BREAK_TIME) })
+        add(DrawerItem("Attendance Reminder", Icons.Outlined.NotificationsActive) { closeThen(Routes.ATT_REMINDER) })
+        add(DrawerItem("Directory", Icons.Outlined.Groups) { closeThen(Routes.DIRECTORY) })
+        if (isManager) add(DrawerItem("Approvals", Icons.Outlined.RuleFolder) { closeThen(Routes.approvals(0)) })
+        add(DrawerItem("My QR Code", Icons.Outlined.QrCode2) { closeThen(Routes.MY_QR) })
+        add(DrawerItem("My Profile", Icons.Outlined.Person) { closeThen(Routes.PROFILE) })
+        add(DrawerItem("My Notice Board", Icons.Outlined.Campaign) { closeThen(Routes.NOTICES) })
+        add(DrawerItem("Change Password", Icons.Outlined.Lock) { closeThen(Routes.SET_PW) })
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
                 name = me?.name ?: email ?: "—",
-                role = (role ?: me?.role ?: "").lowercase().replaceFirstChar { it.titlecase() },
+                role = roleUpper.lowercase().replaceFirstChar { it.titlecase() },
                 photoUrl = me?.photoUrl,
                 items = drawerItems,
                 is24h = timeFormat == TimeFormat.H24,
-                onToggleTime = { is24 ->
-                    scope.launch { container.themePrefs.setTimeFormat(if (is24) TimeFormat.H24 else TimeFormat.H12) }
-                },
+                onToggleTime = { is24 -> scope.launch { container.themePrefs.setTimeFormat(if (is24) TimeFormat.H24 else TimeFormat.H12) } },
                 onLogout = {
                     scope.launch {
                         drawerState.close()
@@ -188,35 +182,18 @@ fun MainScreen(
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
             val onMenu = { scope.launch { drawerState.open() }; Unit }
+            val onBell = { onNavigate(Routes.NOTIFICATIONS) }
             Box(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                modifier = Modifier.padding(padding).fillMaxSize().background(MaterialTheme.colorScheme.background),
             ) {
                 when (tab) {
-                    Tab.Home -> HomeTab(
-                        container = container,
-                        onMenu = onMenu,
-                        onBell = onOpenNotifications,
-                        onCheckIn = onCheckIn,
-                        onOpenAssets = onOpenAssets,
-                        onComingSoon = onComingSoon,
-                    )
-                    Tab.Attendance -> AttendanceTab(
-                        container = container,
-                        onMenu = onMenu,
-                        onBell = onOpenNotifications,
-                        onMyAttendance = onMyAttendance,
-                        onCheckIn = onCheckIn,
-                        onComingSoon = onComingSoon,
-                    )
+                    Tab.Home -> HomeTab(container = container, onMenu = onMenu, onBell = onBell, onNavigate = onNavigate)
+                    Tab.Attendance -> AttendanceTab(container = container, onMenu = onMenu, onBell = onBell, onNavigate = onNavigate, isManager = isManager)
                     Tab.Leave -> LeaveTab(
                         container = container,
                         onMenu = onMenu,
-                        onBell = onOpenNotifications,
-                        onOpenBalance = onOpenLeaveBalance,
-                        onComingSoon = onComingSoon,
+                        onBell = onBell,
+                        onNavigate = onNavigate,
                         onFeatureDisabled = { leavesEnabled = false; selected = 0 },
                     )
                 }
