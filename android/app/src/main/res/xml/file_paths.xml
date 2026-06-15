@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!--
+      Temporary directory used to receive camera-captured profile photos
+      via FileProvider before they are compressed + uploaded.
+    -->
+    <cache-path name="profile_photos" path="profile_photos/" />
+</paths>

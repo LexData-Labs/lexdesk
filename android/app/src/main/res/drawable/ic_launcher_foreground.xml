@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!--
+        AttendDesk "AD" wordmark, sized to fit comfortably inside the
+        launcher circle mask (safe zone is 72dp; this mark uses ~50dp
+        with ~11dp of padding on each side).
+    -->
+
+    <!-- Letter A: two diagonals meeting at the apex + horizontal crossbar. -->
+    <path
+        android:pathData="M29,72 L41,36 L53,72"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M33,60 L49,60"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Letter D: vertical edge on the left, half-ellipse on the right. -->
+    <path
+        android:pathData="M59,36 L68,36 Q79,36 79,54 Q79,72 68,72 L59,72 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

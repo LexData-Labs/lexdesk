@@ -1,0 +1,83 @@
+package com.attenddesk.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+// Brand ramp — mirrors web tailwind.config.ts
+val Brand50  = Color(0xFFEFF6FF)
+val Brand100 = Color(0xFFDBEAFE)
+val Brand200 = Color(0xFFBFDBFE)
+val Brand300 = Color(0xFF93C5FD)
+val Brand400 = Color(0xFF60A5FA)
+val Brand500 = Color(0xFF2563EB)
+val Brand600 = Color(0xFF1D4ED8)
+val Brand700 = Color(0xFF1E40AF)
+val Brand800 = Color(0xFF1E3A8A)
+val Brand900 = Color(0xFF172554)
+
+// Neutral / slate
+val Slate50  = Color(0xFFF8FAFC)
+val Slate100 = Color(0xFFF1F5F9)
+val Slate200 = Color(0xFFE2E8F0)
+val Slate300 = Color(0xFFCBD5E1)
+val Slate400 = Color(0xFF94A3B8)
+val Slate500 = Color(0xFF64748B)
+val Slate600 = Color(0xFF475569)
+val Slate700 = Color(0xFF334155)
+val Slate800 = Color(0xFF1E293B)
+val Slate900 = Color(0xFF0F172A)
+
+// Light surfaces (matches web `:root` --bg / --bg-elevated / --border)
+val SurfaceBg       = Color(0xFFF6F8FB)
+val SurfaceElevated = Color(0xFFFFFFFF)
+val OutlineSubtle   = Color(0xFFE2E8F0)
+
+// Dark surfaces (matches web `.dark` --bg / --bg-elevated / --border)
+val SurfaceBgDark       = Color(0xFF0A0F1A)
+val SurfaceElevatedDark = Color(0xFF111827)
+val OutlineSubtleDark   = Color(0xFF1E293B)
+
+// Status palette — light (matches web .chip-* / status banner styles)
+val SuccessFg     = Color(0xFF047857)
+val SuccessBg     = Color(0xFFECFDF5)
+val SuccessBorder = Color(0xFFA7F3D0)
+
+val DangerFg     = Color(0xFFB91C1C)
+val DangerBg     = Color(0xFFFEF2F2)
+val DangerBorder = Color(0xFFFECACA)
+
+val WarnFg     = Color(0xFF92400E)
+val WarnBg     = Color(0xFFFFFBEB)
+val WarnBorder = Color(0xFFFDE68A)
+
+val InfoFg     = Color(0xFF1E40AF)
+val InfoBg     = Color(0xFFEFF6FF)
+val InfoBorder = Color(0xFFBFDBFE)
+
+val MutedFg     = Color(0xFF475569)
+val MutedBg     = Color(0xFFF1F5F9)
+val MutedBorder = Color(0xFFE2E8F0)
+
+// Status palette — dark (mirrors web dark chip swap: deep bg, light fg, mid border)
+val SuccessFgDark     = Color(0xFF6EE7B7) // emerald-300
+val SuccessBgDark     = Color(0xFF022C22) // emerald-950
+val SuccessBorderDark = Color(0xFF065F46) // emerald-800
+
+val DangerFgDark     = Color(0xFFFCA5A5) // red-300
+val DangerBgDark     = Color(0xFF450A0A) // red-950
+val DangerBorderDark = Color(0xFF7F1D1D) // red-900
+
+val WarnFgDark     = Color(0xFFFCD34D) // amber-300
+val WarnBgDark     = Color(0xFF451A03) // amber-950
+val WarnBorderDark = Color(0xFF78350F) // amber-900
+
+val InfoFgDark     = Color(0xFF93C5FD) // brand-300
+val InfoBgDark     = Color(0xFF172554) // brand-900
+val InfoBorderDark = Color(0xFF1E40AF) // brand-700
+
+val MutedFgDark     = Color(0xFFCBD5E1) // slate-300
+val MutedBgDark     = Color(0xFF1E293B) // slate-800
+val MutedBorderDark = Color(0xFF334155) // slate-700
+
+// Calendar dots — bright accent colors that read at 4dp.
+val LateDot  = Color(0xFFEAB308) // yellow-500
+val EarlyDot = Color(0xFFF97316) // orange-500

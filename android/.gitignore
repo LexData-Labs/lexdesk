@@ -1,0 +1,14 @@
+# Android / Gradle build artifacts and machine-specific files.
+.gradle/
+build/
+/app/build/
+local.properties
+.idea/
+*.iml
+.cxx/
+captures/
+.externalNativeBuild/
+
+# Keystores / signing — never commit.
+*.keystore
+*.jks

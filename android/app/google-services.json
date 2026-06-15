@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "693868305080",
+    "project_id": "lexdesk-prod",
+    "storage_bucket": "lexdesk-prod.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:693868305080:android:9c097c26f627b11696324d",
+        "android_client_info": {
+          "package_name": "com.attenddesk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_0F55uemKsVgkOvTVc0UF3KKlGY1oStY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
