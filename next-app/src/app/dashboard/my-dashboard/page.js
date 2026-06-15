@@ -7,7 +7,7 @@ import MonthCalendar from '@/components/MonthCalendar';
 import KpiCard from '@/components/KpiCard';
 import Avatar from '@/components/Avatar';
 import CheckInCard from '@/components/CheckInCard';
-import { employeeCalendarMonth, bdDateKey, approvedLeaveDays } from '@/lib/attend';
+import { employeeCalendarMonth, bdDateKey, approvedLeaveDays, canonicalDays } from '@/lib/attend';
 
 function initials(name) {
   if (!name) return '?';
@@ -84,16 +84,12 @@ export default function MyDashboardPage() {
     [events, leave, holidays, ym],
   );
 
+  // In Time = earliest SUCCESSFUL check-in today; Out Time = latest SUCCESSFUL
+  // check-out. Reuses canonicalDays (skips allChecksPassed === false) so failed
+  // attempts never set the displayed time — consistent with the rest of the app.
   const today = useMemo(() => {
-    const tk = bdDateKey(new Date());
-    let inTs = null, outTs = null;
-    for (const e of events || []) {
-      if (!e.timestamp || bdDateKey(e.timestamp) !== tk) continue;
-      const ts = new Date(e.timestamp).getTime();
-      if (e.type === 'CHECK_IN') { if (inTs === null || ts < inTs) inTs = ts; }
-      else if (e.type === 'CHECK_OUT') { if (outTs === null || ts > outTs) outTs = ts; }
-    }
-    return { inTs, outTs };
+    const slot = canonicalDays(events)[bdDateKey(new Date())];
+    return { inTs: slot?.firstCheckIn?.ts ?? null, outTs: slot?.lastCheckOut?.ts ?? null };
   }, [events]);
 
   const leaveStats = useMemo(() => {
