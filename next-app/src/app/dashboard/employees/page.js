@@ -21,6 +21,12 @@ export default function EmployeesPage() {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance'], { month: ym });
   const [teams, setTeams] = useState([]);
+  // A system admin (superadmin) needs to see ADMINS too — to open the org
+  // admin's profile and reset their password. Regular admins see employees only.
+  const [isSuper, setIsSuper] = useState(false);
+  useEffect(() => {
+    try { setIsSuper(JSON.parse(localStorage.getItem('user') || 'null')?.role === 'superadmin'); } catch { setIsSuper(false); }
+  }, []);
 
   // Add-employee modal state.
   const [showAdd, setShowAdd] = useState(false);
@@ -46,11 +52,11 @@ export default function EmployeesPage() {
 
   const rows = useMemo(
     () =>
-      onlyEmployees(employees).map((e) => {
+      (isSuper ? (employees || []) : onlyEmployees(employees)).map((e) => {
         const s = stats[e.id] || { presentDays: 0, lateDays: 0, lastCheckIn: null };
         return { ...e, presentDays: s.presentDays, late: s.lateDays, lastCheckIn: s.lastCheckIn };
       }),
-    [employees, stats],
+    [employees, stats, isSuper],
   );
 
   const filtered = useMemo(() => {

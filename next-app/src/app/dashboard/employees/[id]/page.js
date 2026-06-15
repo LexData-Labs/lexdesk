@@ -18,6 +18,7 @@ export default function EmployeeProfilePage() {
   const [savingTeam, setSavingTeam] = useState(false);
   const [teamMsg, setTeamMsg] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -28,7 +29,11 @@ export default function EmployeeProfilePage() {
   const [faceMsg, setFaceMsg] = useState(null); // { ok, text }
 
   useEffect(() => {
-    try { setCurrentUserId(JSON.parse(localStorage.getItem('user') || 'null')?.id ?? null); } catch { setCurrentUserId(null); }
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || 'null');
+      setCurrentUserId(u?.id ?? null);
+      setCurrentUserRole(u?.role ?? null);
+    } catch { setCurrentUserId(null); setCurrentUserRole(null); }
   }, []);
 
   useEffect(() => {
@@ -175,7 +180,9 @@ export default function EmployeeProfilePage() {
           <div className="flex items-center gap-3">
             <Link href="/dashboard/employees" className="btn-outline py-1.5 px-3 text-sm">Back</Link>
             <button onClick={refresh} className="btn-outline py-1.5 px-3 text-sm">Refresh</button>
-            {employee && String(employee.role || '').toUpperCase() === 'EMPLOYEE' && (
+            {employee && String(employeeId) !== String(currentUserId) &&
+              (String(employee.role || '').toUpperCase() === 'EMPLOYEE' ||
+                (String(employee.role || '').toUpperCase() === 'ADMIN' && currentUserRole === 'superadmin')) && (
               <button onClick={() => { setResetResult(null); setResetError(''); setResetOpen(true); }} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-purple)] border-[rgba(139,92,246,0.3)] hover:bg-[rgba(139,92,246,0.05)]">
                 Reset password
               </button>

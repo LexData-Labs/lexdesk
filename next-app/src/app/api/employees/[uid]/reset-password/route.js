@@ -6,10 +6,9 @@ export const dynamic = 'force-dynamic';
 
 const isAdmin = (user) => user.role === 'admin' || user.role === 'superadmin';
 
-// POST: admins only — reset one of THEIR OWN org's EMPLOYEES to a temp password.
-// The org is taken from the admin's session (X-Org-Id), so an admin can only act
-// within their own org. Admin/superadmin targets are refused here (those are the
-// system console's job).
+// POST: reset another user's password to a temp one (returned for display).
+// Admins may reset EMPLOYEES; a superadmin (system admin) may also reset ADMINS.
+// Nobody resets a SUPER_ADMIN here, nor their own account. Org-scoped via session.
 export async function POST(request, ctx) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -31,11 +30,22 @@ export async function POST(request, ctx) {
       );
     }
   }
-  if (!emp) return NextResponse.json({ error: 'Employee not found in your organization.' }, { status: 404 });
-  if (String(emp.role || '').toUpperCase() !== 'EMPLOYEE') {
-    return NextResponse.json({ error: 'Only employee passwords can be reset here.' }, { status: 403 });
+  if (!emp) return NextResponse.json({ error: 'User not found in your organization.' }, { status: 404 });
+  if (String(uid) === String(user.id)) {
+    return NextResponse.json({ error: 'Use “Change password” to reset your own account.' }, { status: 403 });
   }
-  if (!emp.email) return NextResponse.json({ error: 'This employee has no email on file.' }, { status: 400 });
+  const targetRole = String(emp.role || '').toUpperCase();
+  const callerSuper = user.role === 'superadmin';
+  if (targetRole === 'SUPER_ADMIN') {
+    return NextResponse.json({ error: 'A system admin’s password can’t be reset here.' }, { status: 403 });
+  }
+  if (targetRole === 'ADMIN' && !callerSuper) {
+    return NextResponse.json({ error: 'Only a system admin can reset an admin’s password.' }, { status: 403 });
+  }
+  if (targetRole !== 'EMPLOYEE' && targetRole !== 'ADMIN') {
+    return NextResponse.json({ error: 'This account’s password can’t be reset here.' }, { status: 403 });
+  }
+  if (!emp.email) return NextResponse.json({ error: 'This user has no email on file.' }, { status: 400 });
 
   try {
     const result = await resetUserPassword(emp.email, user.orgId);
