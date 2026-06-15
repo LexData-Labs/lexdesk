@@ -81,3 +81,21 @@ val MutedBorderDark = Color(0xFF334155) // slate-700
 // Calendar dots — bright accent colors that read at 4dp.
 val LateDot  = Color(0xFFEAB308) // yellow-500
 val EarlyDot = Color(0xFFF97316) // orange-500
+
+// ── Redesign tokens (reference HR app: navy headers, purple icon chips, donut) ──
+
+// Header / hero gradient — deep navy-indigo. Used by GradientHeader; drawn at the
+// component level so the Material primary (brand blue) keeps powering buttons.
+val Navy700 = Color(0xFF2A3A93) // top-left, lighter
+val Navy800 = Color(0xFF1C2A6E)
+val Navy900 = Color(0xFF131C57) // bottom-right, deepest
+
+// Icon "chip" behind module/action glyphs — light indigo wash + indigo glyph.
+val ChipPurpleBg     = Color(0xFFEEF0FF)
+val ChipPurpleFg     = Color(0xFF5A60E6)
+val ChipPurpleBgDark = Color(0xFF20245A)
+val ChipPurpleFgDark = Color(0xFFB3B8FF)
+
+// Donut / chart accents. The blue slice reuses Brand500.
+val DonutGreen = Color(0xFF34C77B) // "remaining" / present
+val DonutBlue  = Brand500          // "taken" / late

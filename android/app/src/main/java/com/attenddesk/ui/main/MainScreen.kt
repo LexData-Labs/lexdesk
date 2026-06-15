@@ -1,28 +1,36 @@
 package com.attenddesk.ui.main
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.EventAvailable
-import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.FreeBreakfast
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.QrCode2
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,164 +38,188 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.attenddesk.AppContainer
-import com.attenddesk.ui.components.BrandMark
-import com.attenddesk.ui.dashboard.DashboardTab
-import com.attenddesk.ui.leaves.LeavesTab
-import com.attenddesk.ui.profile.ProfileTab
-import com.attenddesk.ui.verification.VerificationTab
+import com.attenddesk.BuildConfig
+import com.attenddesk.data.TimeFormat
+import com.attenddesk.data.api.MeResponse
+import com.attenddesk.ui.attendance.AttendanceTab
+import com.attenddesk.ui.components.AppDrawer
+import com.attenddesk.ui.components.DrawerItem
+import com.attenddesk.ui.home.HomeTab
+import com.attenddesk.ui.leaves.LeaveTab
 import kotlinx.coroutines.launch
 
 private enum class Tab(val label: String, val icon: ImageVector) {
-    Dashboard("Dashboard", Icons.Outlined.Insights),
-    Verify("Verify",       Icons.Outlined.CheckCircle),
-    Leaves("Leaves",       Icons.Outlined.EventAvailable),
-    Profile("Profile",     Icons.Outlined.Person),
+    Home("Home", Icons.Outlined.Home),
+    Attendance("Attendance", Icons.Outlined.CalendarMonth),
+    Leave("Leave", Icons.Outlined.EventAvailable),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     container: AppContainer,
-    onOpenPermissions: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onOpenFaceEnroll: () -> Unit,
-    onVerifyFace: () -> Unit,
-    onScanQr: () -> Unit,
+    onCheckIn: () -> Unit,
+    onMyAttendance: () -> Unit,
+    onOpenLeaveBalance: () -> Unit,
+    onOpenAssets: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenMyQr: () -> Unit,
+    onComingSoon: (String) -> Unit,
     onChangePassword: () -> Unit,
     onLoggedOut: () -> Unit,
 ) {
-    // rememberSaveable so the active tab survives navigation away (e.g. Face
-    // enroll / Verify) and back — otherwise the user lands on Dashboard after
-    // completing an action they started from Verify or Profile.
-    var selected by rememberSaveable { mutableIntStateOf(0) }
-    // Visible tabs derived from feature flags. Leaves tab is gated by
-    // service.leaveRequests — when the org admin turns it off via the system
-    // admin features page, the tab vanishes from the bottom bar.
     val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    var selected by rememberSaveable { mutableIntStateOf(0) }
     var leavesEnabled by remember { mutableStateOf(true) }
+    var me by remember { mutableStateOf<MeResponse?>(null) }
+    val role by container.profileStore.roleFlow.collectAsState(initial = null)
+    val email by container.profileStore.emailFlow.collectAsState(initial = null)
+    val timeFormat by container.themePrefs.timeFormatFlow.collectAsState(initial = TimeFormat.H12)
+
     LaunchedEffect(Unit) {
         scope.launch {
             try {
                 val policy = container.policyRepo.get(forceRefresh = true)
                 leavesEnabled = policy.features.service.leaveRequests
-                // Apply the org's location mode whenever a fresh policy lands.
-                // applyMode is now idempotent — calling with the same config
-                // is a no-op.
                 runCatching { container.locationModeManager.applyMode(policy) }
-            } catch (_: Throwable) { /* keep optimistic default */ }
+            } catch (_: Throwable) { }
         }
+        scope.launch { runCatching { me = container.api.me() } }
     }
 
-    // Resume-triggered refresh: when the user backgrounds the app, an admin
-    // changes something on the web, and then the user brings the app back,
-    // pick up that change without requiring a cold restart. 60s throttle
-    // prevents a rapid pause/resume cycle from flooding /me/policy.
+    // Resume-triggered policy refresh (pick up admin changes), 60s throttle.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        var lastResumeRefreshMs = 0L
-        val minIntervalMs = 60_000L
+        var lastResumeMs = 0L
         val observer = LifecycleEventObserver { _, event ->
             if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
             val now = System.currentTimeMillis()
-            if (now - lastResumeRefreshMs < minIntervalMs) return@LifecycleEventObserver
-            lastResumeRefreshMs = now
+            if (now - lastResumeMs < 60_000L) return@LifecycleEventObserver
+            lastResumeMs = now
             scope.launch {
                 try {
                     val policy = container.policyRepo.get(forceRefresh = true)
                     leavesEnabled = policy.features.service.leaveRequests
                     runCatching { container.locationModeManager.applyMode(policy) }
-                } catch (_: Throwable) { /* keep existing state */ }
+                } catch (_: Throwable) { }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+
     val visibleTabs = remember(leavesEnabled) {
-        Tab.entries.filter { it != Tab.Leaves || leavesEnabled }
+        Tab.entries.filter { it != Tab.Leave || leavesEnabled }
     }
-    // Clamp the selected index if the visible list shrank (e.g. Leaves was on
-    // and the admin turned it off mid-session).
     if (selected >= visibleTabs.size) selected = 0
     val tab = visibleTabs[selected]
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        BrandMark(size = 30.dp)
-                        Text(
-                            "AttendDesk · ${tab.label}",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
+    fun closeDrawerThen(action: () -> Unit) {
+        scope.launch { drawerState.close() }
+        action()
+    }
+
+    val drawerItems = listOf(
+        DrawerItem("Home", Icons.Outlined.Home) {
+            val idx = visibleTabs.indexOf(Tab.Home)
+            if (idx >= 0) selected = idx
+            scope.launch { drawerState.close() }
+        },
+        DrawerItem("Break Time", Icons.Outlined.FreeBreakfast) { closeDrawerThen { onComingSoon("Break Time") } },
+        DrawerItem("Attendance Reminder", Icons.Outlined.NotificationsActive) { closeDrawerThen { onComingSoon("Attendance Reminder") } },
+        DrawerItem("Directory", Icons.Outlined.Groups) { closeDrawerThen { onComingSoon("Directory") } },
+        DrawerItem("My QR Code", Icons.Outlined.QrCode2) { closeDrawerThen(onOpenMyQr) },
+        DrawerItem("My Profile", Icons.Outlined.Person) { closeDrawerThen(onOpenProfile) },
+        DrawerItem("My Notice Board", Icons.Outlined.Campaign) { closeDrawerThen { onComingSoon("Notice Board") } },
+        DrawerItem("Change Password", Icons.Outlined.Lock) { closeDrawerThen(onChangePassword) },
+    )
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppDrawer(
+                name = me?.name ?: email ?: "—",
+                role = (role ?: me?.role ?: "").lowercase().replaceFirstChar { it.titlecase() },
+                photoUrl = me?.photoUrl,
+                items = drawerItems,
+                is24h = timeFormat == TimeFormat.H24,
+                onToggleTime = { is24 ->
+                    scope.launch { container.themePrefs.setTimeFormat(if (is24) TimeFormat.H24 else TimeFormat.H12) }
+                },
+                onLogout = {
+                    scope.launch {
+                        drawerState.close()
+                        runCatching { container.locationModeManager.teardownAll() }
+                        container.authRepo.logout()
+                        onLoggedOut()
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                version = BuildConfig.VERSION_NAME,
             )
         },
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                visibleTabs.forEachIndexed { index, t ->
-                    NavigationBarItem(
-                        selected = selected == index,
-                        onClick = { selected = index },
-                        icon = { Icon(t.icon, contentDescription = t.label) },
-                        label = { Text(t.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
-                        ),
+    ) {
+        Scaffold(
+            bottomBar = {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                    visibleTabs.forEachIndexed { index, t ->
+                        NavigationBarItem(
+                            selected = selected == index,
+                            onClick = { selected = index },
+                            icon = { Icon(t.icon, contentDescription = t.label) },
+                            label = { Text(t.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                            ),
+                        )
+                    }
+                }
+            },
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { padding ->
+            val onMenu = { scope.launch { drawerState.open() }; Unit }
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            ) {
+                when (tab) {
+                    Tab.Home -> HomeTab(
+                        container = container,
+                        onMenu = onMenu,
+                        onBell = onOpenNotifications,
+                        onCheckIn = onCheckIn,
+                        onOpenAssets = onOpenAssets,
+                        onComingSoon = onComingSoon,
+                    )
+                    Tab.Attendance -> AttendanceTab(
+                        container = container,
+                        onMenu = onMenu,
+                        onBell = onOpenNotifications,
+                        onMyAttendance = onMyAttendance,
+                        onCheckIn = onCheckIn,
+                        onComingSoon = onComingSoon,
+                    )
+                    Tab.Leave -> LeaveTab(
+                        container = container,
+                        onMenu = onMenu,
+                        onBell = onOpenNotifications,
+                        onOpenBalance = onOpenLeaveBalance,
+                        onComingSoon = onComingSoon,
+                        onFeatureDisabled = { leavesEnabled = false; selected = 0 },
                     )
                 }
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-        ) {
-            when (tab) {
-                Tab.Dashboard -> DashboardTab(
-                    container = container,
-                    onOpenHistory = onOpenHistory,
-                )
-                Tab.Verify -> VerificationTab(
-                    container = container,
-                    onOpenPermissions = onOpenPermissions,
-                    onOpenFaceEnroll = onOpenFaceEnroll,
-                    onVerifyFace = onVerifyFace,
-                    onScanQr = onScanQr,
-                )
-                Tab.Leaves -> LeavesTab(
-                    container = container,
-                    onFeatureDisabled = {
-                        leavesEnabled = false
-                        selected = 0
-                    },
-                )
-                Tab.Profile -> ProfileTab(
-                    container = container,
-                    onOpenFaceEnroll = onOpenFaceEnroll,
-                    onChangePassword = onChangePassword,
-                    onLoggedOut = onLoggedOut,
-                )
             }
         }
     }

@@ -119,6 +119,9 @@ dependencies {
     implementation("com.google.mlkit:face-detection:16.1.7")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
 
+    // ZXing core — generate the employee's personal QR (My QR Code).
+    implementation("com.google.zxing:core:3.5.3")
+
     // TFLite for MobileFaceNet embedding
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")

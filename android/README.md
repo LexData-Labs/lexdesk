@@ -16,7 +16,7 @@ Native Android app (Kotlin + Jetpack Compose, min SDK 26, target SDK 34). Authen
    android/app/google-services.json
    ```
 
-   Without this file the `com.google.gms.google-services` plugin fails. The file is not committed.
+   Use the **same Firebase project as the web dashboard** (`lexdesk-prod`) so the app's ID tokens are accepted by the `/api/v1` server. Without this file the `com.google.gms.google-services` plugin fails. The file is not committed.
 
 3. **Add the face recognition model.** Drop a 112×112-input, 192-D-output MobileFaceNet TFLite file at:
 

@@ -17,7 +17,7 @@ import com.attenddesk.ui.theme.Brand500
 import com.attenddesk.ui.theme.Brand700
 
 /**
- * Gradient "AD" badge — mirrors the web header logo.
+ * Gradient "LD" badge — the LexDesk header logo.
  */
 @Composable
 fun BrandMark(
@@ -32,7 +32,7 @@ fun BrandMark(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "AD",
+            text = "LD",
             color = Color.White,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.labelLarge,
