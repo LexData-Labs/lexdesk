@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { signToken, publicUser, verifyFirebasePassword, roleToLexdesk, initialsFromName } from '@/lib/auth';
 import { firebaseAdmin } from '@/lib/firebase';
 import { Paths } from '@/lib/paths';
@@ -20,6 +21,34 @@ export async function POST(request) {
   const { email, password } = body || {};
   if (!email || !password) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
+  }
+
+  // System admin — env-configured (LEXDESK_SYSADMIN_EMAIL/PASSWORD), no Firebase
+  // user. Mints a full 'superadmin' session (can reset the org admin's password
+  // from the dashboard). Checked BEFORE Firebase so it works without a Firestore
+  // doc; inert unless both env vars are set. Password compared in constant time.
+  const sysEmail = process.env.LEXDESK_SYSADMIN_EMAIL;
+  const sysPassword = process.env.LEXDESK_SYSADMIN_PASSWORD;
+  if (sysEmail && sysPassword && String(email).toLowerCase() === sysEmail.toLowerCase()) {
+    const a = Buffer.from(String(password));
+    const b = Buffer.from(String(sysPassword));
+    const ok = a.length === b.length && crypto.timingSafeEqual(a, b);
+    if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+    const sysUser = {
+      id: 'sysadmin',
+      email: sysEmail,
+      name: 'System Admin',
+      role: 'superadmin',
+      avatar: 'SA',
+      employeeId: null,
+      orgId: ORG_ID,
+    };
+    try {
+      const token = signToken(sysUser);
+      return NextResponse.json({ token, user: publicUser(sysUser) });
+    } catch (err) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
   }
 
   let verified;
