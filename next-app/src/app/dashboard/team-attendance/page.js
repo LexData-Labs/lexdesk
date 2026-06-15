@@ -38,6 +38,15 @@ export default function TeamAttendancePage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Manual attendance entry (lead / admin).
+  const [showAdd, setShowAdd] = useState(false);
+  const [addUid, setAddUid] = useState('');
+  const [addType, setAddType] = useState('CHECK_IN');
+  const [addDate, setAddDate] = useState('');
+  const [addTime, setAddTime] = useState('09:00');
+  const [addNote, setAddNote] = useState('');
+  const [addBusy, setAddBusy] = useState(false);
+  const [addErr, setAddErr] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -154,6 +163,46 @@ export default function TeamAttendancePage() {
     URL.revokeObjectURL(url);
   };
 
+  const openAdd = () => {
+    setAddErr('');
+    setAddUid(effectiveUid || members[0]?.id || '');
+    setAddType('CHECK_IN');
+    const d = new Date();
+    setAddDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    setAddTime('09:00');
+    setAddNote('');
+    setShowAdd(true);
+  };
+
+  const submitManual = async (e) => {
+    e.preventDefault();
+    setAddErr('');
+    if (!addUid) { setAddErr('Pick a team member.'); return; }
+    if (!addDate || !addTime) { setAddErr('Date and time are required.'); return; }
+    setAddBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      // Interpret the entered time as office time (Asia/Dhaka = UTC+6, no DST).
+      const at = `${addDate}T${addTime}:00+06:00`;
+      const res = await fetch('/api/team/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ uid: addUid, type: addType, at, note: addNote.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setShowAdd(false);
+      await load();
+    } catch (e2) {
+      setAddErr(e2.message);
+    } finally {
+      setAddBusy(false);
+    }
+  };
+
+  const addInputCls =
+    'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -162,10 +211,57 @@ export default function TeamAttendancePage() {
         actions={
           <div className="flex items-center gap-2">
             <MonthNav value={ym} onChange={setYm} />
+            {isLeader && members.length > 0 && (
+              <button onClick={openAdd} className="btn-primary py-2 px-4 text-sm">+ Add attendance</button>
+            )}
             <button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>
           </div>
         }
       />
+
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowAdd(false)}>
+          <form onSubmit={submitManual} onClick={(e) => e.stopPropagation()} className="card w-full max-w-lg flex flex-col gap-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Add attendance</h2>
+              <button type="button" onClick={() => setShowAdd(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)] -mt-2">Manual entries count as verified attendance and are tagged as manually added.</p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Team member</label>
+              <select value={addUid} onChange={(e) => setAddUid(e.target.value)} className={addInputCls}>
+                {members.map((m) => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Type</label>
+                <select value={addType} onChange={(e) => setAddType(e.target.value)} className={addInputCls}>
+                  <option value="CHECK_IN">Check in</option>
+                  <option value="CHECK_OUT">Check out</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Date</label>
+                <input type="date" value={addDate} onChange={(e) => setAddDate(e.target.value)} className={addInputCls} required />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Time</label>
+                <input type="time" value={addTime} onChange={(e) => setAddTime(e.target.value)} className={addInputCls} required />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Note (optional)</label>
+              <input type="text" maxLength={200} value={addNote} onChange={(e) => setAddNote(e.target.value)} placeholder="e.g. Forgot to check in" className={addInputCls} />
+            </div>
+            {addErr && <p className="text-sm text-[var(--color-red)]">{addErr}</p>}
+            <div className="flex gap-2 justify-end pt-1">
+              <button type="button" onClick={() => setShowAdd(false)} className="btn-outline py-2 px-4 text-sm">Cancel</button>
+              <button type="submit" disabled={addBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">{addBusy ? 'Adding…' : 'Add attendance'}</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 

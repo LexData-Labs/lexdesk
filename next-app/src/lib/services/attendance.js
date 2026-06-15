@@ -253,6 +253,52 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
   };
 }
 
+// Manual attendance entry by a team lead / admin (no anti-cheat run). Counts as
+// a valid event (allChecksPassed:true) and is tagged clientMode:'manual' +
+// manualBy for audit. isLate/isEarly are derived from the office schedule —
+// same rule as a real check-in — so it renders correctly in calendars/reports.
+export async function addManualAttendance(orgId, { uid, type, atISO, note } = {}, actorUid) {
+  if (type !== 'CHECK_IN' && type !== 'CHECK_OUT') throw Object.assign(new Error('type must be CHECK_IN or CHECK_OUT'), { status: 400 });
+  const when = new Date(atISO);
+  if (Number.isNaN(when.getTime())) throw Object.assign(new Error('invalid_timestamp'), { status: 400 });
+
+  const { db } = firebaseAdmin();
+  const [userSnap, officesSnap] = await Promise.all([
+    db.doc(Paths.user(orgId, uid)).get(),
+    db.collection(Paths.offices(orgId)).limit(1).get(),
+  ]);
+  if (!userSnap.exists) throw Object.assign(new Error('user_not_found'), { status: 404 });
+  const u = userSnap.data();
+  const office = officesSnap.empty ? null : { id: officesSnap.docs[0].id, ...officesSnap.docs[0].data() };
+
+  const hhmm = bdHhmm(when);
+  const isLate = type === 'CHECK_IN' && !!office?.startTime && hhmm > office.startTime;
+  const isEarly = type === 'CHECK_OUT' && !!office?.endTime && hhmm < office.endTime;
+
+  const ref = db.collection(Paths.events(orgId)).doc();
+  await ref.set({
+    uid,
+    userEmail: u.email ?? '',
+    userName: u.name ?? '',
+    officeId: office?.id ?? null,
+    type,
+    timestamp: when,
+    lat: null, lng: null, accuracyMeters: null,
+    ssid: null, bssid: null, faceMatchScore: null,
+    allChecksPassed: true,
+    rawCheckResults: [],
+    isLate, isEarly,
+    scheduledStart: office?.startTime ?? null,
+    scheduledEnd: office?.endTime ?? null,
+    clientMode: 'manual',
+    apiKeyId: null,
+    deviceId: null,
+    manualBy: actorUid ?? null,
+    manualNote: note ?? null,
+  });
+  return { id: ref.id, isLate, isEarly };
+}
+
 // Doc → the nested-user row shape AttendDesk's external /attendance returns.
 function mapEventDoc(d) {
   const data = d.data();

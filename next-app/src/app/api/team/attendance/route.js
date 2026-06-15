@@ -1,8 +1,45 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { getTeams, getEmployees, getAttendance } from '@/lib/backend';
+import { getTeams, getEmployees, getAttendance, addManualAttendance } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
+
+// POST: manually add an attendance event for a team member. A team lead may
+// only add for members of a team they lead; an admin may add for anyone.
+// body: { uid, type: 'CHECK_IN'|'CHECK_OUT', at: ISO-8601, note? }
+export async function POST(request) {
+  const user = getUserFromRequest(request);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user.id) return NextResponse.json({ error: 'no_linked_attenddesk_user' }, { status: 400 });
+
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }); }
+  const { uid, type, at, note } = body || {};
+  if (!uid || !at) return NextResponse.json({ error: 'uid and at are required' }, { status: 400 });
+  if (type !== 'CHECK_IN' && type !== 'CHECK_OUT') {
+    return NextResponse.json({ error: 'type must be CHECK_IN or CHECK_OUT' }, { status: 400 });
+  }
+
+  try {
+    const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+    if (!isAdmin) {
+      const teamsData = await getTeams(user.orgId);
+      const myTeamIds = new Set(
+        (teamsData.teams || []).filter((t) => String(t.leaderUid) === String(user.id)).map((t) => t.id),
+      );
+      if (myTeamIds.size === 0) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      const empData = await getEmployees(user.orgId);
+      const target = (empData.employees || []).find((e) => String(e.id) === String(uid));
+      if (!target || !target.teamId || !myTeamIds.has(target.teamId)) {
+        return NextResponse.json({ error: 'Forbidden — not a member of a team you lead' }, { status: 403 });
+      }
+    }
+    const result = await addManualAttendance(user.orgId, { uid, type, atISO: at, note }, user.id);
+    return NextResponse.json(result, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });
+  }
+}
 
 // GET: attendance events for members of the team(s) the caller LEADS, plus
 // the member roster so the page needs no second call. Leadership is resolved

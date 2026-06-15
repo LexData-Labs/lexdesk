@@ -8,6 +8,8 @@ import { firebaseAdmin } from './firebase';
 import { Paths } from './paths';
 import { processCheckIn, listAttendance } from './services/attendance';
 
+export { addManualAttendance } from './services/attendance';
+
 export {
   getEmployees,
   getEmployee,
