@@ -80,6 +80,38 @@ export async function submitLeave(body, orgId) {
   return { id: ref.id };
 }
 
+// Mobile: a user's OWN leave requests (equality-only query, client sort).
+export async function listMyLeaveRequests(orgId, uid) {
+  const { db } = firebaseAdmin();
+  const snap = await db.collection(Paths.leaveRequests(orgId)).where('uid', '==', uid).get();
+  const requests = snap.docs.map(rowFromDoc).sort((a, b) => {
+    if (a.fromDay !== b.fromDay) return a.fromDay < b.fromDay ? 1 : -1;
+    return a.id < b.id ? 1 : -1;
+  });
+  return { requests };
+}
+
+// Mobile: cancel one of the caller's OWN pending requests.
+export async function cancelMyLeaveRequest(orgId, uid, id) {
+  const { db } = firebaseAdmin();
+  const ref = db.doc(Paths.leaveRequest(orgId, id));
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw Object.assign(new Error('not_found'), { status: 404 });
+    const data = snap.data() ?? {};
+    if (String(data.uid) !== String(uid)) throw Object.assign(new Error('forbidden'), { status: 403 });
+    if (data.status !== 'pending') throw Object.assign(new Error('not_pending'), { status: 409 });
+    tx.update(ref, {
+      status: 'cancelled',
+      decidedAt: FieldValue.serverTimestamp(),
+      decidedBy: uid,
+      decisionNote: null,
+    });
+  });
+  const fresh = await ref.get();
+  return { request: rowFromDoc(fresh) };
+}
+
 export async function decideLeave(id, decision, note, orgId) {
   const { db } = firebaseAdmin();
   const ref = db.doc(Paths.leaveRequest(orgId, id));

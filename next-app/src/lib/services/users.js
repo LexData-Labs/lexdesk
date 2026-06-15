@@ -167,6 +167,19 @@ export async function enrollFace(uid, embeddings, orgId) {
   return { ok: true, enrolledAt: new Date().toISOString() };
 }
 
+// Mobile enroll: OVERWRITE the user's face (re-enroll allowed), unlike the
+// web one-time enrollFace. Averages the capture embeddings and stores them.
+export async function enrollFaceOverwrite(uid, embeddings, orgId) {
+  const faceEmbeddingB64 = averageEmbeddings(embeddings);
+  const { db } = firebaseAdmin();
+  await db.doc(Paths.user(orgId, uid)).update({
+    faceEmbeddingB64,
+    faceEmbeddingModel: FACE_EMBEDDING_MODEL,
+    faceEnrolledAt: FieldValue.serverTimestamp(),
+  });
+  return { ok: true, enrolledAt: new Date().toISOString() };
+}
+
 export async function resetFace(uid, orgId) {
   const { db } = firebaseAdmin();
   const ref = db.doc(Paths.user(orgId, uid));

@@ -14,5 +14,18 @@ export async function getFeatures() {
       leaveRequests: true,
       apiAccess: true,
     },
+    // Background-location mode for the mobile app. 'manual' = no background
+    // pings (default). The policy endpoint surfaces this and the location-ping
+    // route gates + rate-limits on it.
+    location: {
+      mode: process.env.LEXDESK_LOCATION_MODE || 'manual',
+      periodicIntervalMinutes: Number(process.env.LEXDESK_LOCATION_PERIODIC_MIN) || 15,
+      continuousIntervalSeconds: Number(process.env.LEXDESK_LOCATION_CONTINUOUS_SEC) || 60,
+    },
   };
+}
+
+// Standard 403 for a disabled feature (mobile routes mirror AttendDesk).
+export function featureDisabledResponse(group, feature) {
+  return Response.json({ error: 'feature_disabled', feature: `${group}.${feature}` }, { status: 403 });
 }

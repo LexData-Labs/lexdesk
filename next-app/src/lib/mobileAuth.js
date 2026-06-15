@@ -1,0 +1,58 @@
+import { NextResponse } from 'next/server';
+import { firebaseAdmin } from './firebase';
+import { Paths } from './paths';
+import { ORG_ID } from './config';
+
+// Mobile auth: the Android app sends a Firebase ID token (Bearer). We verify it
+// with the Admin SDK and resolve the user's role. Single-org, so orgId is
+// pinned to ORG_ID. role comes from the token's custom claims, falling back to
+// userIndex/{uid} then the org user doc (seed/createEmployee write both). This
+// is SEPARATE from the web's getUserFromRequest (LexDesk JWT) — both coexist.
+
+export class MobileAuthError extends Error {
+  constructor(status, code) {
+    super(code);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export async function getMobileUser(request) {
+  const header = request.headers.get('authorization') || '';
+  if (!header.startsWith('Bearer ')) throw new MobileAuthError(401, 'missing_bearer_token');
+  const token = header.slice(7).trim();
+
+  const { auth, db } = firebaseAdmin();
+  let decoded;
+  try {
+    decoded = await auth.verifyIdToken(token, true);
+  } catch {
+    throw new MobileAuthError(401, 'invalid_token');
+  }
+
+  const uid = decoded.uid;
+  const email = decoded.email || '';
+  let role = decoded.role;
+  if (!role) {
+    const idx = await db.doc(Paths.userIndex(uid)).get();
+    if (idx.exists) role = idx.data().role;
+  }
+  if (!role) {
+    const u = await db.doc(Paths.user(ORG_ID, uid)).get();
+    if (u.exists) role = u.data().role;
+  }
+  if (!role) throw new MobileAuthError(403, 'missing_claims');
+
+  return { uid, email, role, orgId: ORG_ID };
+}
+
+// Map a thrown error to a JSON response for /api/v1 routes.
+export function mobileAuthError(err) {
+  if (err instanceof MobileAuthError) {
+    return NextResponse.json({ error: err.code }, { status: err.status });
+  }
+  return NextResponse.json(
+    { error: err?.message || 'internal_error', upstream: err?.body ?? null },
+    { status: err?.status || 500 },
+  );
+}

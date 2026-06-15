@@ -24,6 +24,9 @@ export const Paths = {
   team: (orgId, id) => `organizations/${orgId}/teams/${id}`,
   assetRequests: (orgId) => `organizations/${orgId}/assetRequests`,
   assetRequest: (orgId, id) => `organizations/${orgId}/assetRequests/${id}`,
+  locationPings: (orgId) => `organizations/${orgId}/locationPings`,
+  // Desktop/mobile device binding (one device → one uid; anti buddy-punching).
+  device: (orgId, deviceId) => `organizations/${orgId}/devices/${deviceId}`,
   userIndex: (uid) => `userIndex/${uid}`,
 };
 

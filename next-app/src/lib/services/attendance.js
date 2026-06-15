@@ -164,6 +164,48 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
     });
   }
 
+  // --- Device binding (anti buddy-punching) ---
+  // When the client reports a deviceId, bind it to the first uid that uses it;
+  // any other uid is rejected until an admin clears it. Always required.
+  if (payload.deviceId) {
+    let devicePassed = false;
+    let deviceReason;
+    const deviceRef = db.doc(Paths.device(organizationId, payload.deviceId));
+    try {
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(deviceRef);
+        if (!snap.exists) {
+          tx.set(deviceRef, {
+            uid,
+            email: userEmail,
+            deviceName: payload.deviceName ?? null,
+            deviceMac: payload.deviceMac ?? null,
+            firstSeenAt: FieldValue.serverTimestamp(),
+            lastSeenAt: FieldValue.serverTimestamp(),
+          });
+          devicePassed = true;
+          deviceReason = 'device_bound';
+          return;
+        }
+        if (snap.data()?.uid === uid) {
+          tx.update(deviceRef, { lastSeenAt: FieldValue.serverTimestamp(), deviceName: payload.deviceName ?? null });
+          devicePassed = true;
+        } else {
+          deviceReason = 'device_bound_to_other_user';
+        }
+      });
+    } catch {
+      deviceReason = 'device_store_failed';
+    }
+    results.push({
+      name: 'device',
+      required: true,
+      passed: devicePassed,
+      reason: deviceReason,
+      details: { deviceId: payload.deviceId, deviceName: payload.deviceName ?? null },
+    });
+  }
+
   const requiredFailed = results.filter((r) => r.required && !r.passed);
   const allChecksPassed = requiredFailed.length === 0;
 
@@ -195,8 +237,8 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
     scheduledEnd: scheduledEnd ?? null,
     clientMode: 'mobile',
     apiKeyId: null,
-    deviceId: null,
-    deviceName: null,
+    deviceId: payload.deviceId ?? null,
+    deviceName: payload.deviceName ?? null,
   });
 
   return {
@@ -236,5 +278,35 @@ export async function listAttendance(organizationId, { from, to, userId, limit =
       scheduledEnd: data.scheduledEnd ?? null,
     };
   });
+  return { events };
+}
+
+// Mobile history for one uid → the app's HistoryEvent shape. Uses an
+// equality-only query (no Firestore composite index needed) then sorts +
+// slices client-side.
+export async function listMyHistory(organizationId, uid, limit = 30) {
+  const { db } = firebaseAdmin();
+  const snap = await db.collection(Paths.events(organizationId)).where('uid', '==', uid).get();
+  const n = Math.min(Math.max(Number(limit) || 30, 1), 200);
+  const events = snap.docs
+    .map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        type: data.type,
+        timestamp: data.timestamp?.toDate?.()?.toISOString() ?? null,
+        allChecksPassed: data.allChecksPassed,
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
+        ssid: data.ssid ?? null,
+        faceMatchScore: data.faceMatchScore ?? null,
+        isLate: data.isLate ?? false,
+        isEarly: data.isEarly ?? false,
+        scheduledStart: data.scheduledStart ?? null,
+        scheduledEnd: data.scheduledEnd ?? null,
+      };
+    })
+    .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
+    .slice(0, n);
   return { events };
 }
