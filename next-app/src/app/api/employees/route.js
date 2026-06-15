@@ -21,7 +21,9 @@ export async function POST(request) {
   }
   const email = (body?.email || '').trim();
   const name = (body?.name || '').trim();
-  const role = body?.role === 'ADMIN' ? 'ADMIN' : 'EMPLOYEE';
+  // Only the system admin (superadmin) may create ADMINs; regular admins create
+  // employees only. (The org admin is provisioned from /dashboard/organization.)
+  const role = body?.role === 'ADMIN' && user.role === 'superadmin' ? 'ADMIN' : 'EMPLOYEE';
   const teamId = body?.teamId || null;
   const employeeId = (body?.employeeId || '').trim() || null;
   if (!email || !name) {
