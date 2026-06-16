@@ -28,6 +28,7 @@ export default function TeamAttendancePage() {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [events, setEvents] = useState([]);
   const [members, setMembers] = useState([]);
+  const [teams, setTeams] = useState([]);
   // Start true so the "not a leader" card never flashes before the first load.
   const [isLeader, setIsLeader] = useState(true);
   const [leave, setLeave] = useState([]);
@@ -47,6 +48,12 @@ export default function TeamAttendancePage() {
   const [addNote, setAddNote] = useState('');
   const [addBusy, setAddBusy] = useState(false);
   const [addErr, setAddErr] = useState('');
+  // Add team member (a lead creates an EMPLOYEE auto-joined to their team).
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [memberForm, setMemberForm] = useState({ name: '', email: '', employeeId: '', teamId: '' });
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberErr, setMemberErr] = useState('');
+  const [memberCreated, setMemberCreated] = useState(null); // { email, temporaryPassword }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,6 +74,7 @@ export default function TeamAttendancePage() {
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setEvents(json.events || []);
       setMembers(json.members || []);
+      setTeams(json.teams || []);
       setIsLeader(json.isLeader !== false);
       setPage(1);
     } catch (e) {
@@ -200,6 +208,53 @@ export default function TeamAttendancePage() {
     }
   };
 
+  const openAddMember = () => {
+    setMemberErr('');
+    setMemberCreated(null);
+    setMemberForm({ name: '', email: '', employeeId: '', teamId: teams[0]?.id || '' });
+    setShowAddMember(true);
+  };
+
+  const submitAddMember = async (e) => {
+    e.preventDefault();
+    setMemberErr('');
+    if (!memberForm.name.trim() || !memberForm.email.trim()) {
+      setMemberErr('Name and email are required.');
+      return;
+    }
+    setMemberBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      // teamId is optional when leading one team (the server auto-assigns it);
+      // sent explicitly only when the lead picks among several teams.
+      const res = await fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: memberForm.name.trim(),
+          email: memberForm.email.trim(),
+          employeeId: memberForm.employeeId.trim() || null,
+          teamId: memberForm.teamId || null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      const emp = json.employee || {};
+      setMemberCreated({ email: emp.email || memberForm.email.trim(), temporaryPassword: emp.temporaryPassword || '' });
+      await load();
+    } catch (e2) {
+      setMemberErr(e2.message);
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const closeAddMember = () => {
+    setShowAddMember(false);
+    setMemberCreated(null);
+    setMemberErr('');
+  };
+
   const addInputCls =
     'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
 
@@ -211,8 +266,11 @@ export default function TeamAttendancePage() {
         actions={
           <div className="flex items-center gap-2">
             <MonthNav value={ym} onChange={setYm} />
+            {isLeader && (
+              <button onClick={openAddMember} className="btn-primary py-2 px-4 text-sm">+ Add member</button>
+            )}
             {isLeader && members.length > 0 && (
-              <button onClick={openAdd} className="btn-primary py-2 px-4 text-sm">+ Add attendance</button>
+              <button onClick={openAdd} className="btn-outline py-2 px-4 text-sm">+ Add attendance</button>
             )}
             <button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>
           </div>
@@ -260,6 +318,59 @@ export default function TeamAttendancePage() {
               <button type="submit" disabled={addBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">{addBusy ? 'Adding…' : 'Add attendance'}</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showAddMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeAddMember}>
+          <div className="card w-full max-w-lg flex flex-col gap-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Add team member</h2>
+              <button onClick={closeAddMember} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
+            </div>
+
+            {memberCreated ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-[var(--color-green)]">Employee created and added to your team. Share these sign-in details — they must change the password on first login.</p>
+                <div className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg p-3 text-sm">
+                  <div className="flex justify-between gap-3"><span className="text-[var(--color-text-muted)]">Email</span><span className="text-[var(--color-text-main)]">{memberCreated.email}</span></div>
+                  <div className="flex justify-between gap-3 mt-1"><span className="text-[var(--color-text-muted)]">Temp password</span><span className="text-[var(--color-text-main)] font-mono">{memberCreated.temporaryPassword || '—'}</span></div>
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={closeAddMember} className="btn-primary py-2 px-5 text-sm">Done</button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={submitAddMember} className="flex flex-col gap-4">
+                <p className="text-xs text-[var(--color-text-muted)] -mt-1">New members join {teams.length > 1 ? 'the team you pick below' : 'your team'} and get a temporary password to share.</p>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Full name</label>
+                  <input type="text" maxLength={120} value={memberForm.name} onChange={(e) => setMemberForm((f) => ({ ...f, name: e.target.value }))} className={addInputCls} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Email</label>
+                  <input type="email" value={memberForm.email} onChange={(e) => setMemberForm((f) => ({ ...f, email: e.target.value }))} className={addInputCls} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
+                  <input type="text" maxLength={50} value={memberForm.employeeId} onChange={(e) => setMemberForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={addInputCls} />
+                </div>
+                {teams.length > 1 && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Team</label>
+                    <select value={memberForm.teamId} onChange={(e) => setMemberForm((f) => ({ ...f, teamId: e.target.value }))} className={addInputCls}>
+                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                {memberErr && <p className="text-sm text-[var(--color-red)]">{memberErr}</p>}
+                <div className="flex gap-2 justify-end pt-1">
+                  <button type="button" onClick={closeAddMember} className="btn-outline py-2 px-4 text-sm">Cancel</button>
+                  <button type="submit" disabled={memberBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">{memberBusy ? 'Creating…' : 'Create employee'}</button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
 

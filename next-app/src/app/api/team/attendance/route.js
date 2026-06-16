@@ -69,7 +69,7 @@ export async function GET(request) {
     const teamsData = await getTeams(user.orgId);
     const myTeams = (teamsData.teams || []).filter((t) => String(t.leaderUid) === String(user.id));
     if (myTeams.length === 0) {
-      return NextResponse.json({ isLeader: false, events: [], members: [] });
+      return NextResponse.json({ isLeader: false, events: [], members: [], teams: [] });
     }
     const myTeamIds = new Set(myTeams.map((t) => t.id));
     const teamNameById = new Map(myTeams.map((t) => [t.id, t.name || '']));
@@ -88,7 +88,10 @@ export async function GET(request) {
 
     const data = await getAttendance({ limit, from, to }, user.orgId);
     const events = (data.events || []).filter((e) => memberUids.has(String(e.user?.id)));
-    return NextResponse.json({ isLeader: true, events, members });
+    // The led teams (incl. empty ones) so the page can offer a team picker when
+    // adding a member without a second request.
+    const teams = myTeams.map((t) => ({ id: t.id, name: t.name || '' }));
+    return NextResponse.json({ isLeader: true, events, members, teams });
   } catch (err) {
     return NextResponse.json(
       { error: err.message, upstream: err.body ?? null },
