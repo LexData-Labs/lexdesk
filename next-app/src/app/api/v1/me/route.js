@@ -24,6 +24,7 @@ export async function GET(request) {
       email: data.email,
       name: data.name,
       role: data.role,
+      employeeId: data.employeeId ?? null,
       mustChangePassword: data.mustChangePassword ?? false,
       faceEnrolledAt: data.faceEnrolledAt?.toDate?.()?.toISOString() ?? null,
       photoUrl: await signedReadUrl(data.photoStoragePath),

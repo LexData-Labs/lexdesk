@@ -241,7 +241,7 @@ fun ProfileScreen(
                             } else null,
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        InfoRow(Icons.Outlined.Badge, "Employee ID", me?.id?.take(10) ?: "—")
+                        InfoRow(Icons.Outlined.Badge, "Employee ID", me?.employeeId?.takeIf { it.isNotBlank() } ?: "—")
                     }
                 } else {
                     SectionCard(title = "Work") {
