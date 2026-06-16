@@ -77,12 +77,13 @@ export default function TeamApprovalsPage() {
 
   const list = requests || [];
   const isAsset = mode === 'asset';
+  const isRemote = mode === 'remote';
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Team Approvals"
-        subtitle="Review and decide your team's leave & asset requests"
+        subtitle="Review and decide your team's leave, asset & remote requests"
         actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
       />
 
@@ -97,9 +98,9 @@ export default function TeamApprovalsPage() {
         <>
           <div className="card flex flex-wrap items-center gap-3">
             <div className="flex gap-2">
-              {['leave', 'asset'].map((m) => (
+              {['leave', 'asset', 'remote'].map((m) => (
                 <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${mode === m ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>
-                  {m === 'asset' ? 'Assets' : 'Leave'}
+                  {m === 'asset' ? 'Assets' : m === 'remote' ? 'Remote' : 'Leave'}
                 </button>
               ))}
             </div>
@@ -117,8 +118,8 @@ export default function TeamApprovalsPage() {
                 <thead>
                   <tr className="text-left text-[var(--color-text-muted)] text-xs border-b border-[var(--color-card-border)]">
                     <th className="py-3 px-4 font-medium">Employee</th>
-                    <th className="py-3 px-4 font-medium">{isAsset ? 'Asset' : 'Dates'}</th>
-                    <th className="py-3 px-4 font-medium">{isAsset ? 'Dates' : 'Subject'}</th>
+                    <th className="py-3 px-4 font-medium">{isAsset ? 'Asset' : isRemote ? 'Day' : 'Dates'}</th>
+                    <th className="py-3 px-4 font-medium">{isAsset ? 'Dates' : isRemote ? 'Reason' : 'Subject'}</th>
                     <th className="py-3 px-4 font-medium">Status</th>
                     <th className="py-3 px-4 font-medium text-right">Action</th>
                   </tr>
@@ -140,11 +141,18 @@ export default function TeamApprovalsPage() {
                             <div className="text-[var(--color-text-main)]">{r.assetName || '—'}</div>
                             <div className="text-xs text-[var(--color-text-muted)]">{r.assetType || '—'}{r.description ? ` · ${r.description}` : ''}</div>
                           </td>
+                        ) : isRemote ? (
+                          <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{r.day || '—'}</td>
                         ) : (
                           <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{fmtRange(r.fromDay, r.toDay)}</td>
                         )}
                         {isAsset ? (
                           <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{fmtRange(r.fromDay, r.toDay)}</td>
+                        ) : isRemote ? (
+                          <td className="py-3 px-4">
+                            <div className="text-[var(--color-text-main)] max-w-[260px]">{r.reason || '—'}</div>
+                            {r.place && <div className="text-xs text-[var(--color-text-muted)]">{r.place}</div>}
+                          </td>
                         ) : (
                           <td className="py-3 px-4">
                             <div className="text-[var(--color-text-main)]">{r.subject || '—'}</div>
@@ -173,7 +181,7 @@ export default function TeamApprovalsPage() {
                     );
                   })}
                   {!loading && list.length === 0 && (
-                    <tr><td colSpan={5} className="py-8 text-center text-[var(--color-text-muted)]">No {status === 'all' ? '' : status} {isAsset ? 'asset' : 'leave'} requests for your team.</td></tr>
+                    <tr><td colSpan={5} className="py-8 text-center text-[var(--color-text-muted)]">No {status === 'all' ? '' : status} {mode} requests for your team.</td></tr>
                   )}
                   {loading && (
                     <tr><td colSpan={5} className="py-8 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
