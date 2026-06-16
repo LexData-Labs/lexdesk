@@ -91,6 +91,27 @@ class FaceEmbedder(context: Context) {
             return out
         }
 
+        /**
+         * Mean of several L2-normalized embeddings, re-normalized — averaging a
+         * short burst of verification frames yields a steadier embedding than any
+         * single frame. Mirrors the server's enrollment averaging.
+         */
+        fun average(list: List<FloatArray>): FloatArray {
+            require(list.isNotEmpty()) { "average() needs at least one embedding" }
+            val dim = list[0].size
+            val sum = FloatArray(dim)
+            for (v in list) {
+                for (i in 0 until dim) {
+                    sum[i] = sum[i] + v[i]
+                }
+            }
+            val n = list.size.toFloat()
+            for (i in 0 until dim) {
+                sum[i] = sum[i] / n
+            }
+            return l2Normalize(sum)
+        }
+
         fun encodeBase64(v: FloatArray): String {
             val buf = ByteBuffer.allocate(v.size * 4).order(ByteOrder.LITTLE_ENDIAN)
             for (x in v) buf.putFloat(x)
