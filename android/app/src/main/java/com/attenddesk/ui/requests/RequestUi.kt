@@ -114,7 +114,7 @@ fun <T> RequestScreenScaffold(
         floatingActionButton = {
             if (onAdd != null) {
                 FloatingActionButton(onClick = onAdd, containerColor = MaterialTheme.colorScheme.primary) {
-                    Icon(Icons.Outlined.Add, contentDescription = "New", tint = androidx.compose.ui.graphics.Color.White)
+                    Icon(Icons.Outlined.Add, contentDescription = "New", tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         },

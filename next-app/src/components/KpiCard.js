@@ -1,11 +1,11 @@
 'use client';
 
 const COLORS = {
-  purple: { bg: 'rgba(139,92,246,0.15)', fg: 'var(--color-purple)' },
+  purple: { bg: 'rgba(150,150,150,0.15)', fg: 'var(--color-purple)' },
   green:  { bg: 'rgba(34,197,94,0.15)',  fg: 'var(--color-green)' },
   yellow: { bg: 'rgba(234,179,8,0.15)',  fg: 'var(--color-yellow)' },
   red:    { bg: 'rgba(239,68,68,0.15)',  fg: 'var(--color-red)' },
-  blue:   { bg: 'rgba(59,130,246,0.15)', fg: 'var(--color-blue)' },
+  blue:   { bg: 'rgba(120,120,120,0.15)', fg: 'var(--color-blue)' },
 };
 
 export default function KpiCard({ label, value, color = 'purple', icon }) {

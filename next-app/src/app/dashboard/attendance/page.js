@@ -93,7 +93,7 @@ export default function AttendancePage() {
               onClick={() => { setFilter(f.key); setPage(1); }}
               className={`px-3 py-2 rounded-lg text-xs font-semibold ${
                 filter === f.key
-                  ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
+                  ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
                   : 'bg-[var(--color-card-bg)] text-[var(--color-text-muted)] border border-[var(--color-card-border)] hover:text-[var(--color-text-main)]'
               }`}
             >

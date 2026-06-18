@@ -279,7 +279,7 @@ export default function TeamAttendancePage() {
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowAdd(false)}>
-          <form onSubmit={submitManual} onClick={(e) => e.stopPropagation()} className="card w-full max-w-lg flex flex-col gap-4 shadow-2xl">
+          <form onSubmit={submitManual} onClick={(e) => e.stopPropagation()} className="card glossy w-full max-w-lg flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Add attendance</h2>
               <button type="button" onClick={() => setShowAdd(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
@@ -323,7 +323,7 @@ export default function TeamAttendancePage() {
 
       {showAddMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeAddMember}>
-          <div className="card w-full max-w-lg flex flex-col gap-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="card glossy w-full max-w-lg flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Add team member</h2>
               <button onClick={closeAddMember} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
@@ -407,7 +407,7 @@ export default function TeamAttendancePage() {
                       key={m.id}
                       onClick={() => setSelectedUid(m.id)}
                       className={`border-t border-[var(--color-card-border)] cursor-pointer hover:bg-white/[0.02] ${
-                        m.id === effectiveUid ? 'bg-[rgba(139,92,246,0.08)]' : ''
+                        m.id === effectiveUid ? 'bg-[rgba(150,150,150,0.08)]' : ''
                       }`}
                     >
                       <td className="py-2.5 px-4">
@@ -452,7 +452,7 @@ export default function TeamAttendancePage() {
                   onClick={() => { setFilter(f.key); setPage(1); }}
                   className={`px-3 py-2 rounded-lg text-xs font-semibold ${
                     filter === f.key
-                      ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
+                      ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
                       : 'bg-[var(--color-card-bg)] text-[var(--color-text-muted)] border border-[var(--color-card-border)] hover:text-[var(--color-text-main)]'
                   }`}
                 >

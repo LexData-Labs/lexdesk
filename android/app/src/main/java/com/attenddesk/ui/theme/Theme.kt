@@ -14,14 +14,14 @@ import androidx.compose.ui.unit.dp
 import com.attenddesk.data.ThemeMode
 
 private val LightColors = lightColorScheme(
-    primary = Brand500,
+    primary = Color(0xFF000000),
     onPrimary = Color.White,
-    primaryContainer = Brand100,
-    onPrimaryContainer = Brand900,
-    secondary = Brand600,
+    primaryContainer = Color(0xFFE5E5E5),
+    onPrimaryContainer = Color(0xFF000000),
+    secondary = Color(0xFF404040),
     onSecondary = Color.White,
-    secondaryContainer = Brand50,
-    onSecondaryContainer = Brand800,
+    secondaryContainer = Color(0xFFF0F0F0),
+    onSecondaryContainer = Color(0xFF000000),
     background = SurfaceBg,
     onBackground = Slate900,
     surface = SurfaceElevated,
@@ -37,14 +37,14 @@ private val LightColors = lightColorScheme(
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Brand400,
-    onPrimary = Brand900,
-    primaryContainer = Brand800,
-    onPrimaryContainer = Brand100,
-    secondary = Brand300,
-    onSecondary = Brand900,
-    secondaryContainer = Brand700,
-    onSecondaryContainer = Brand100,
+    primary = Color(0xFFF5F5F5),
+    onPrimary = Color(0xFF000000),
+    primaryContainer = Color(0xFF2A2A2A),
+    onPrimaryContainer = Color(0xFFF5F5F5),
+    secondary = Color(0xFFD4D4D4),
+    onSecondary = Color(0xFF000000),
+    secondaryContainer = Color(0xFF2A2A2A),
+    onSecondaryContainer = Color(0xFFF5F5F5),
     background = SurfaceBgDark,
     onBackground = Slate100,
     surface = SurfaceElevatedDark,

@@ -66,8 +66,6 @@ import androidx.core.content.ContextCompat
 import com.attenddesk.AppContainer
 import com.attenddesk.checks.FaceEmbedder
 import com.attenddesk.ui.components.AppTopBar
-import com.attenddesk.ui.theme.Brand400
-import com.attenddesk.ui.theme.ChipPurpleFg
 import com.attenddesk.ui.theme.DangerFg
 import com.attenddesk.ui.theme.Slate300
 import com.attenddesk.ui.theme.SuccessFg
@@ -314,8 +312,8 @@ private fun ScanReticle(
         label = "check",
     )
 
-    val purple = ChipPurpleFg
-    val blue = Brand400
+    val purple = Color(0xFFF5F5F5)
+    val blue = Color(0xFFBDBDBD)
     val green = SuccessFgDark
     val idle = Slate300.copy(alpha = 0.5f)
     val scanning = faceDetected && !captured

@@ -92,7 +92,7 @@ export default function LeaveApprovalsPage() {
             onClick={() => setStatus(s)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${
               status === s
-                ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
+                ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]'
                 : 'btn-outline'
             }`}
           >

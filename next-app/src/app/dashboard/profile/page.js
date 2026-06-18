@@ -218,7 +218,7 @@ export default function MyProfilePage() {
       <PageHeader title="My Profile" subtitle="Your account and attendance summary" actions={<MonthNav value={ym} onChange={setYm} />} />
 
       <div className="relative rounded-2xl overflow-hidden mb-2 shadow-sm border border-[var(--color-card-border)]">
-        <div className="h-32 bg-gradient-to-r from-[rgba(139,92,246,0.15)] to-[rgba(59,130,246,0.15)] dark:from-[rgba(139,92,246,0.2)] dark:to-[rgba(59,130,246,0.2)]"></div>
+        <div className="h-32 bg-gradient-to-r from-[rgba(150,150,150,0.15)] to-[rgba(120,120,120,0.15)] dark:from-[rgba(150,150,150,0.2)] dark:to-[rgba(120,120,120,0.2)]"></div>
 
         <div className="bg-[var(--color-card-bg)] px-4 sm:px-8 pb-8 pt-0 flex flex-col sm:flex-row items-center sm:items-end gap-5">
           <div className="relative -mt-12 z-10">
@@ -258,7 +258,7 @@ export default function MyProfilePage() {
             )}
             <div className="flex items-center justify-center sm:justify-start gap-3 mt-1.5 flex-wrap">
               <span className="text-sm text-[var(--color-text-muted)]">{user.email}</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] text-xs font-bold uppercase tracking-wider">
+              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] text-xs font-bold uppercase tracking-wider">
                 {user.role}
               </span>
               {adProfile?.faceEnrolledAt && (

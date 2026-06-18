@@ -116,7 +116,7 @@ export default function DashboardLayout({ children }) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           <Link href={homeHref} className="flex items-center gap-2 text-lg font-bold text-[var(--color-text-main)] no-underline">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-xs text-white">L</div>
+            <div className="w-7 h-7 rounded-lg bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-xs text-white">L</div>
             LexDesk
           </Link>
           <button
@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }) {
 
         <aside className={`fixed inset-y-0 left-0 z-50 w-[260px] bg-[var(--color-bg)] border-r border-[var(--color-card-border)] flex flex-col transform transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <Link href={homeHref} onClick={() => setSidebarOpen(false)} className="p-6 flex items-center gap-3 text-xl font-bold text-[var(--color-text-main)] no-underline">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-sm text-white">L</div>
+            <div className="w-8 h-8 rounded-lg bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-sm text-white">L</div>
             LexDesk
           </Link>
 
@@ -181,7 +181,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </aside>
 
-        <main className="flex flex-col flex-1 bg-[radial-gradient(circle_at_top_right,rgba(30,58,138,0.1),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(139,92,246,0.05),transparent_50%)] lg:overflow-hidden relative">
+        <main className="flex flex-col flex-1 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.03),transparent_50%)] lg:overflow-hidden relative">
 
           {/* Top Right Theme Toggle (desktop) */}
           <div className="hidden lg:block absolute top-6 right-8 z-50">
@@ -190,7 +190,7 @@ export default function DashboardLayout({ children }) {
                 onClick={() => toggleTheme('light')}
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                   theme === 'light' 
-                    ? 'bg-[#0052FF] text-white shadow-sm' 
+                    ? 'bg-[var(--color-text-main)] text-[var(--color-bg)] shadow-sm' 
                     : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'
                 }`}
               >
@@ -200,7 +200,7 @@ export default function DashboardLayout({ children }) {
                 onClick={() => toggleTheme('dark')}
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                   theme === 'dark' 
-                    ? 'bg-[#0052FF] text-white shadow-sm' 
+                    ? 'bg-[var(--color-text-main)] text-[var(--color-bg)] shadow-sm' 
                     : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'
                 }`}
               >

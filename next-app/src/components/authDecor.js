@@ -9,7 +9,7 @@ export function AuthDecor() {
     <>
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_20%,rgba(139,92,246,0.28),transparent_60%),radial-gradient(50%_40%_at_80%_90%,rgba(30,58,138,0.32),transparent_60%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_20%_20%,rgba(150,150,150,0.28),transparent_60%),radial-gradient(50%_40%_at_80%_90%,rgba(90,90,90,0.32),transparent_60%)]"
       />
       <div
         aria-hidden

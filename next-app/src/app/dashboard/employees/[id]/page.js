@@ -183,7 +183,7 @@ export default function EmployeeProfilePage() {
             {employee && String(employeeId) !== String(currentUserId) &&
               (String(employee.role || '').toUpperCase() === 'EMPLOYEE' ||
                 (String(employee.role || '').toUpperCase() === 'ADMIN' && currentUserRole === 'superadmin')) && (
-              <button onClick={() => { setResetResult(null); setResetError(''); setResetOpen(true); }} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-purple)] border-[rgba(139,92,246,0.3)] hover:bg-[rgba(139,92,246,0.05)]">
+              <button onClick={() => { setResetResult(null); setResetError(''); setResetOpen(true); }} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-purple)] border-[rgba(150,150,150,0.3)] hover:bg-[rgba(150,150,150,0.05)]">
                 Reset password
               </button>
             )}
@@ -203,7 +203,7 @@ export default function EmployeeProfilePage() {
 
       {resetOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeReset}>
-          <div className="card w-full max-w-sm sm:max-w-md flex flex-col gap-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="card glossy w-full max-w-sm sm:max-w-md flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
             {resetResult ? (
               <>
                 <h3 className="font-semibold text-lg text-[var(--color-text-main)]">Password reset</h3>

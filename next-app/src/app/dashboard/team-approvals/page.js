@@ -99,7 +99,7 @@ export default function TeamApprovalsPage() {
           <div className="card flex flex-wrap items-center gap-3">
             <div className="flex gap-2">
               {['leave', 'asset', 'remote'].map((m) => (
-                <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${mode === m ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>
+                <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${mode === m ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>
                   {m === 'asset' ? 'Assets' : m === 'remote' ? 'Remote' : 'Leave'}
                 </button>
               ))}
@@ -107,7 +107,7 @@ export default function TeamApprovalsPage() {
             <div className="h-5 w-px bg-[var(--color-card-border)]" />
             <div className="flex flex-wrap gap-2">
               {STATUS_FILTERS.map((s) => (
-                <button key={s} onClick={() => setStatus(s)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${status === s ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>{s}</button>
+                <button key={s} onClick={() => setStatus(s)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${status === s ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>{s}</button>
               ))}
             </div>
           </div>

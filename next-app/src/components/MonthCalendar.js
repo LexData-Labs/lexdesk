@@ -11,7 +11,7 @@ const STATUS_STYLE = {
   missed: { bg: 'rgba(239,68,68,0.32)', border: 'rgba(239,68,68,0.65)', color: '#EF4444', mark: 'A' },
   holiday: { bg: 'rgba(236,72,153,0.32)', border: 'rgba(236,72,153,0.65)', color: '#EC4899', mark: 'H' },
   future: { bg: 'transparent', border: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted)', mark: '', dashed: true },
-  today: { bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.4)', color: 'var(--color-text-main)', mark: '' },
+  today: { bg: 'rgba(150,150,150,0.08)', border: 'rgba(150,150,150,0.4)', color: 'var(--color-text-main)', mark: '' },
 };
 
 const LEGEND = [
@@ -64,7 +64,7 @@ export default function MonthCalendar({ cal, loading, compact = false }) {
           if (!day) return <div key={i} />;
           const cell = cal.days[day];
           const st = STATUS_STYLE[cell.status] || STATUS_STYLE.future;
-          const border = isTodayCell(day) ? '2px solid #8B5CF6' : `1px ${st.dashed ? 'dashed' : 'solid'} ${st.border}`;
+          const border = isTodayCell(day) ? '2px solid var(--color-purple)' : `1px ${st.dashed ? 'dashed' : 'solid'} ${st.border}`;
           const tip = cell.name || cell.subject || cell.status;
           return (
             <div

@@ -149,7 +149,7 @@ export default function FaceCaptureModal({ mode, onDone, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={requestClose}>
-      <div className="card w-full max-w-sm sm:max-w-md flex flex-col gap-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="card glossy w-full max-w-sm sm:max-w-md flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-semibold text-lg text-[var(--color-text-main)]">
           {mode === 'enroll' ? 'Enroll your face' : 'Verify your face'}
         </h3>

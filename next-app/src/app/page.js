@@ -47,7 +47,7 @@ export default function Home() {
       <div className="relative flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-10 md:py-0">
         <div className="flex-1 max-w-[600px] text-center md:text-left">
           <div className="inline-flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] shadow-[0_0_15px_var(--color-purple-glow)] flex items-center justify-center text-white font-bold">L</div>
+            <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">L</div>
             <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">LexDesk</span>
           </div>
 
@@ -82,7 +82,7 @@ export default function Home() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
                 required
-                className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(139,92,246,0.2)] transition-all"
+                className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(150,150,150,0.2)] transition-all"
               />
             </div>
             
@@ -95,7 +95,7 @@ export default function Home() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 pr-10 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(139,92,246,0.2)] transition-all"
+                  className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 pr-10 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(150,150,150,0.2)] transition-all"
                 />
                 <button
                   type="button"

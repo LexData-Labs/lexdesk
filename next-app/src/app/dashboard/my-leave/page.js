@@ -163,7 +163,7 @@ export default function MyLeavePage() {
           <form
             onSubmit={submit}
             onClick={(e) => e.stopPropagation()}
-            className="card w-full max-w-lg flex flex-col gap-4 shadow-2xl"
+            className="card glossy w-full max-w-lg flex flex-col gap-4"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Request leave</h2>

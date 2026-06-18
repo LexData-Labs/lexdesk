@@ -1,13 +1,19 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: #070B14;
-  --color-card-bg: rgba(15, 23, 42, 0.6);
-  --color-card-border: rgba(255, 255, 255, 0.05);
-  --color-text-main: #F8FAFC;
-  --color-text-muted: #94A3B8;
-  --color-purple: #8B5CF6;
-  --color-blue: #3B82F6;
+  /* Monochrome system — deep matte black (#000000) + white. Status colors kept. */
+  --color-bg: #000000;
+  --color-card-bg: rgba(255, 255, 255, 0.05);
+  --color-card-border: rgba(255, 255, 255, 0.12);
+  --color-text-main: #F5F5F5;
+  --color-text-muted: #A1A1A1;
+  /* "Brand" accents are now monochrome so every var() reference reads B&W. */
+  --color-purple: #FFFFFF;
+  --color-blue: #BDBDBD;
+  --color-primary: #FFFFFF;
+  --color-on-primary: #000000;
+  --color-accent-soft: rgba(255, 255, 255, 0.10);
+  /* Status palette — intentionally kept for at-a-glance clarity. */
   --color-green: #22C55E;
   --color-yellow: #EAB308;
   --color-red: #EF4444;
@@ -16,13 +22,18 @@
 
 @layer base {
   :root.light {
-    --color-bg: #F8FAFC;
+    --color-bg: #FFFFFF;
     --color-card-bg: #FFFFFF;
-    --color-card-border: #E2E8F0;
-    --color-text-main: #0F172A;
-    --color-text-muted: #64748B;
+    --color-card-border: #E5E5E5;
+    --color-text-main: #000000;
+    --color-text-muted: #6B7280;
+    --color-purple: #000000;
+    --color-blue: #555555;
+    --color-primary: #000000;
+    --color-on-primary: #FFFFFF;
+    --color-accent-soft: rgba(0, 0, 0, 0.06);
   }
-  
+
   body {
     @apply bg-[var(--color-bg)] text-[var(--color-text-main)] min-h-screen;
     font-family: 'Inter', sans-serif;
@@ -32,28 +43,71 @@
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; border-radius: 10px; }
-::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+::-webkit-scrollbar-thumb { background: rgba(160, 160, 160, 0.5); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(160, 160, 160, 0.8); }
 
-/* Custom utility classes from the original CSS */
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-gradient-to-r from-[var(--color-purple)] to-[var(--color-blue)] text-white font-semibold rounded-[8px] cursor-pointer shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all duration-300 hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] hover:-translate-y-0.5 border-none outline-none;
+    @apply px-4 py-2 font-semibold rounded-[8px] cursor-pointer transition-all duration-300 hover:-translate-y-0.5 border-none outline-none;
+    color: var(--color-on-primary);
+    background-color: var(--color-primary);
+    /* Top-light / bottom-dark sheen makes the solid colour read "glossy". */
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.10));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px rgba(0, 0, 0, 0.35);
   }
-  
+  .btn-primary:hover {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 10px 26px rgba(0, 0, 0, 0.45);
+  }
+
   .btn-outline {
-    @apply px-4 py-2 bg-transparent text-[var(--color-text-main)] font-semibold rounded-[8px] cursor-pointer border border-solid border-[rgba(255,255,255,0.1)] transition-all duration-300 hover:bg-[rgba(255,255,255,0.05)] hover:-translate-y-0.5 outline-none;
+    @apply px-4 py-2 bg-transparent text-[var(--color-text-main)] font-semibold rounded-[8px] cursor-pointer border border-solid border-[var(--color-card-border)] transition-all duration-300 hover:bg-[var(--color-accent-soft)] hover:-translate-y-0.5 outline-none;
   }
-  
+
   .card {
-    @apply bg-[var(--color-card-bg)] border border-solid border-[var(--color-card-border)] rounded-[16px] p-5 backdrop-blur-[10px];
+    @apply border border-solid border-[var(--color-card-border)] rounded-[16px] p-5;
+    /* Glossy matte-black surface: deep base + a soft top sheen. */
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015) 60%),
+      var(--color-card-bg);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  :root.light .card {
+    background: var(--color-card-bg);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Glossy glass surface for pop-ups / modals (defined after .card so it wins). */
+  .glossy {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02) 55%, rgba(255, 255, 255, 0.06)),
+      var(--color-card-bg);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 24px 70px rgba(0, 0, 0, 0.55);
+  }
+  :root.light .glossy {
+    border-color: rgba(0, 0, 0, 0.08);
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.6)),
+      var(--color-card-bg);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 24px 70px rgba(0, 0, 0, 0.18);
   }
 
   .nav-item {
-    @apply flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-[var(--color-text-muted)] rounded-[8px] cursor-pointer transition-all duration-200 font-medium text-[0.85rem] sm:text-[0.9rem] hover:text-[var(--color-text-main)] hover:bg-black/5 dark:hover:bg-[rgba(255,255,255,0.03)];
+    @apply flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 text-[var(--color-text-muted)] rounded-[8px] cursor-pointer transition-all duration-200 font-medium text-[0.85rem] sm:text-[0.9rem] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)];
   }
-  
+
   .nav-item.active {
-    @apply bg-[rgba(139,92,246,0.1)] text-[var(--color-purple)] border-l-[3px] border-solid border-[var(--color-purple)];
+    @apply text-[var(--color-text-main)] border-l-[3px] border-solid;
+    background: var(--color-accent-soft);
+    border-color: var(--color-text-main);
   }
 }

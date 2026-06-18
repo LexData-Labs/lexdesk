@@ -31,10 +31,10 @@ val SurfaceBg       = Color(0xFFF6F8FB)
 val SurfaceElevated = Color(0xFFFFFFFF)
 val OutlineSubtle   = Color(0xFFE2E8F0)
 
-// Dark surfaces (matches web `.dark` --bg / --bg-elevated / --border)
-val SurfaceBgDark       = Color(0xFF0A0F1A)
-val SurfaceElevatedDark = Color(0xFF111827)
-val OutlineSubtleDark   = Color(0xFF1E293B)
+// Dark surfaces — deep matte black monochrome theme.
+val SurfaceBgDark       = Color(0xFF000000)
+val SurfaceElevatedDark = Color(0xFF242424)
+val OutlineSubtleDark   = Color(0xFF333333)
 
 // Status palette — light (matches web .chip-* / status banner styles)
 val SuccessFg     = Color(0xFF047857)
@@ -86,16 +86,16 @@ val EarlyDot = Color(0xFFF97316) // orange-500
 
 // Header / hero gradient — deep navy-indigo. Used by GradientHeader; drawn at the
 // component level so the Material primary (brand blue) keeps powering buttons.
-val Navy700 = Color(0xFF2A3A93) // top-left, lighter
-val Navy800 = Color(0xFF1C2A6E)
-val Navy900 = Color(0xFF131C57) // bottom-right, deepest
+val Navy700 = Color(0xFF2E2E2E) // top-left, lighter (monochrome header)
+val Navy800 = Color(0xFF222222)
+val Navy900 = Color(0xFF161616) // bottom-right, deepest
 
 // Icon "chip" behind module/action glyphs — light indigo wash + indigo glyph.
-val ChipPurpleBg     = Color(0xFFEEF0FF)
-val ChipPurpleFg     = Color(0xFF5A60E6)
-val ChipPurpleBgDark = Color(0xFF20245A)
-val ChipPurpleFgDark = Color(0xFFB3B8FF)
+val ChipPurpleBg     = Color(0xFFEDEDED)
+val ChipPurpleFg     = Color(0xFF3A3A3A)
+val ChipPurpleBgDark = Color(0xFF2A2A2A)
+val ChipPurpleFgDark = Color(0xFFE5E5E5)
 
 // Donut / chart accents. The blue slice reuses Brand500.
-val DonutGreen = Color(0xFF34C77B) // "remaining" / present
-val DonutBlue  = Brand500          // "taken" / late
+val DonutGreen = Color(0xFF34C77B) // "remaining" / present (status — kept)
+val DonutBlue  = Color(0xFF8A8A8A) // "taken" / late (monochrome)

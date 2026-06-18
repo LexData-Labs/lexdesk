@@ -126,7 +126,7 @@ export default function EmployeesPage() {
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeAdd}>
-          <div className="card w-full max-w-lg flex flex-col gap-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="card glossy w-full max-w-lg flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Add employee</h2>
               <button onClick={closeAdd} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
@@ -184,8 +184,8 @@ export default function EmployeesPage() {
           className="flex-1 min-w-[200px] bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]"
         />
         <div className="flex gap-2">
-          <button onClick={() => setView('list')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'list' ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>List</button>
-          <button onClick={() => setView('grid')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'grid' ? 'bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>Grid</button>
+          <button onClick={() => setView('list')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'list' ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>List</button>
+          <button onClick={() => setView('grid')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'grid' ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>Grid</button>
         </div>
         <select
           value={pageSize}
@@ -222,7 +222,7 @@ export default function EmployeesPage() {
                         <div>
                           <div className="font-medium flex items-center gap-2">
                             {e.name || '—'}
-                            {leaderUids.has(String(e.id)) && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)]">Lead</span>}
+                            {leaderUids.has(String(e.id)) && <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)]">Lead</span>}
                           </div>
                           <div className="text-xs text-[var(--color-text-muted)]">{e.email}</div>
                         </div>
@@ -259,7 +259,7 @@ export default function EmployeesPage() {
                 <div>
                   <div className="font-semibold text-[var(--color-text-main)] truncate max-w-[150px] flex items-center justify-center gap-1.5">
                     {e.name || '—'}
-                    {leaderUids.has(String(e.id)) && <span className="text-[9px] font-bold uppercase px-1 py-0.5 rounded bg-[rgba(139,92,246,0.15)] text-[var(--color-purple)]">Lead</span>}
+                    {leaderUids.has(String(e.id)) && <span className="text-[9px] font-bold uppercase px-1 py-0.5 rounded bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)]">Lead</span>}
                   </div>
                   <div className="text-xs text-[var(--color-text-muted)] truncate max-w-[150px]">{e.email}</div>
                   {teamNameOf(e) && <div className="text-xs text-[var(--color-purple)] mt-0.5">{teamNameOf(e)}</div>}

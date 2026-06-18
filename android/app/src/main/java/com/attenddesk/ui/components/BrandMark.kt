@@ -1,6 +1,7 @@
 package com.attenddesk.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -13,22 +14,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.attenddesk.ui.theme.Brand500
-import com.attenddesk.ui.theme.Brand700
 
 /**
- * Gradient "LD" badge — the LexDesk header logo.
+ * Glossy black "LD" badge — the LexDesk header logo.
  */
 @Composable
 fun BrandMark(
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
 ) {
-    val brush = Brush.linearGradient(listOf(Brand500, Brand700))
+    val brush = Brush.linearGradient(listOf(Color(0xFF242424), Color(0xFF000000)))
     Box(
         modifier = modifier
             .size(size)
-            .background(brush, MaterialTheme.shapes.small),
+            .background(brush, MaterialTheme.shapes.small)
+            .border(1.dp, Color.White.copy(alpha = 0.18f), MaterialTheme.shapes.small),
         contentAlignment = Alignment.Center,
     ) {
         Text(

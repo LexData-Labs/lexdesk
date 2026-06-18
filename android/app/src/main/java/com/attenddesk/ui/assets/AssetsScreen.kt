@@ -70,7 +70,7 @@ fun AssetsScreen(container: AppContainer, onBack: () -> Unit) {
         topBar = { GradientHeader(title = "Assets", onBack = onBack) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showForm = true }, containerColor = MaterialTheme.colorScheme.primary) {
-                Icon(Icons.Outlined.Add, contentDescription = "New requisition", tint = Color.White)
+                Icon(Icons.Outlined.Add, contentDescription = "New requisition", tint = MaterialTheme.colorScheme.onPrimary)
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
