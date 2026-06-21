@@ -1,17 +1,18 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Monochrome system — deep matte black (#000000) + white. Status colors kept. */
-  --color-bg: #000000;
-  --color-card-bg: rgba(255, 255, 255, 0.05);
-  --color-card-border: rgba(255, 255, 255, 0.12);
-  --color-text-main: #F5F5F5;
-  --color-text-muted: #A1A1A1;
-  /* "Brand" accents are now monochrome so every var() reference reads B&W. */
-  --color-purple: #FFFFFF;
-  --color-blue: #BDBDBD;
-  --color-primary: #FFFFFF;
-  --color-on-primary: #000000;
+  /* Monochrome palette imported from "colors (1)" (CSS Peeper export):
+     #000000 #212121 #414141 #9B9B9B #AFAFAF #FFFFFF. Status colors kept. */
+  --color-bg: #000000;            /* palette: #000000 */
+  --color-card-bg: #212121;       /* palette: #212121 */
+  --color-card-border: #414141;   /* palette: #414141 */
+  --color-text-main: #FFFFFF;     /* palette: #FFFFFF */
+  --color-text-muted: #9B9B9B;    /* palette: #9B9B9B */
+  /* Accents stay within the grayscale palette so every var() reads B&W. */
+  --color-purple: #AFAFAF;        /* palette: #AFAFAF */
+  --color-blue: #9B9B9B;          /* palette: #9B9B9B */
+  --color-primary: #FFFFFF;       /* palette: #FFFFFF */
+  --color-on-primary: #000000;    /* palette: #000000 */
   --color-accent-soft: rgba(255, 255, 255, 0.10);
   /* Status palette — intentionally kept for at-a-glance clarity. */
   --color-green: #22C55E;
@@ -22,15 +23,16 @@
 
 @layer base {
   :root.light {
-    --color-bg: #FFFFFF;
+    /* Same palette, inverted for light mode. */
+    --color-bg: #FFFFFF;          /* palette: #FFFFFF */
     --color-card-bg: #FFFFFF;
-    --color-card-border: #E5E5E5;
-    --color-text-main: #000000;
-    --color-text-muted: #6B7280;
-    --color-purple: #000000;
-    --color-blue: #555555;
-    --color-primary: #000000;
-    --color-on-primary: #FFFFFF;
+    --color-card-border: #AFAFAF; /* palette: #AFAFAF */
+    --color-text-main: #000000;   /* palette: #000000 */
+    --color-text-muted: #414141;  /* palette: #414141 */
+    --color-purple: #212121;      /* palette: #212121 */
+    --color-blue: #414141;        /* palette: #414141 */
+    --color-primary: #000000;     /* palette: #000000 */
+    --color-on-primary: #FFFFFF;  /* palette: #FFFFFF */
     --color-accent-soft: rgba(0, 0, 0, 0.06);
   }
 

@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }) {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     if (!storedToken || !storedUser) {
-      router.push('/');
+      router.push('/register');
       return;
     }
     try {
@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }) {
         }
       }
     } catch {
-      router.push('/');
+      router.push('/register');
     }
 
     const savedTheme = localStorage.getItem('theme');
@@ -99,7 +99,7 @@ export default function DashboardLayout({ children }) {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    router.push('/');
+    router.push('/register');
   };
 
   const homeHref = user.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';
