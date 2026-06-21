@@ -185,3 +185,331 @@
     animation: none !important;
   }
 }
+
+/* ============================================================================
+   TeamOS Hub — the playable 3D homepage (see src/components/home/).
+   Pure black stage with a glassy HUD. All overlay chrome lives here.
+============================================================================ */
+
+/* Boot / loading screen shown while the three.js chunk downloads. */
+.hub-boot {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: #000; color: #f5f5f5;
+}
+.hub-boot__ring {
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #fff;
+  animation: hub-spin 0.9s linear infinite;
+}
+.hub-boot__text { font-size: 0.85rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255, 255, 255, 0.65); }
+
+.hub-root {
+  position: fixed; inset: 0; overflow: hidden;
+  background: #000; color: #f5f5f5;
+  animation: hub-fade-in 0.9s ease both;
+}
+.hub-canvas { position: absolute; inset: 0; display: block; touch-action: none; }
+
+/* Top bar: brand + always-available exits (Classic view, Sign in). */
+.hub-topbar {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px clamp(16px, 4vw, 48px);
+  pointer-events: none;
+}
+.hub-topbar > * { pointer-events: auto; }
+.hub-brand {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: none; border: none; cursor: pointer; color: inherit; padding: 4px;
+}
+.hub-brand__mark {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px;
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.18), transparent);
+  border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.hub-brand__name { font-weight: 700; letter-spacing: -0.01em; font-size: 1.05rem; }
+.hub-topbar__right { display: flex; align-items: center; gap: 12px; }
+.hub-ghost {
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.8); border-radius: 8px; padding: 8px 14px;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.hub-ghost:hover { color: #fff; background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
+
+/* Intro headline — fades away after a few seconds, leaving a clean stage. */
+.hub-intro {
+  position: absolute; left: 0; right: 0; top: clamp(74px, 12vh, 124px); z-index: 18;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center; padding: 0 24px; pointer-events: none;
+  animation: hub-intro 6.5s ease forwards;
+}
+.hub-intro__title {
+  margin: 0; font-size: clamp(1.5rem, 3vw, 2.6rem); font-weight: 800; letter-spacing: -0.02em;
+  line-height: 1.05; max-width: 20ch;
+  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0.55));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 2px 40px rgba(255, 255, 255, 0.12);
+}
+.hub-intro__sub { margin: 0; font-size: 0.9rem; letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.6); }
+
+/* Controls legend (hidden while docked). */
+.hub-controls {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: clamp(20px, 5vh, 40px); z-index: 18;
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+  padding: 10px 18px; border-radius: 999px; pointer-events: none;
+  background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-size: 0.78rem; color: rgba(255, 255, 255, 0.7);
+}
+.hub-controls span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* Docking prompt shown when a node is in range. */
+.hub-prompt {
+  position: absolute; left: 50%; bottom: clamp(76px, 12vh, 110px); z-index: 19;
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+  padding: 12px 22px; border-radius: 14px; pointer-events: none;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  box-shadow: 0 8px 40px rgba(255, 255, 255, 0.08);
+  animation: hub-prompt-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hub-prompt__label { font-size: 0.95rem; font-weight: 700; color: #fff; letter-spacing: 0.01em; }
+.hub-prompt__cta { font-size: 0.72rem; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.6); }
+
+kbd {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 5px; font-family: inherit; font-size: 0.72rem; font-weight: 700; color: #fff;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Floating 3D node labels (rendered through drei <Html>). */
+.hub-label {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: none; border: none; cursor: pointer; color: #fff;
+  white-space: nowrap; transform: translateZ(0); transition: transform 0.2s ease;
+  font-family: 'Inter', sans-serif;
+}
+.hub-label:hover { transform: scale(1.06); }
+.hub-label__title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.02em;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.5);
+}
+.hub-label__sub {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.55);
+}
+.hub-label.is-active .hub-label__title { text-shadow: 0 1px 18px rgba(255, 255, 255, 0.9); }
+
+/* HUD panel overlay (slides in on travel). */
+.hub-hud {
+  position: absolute; inset: 0; z-index: 25;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: clamp(16px, 4vw, 56px); pointer-events: none;
+}
+.hub-panel {
+  pointer-events: auto;
+  width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto;
+  padding: 26px 28px 30px;
+  animation: hub-panel-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hub-panel__eyebrow {
+  display: block; text-align: center; font-size: 10px; letter-spacing: 0.32em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.4); margin-bottom: 14px;
+}
+.hub-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.8); border-radius: 8px; padding: 7px 12px;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; margin-bottom: 18px; transition: all 0.2s ease;
+}
+.hub-back:hover { color: #fff; background: rgba(255, 255, 255, 0.12); }
+
+/* Sign-in mascot — floats free in the space on the left, beside the panel. */
+.hub-mascot {
+  position: absolute; left: clamp(20px, 7vw, 120px); top: 50%; z-index: 24;
+  pointer-events: none; transform-origin: left center;
+  transform: translateY(-50%) scale(1.15);
+  animation: hub-mascot-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hub-mascot-in {
+  from { opacity: 0; transform: translateY(-50%) translateX(-28px) scale(1.05); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0) scale(1.15); }
+}
+
+/* Icon button (mute toggle) in the top bar. */
+.hub-icon-btn {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.8); cursor: pointer; transition: all 0.2s ease;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.hub-icon-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
+
+/* Radar minimap (bottom-right) — north-up, updated outside React per frame. */
+.hub-radar {
+  position: absolute; right: clamp(16px, 3vw, 34px); bottom: clamp(74px, 13vh, 110px); z-index: 18;
+  width: 116px; height: 116px; pointer-events: none; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.42); border: 1px solid rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 28px rgba(255, 255, 255, 0.05);
+  animation: hub-fade-in 0.8s ease 0.4s both;
+}
+.hub-radar svg { width: 100%; height: 100%; display: block; }
+.hub-radar__ring { fill: none; stroke: rgba(255, 255, 255, 0.13); stroke-width: 1; }
+.hub-radar__cross { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1; }
+.hub-radar__node { fill: rgba(255, 255, 255, 0.5); transition: fill 0.2s ease; }
+.hub-radar__node.is-on { fill: #fff; filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9)); }
+.hub-radar__ship { fill: #fff; filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.9)); }
+.hub-radar__label {
+  position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
+  font-size: 8px; letter-spacing: 0.22em; color: rgba(255, 255, 255, 0.4);
+}
+
+/* Hyperspace warp overlay on dock — radial light-streaks rushing out + a flash. */
+.hub-warp { position: absolute; inset: 0; z-index: 26; pointer-events: none; overflow: hidden; }
+.hub-warp::before {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 260vmax; height: 260vmax; margin-left: -130vmax; margin-top: -130vmax;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg 2.4deg, rgba(255, 255, 255, 0.5) 2.4deg 2.9deg);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 10%, #000 38%);
+  mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 10%, #000 38%);
+  transform-origin: 50% 50%;
+  animation: hub-warp-streaks 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.hub-warp::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 55%);
+  animation: hub-warp-flash 0.7s ease-out forwards;
+}
+@keyframes hub-warp-streaks { 0% { opacity: 0; transform: scale(0.25); } 28% { opacity: 0.95; } 100% { opacity: 0; transform: scale(2.6); } }
+@keyframes hub-warp-flash { 0% { opacity: 0; } 18% { opacity: 0.8; } 100% { opacity: 0; } }
+
+/* Touch controls — virtual joystick (left) + dock button (right). */
+.hub-joy {
+  position: absolute; left: clamp(16px, 6vw, 44px); bottom: clamp(22px, 6vh, 52px); z-index: 22;
+  width: 124px; height: 124px; border-radius: 50%; touch-action: none;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.05);
+  animation: hub-fade-in 0.6s ease both;
+}
+.hub-joy__ring { position: absolute; width: 70px; height: 70px; border-radius: 50%; border: 1px dashed rgba(255, 255, 255, 0.18); }
+.hub-joy__knob {
+  position: relative; width: 54px; height: 54px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #b8bfc9);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.hub-dock-btn {
+  position: absolute; right: clamp(16px, 6vw, 44px); bottom: clamp(38px, 9vh, 74px); z-index: 22;
+  width: 86px; height: 86px; border-radius: 50%; touch-action: manipulation; cursor: pointer;
+  font-weight: 800; letter-spacing: 0.12em; font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.hub-dock-btn[data-on='true'] {
+  color: #000; background: #fff; border-color: #fff;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+  animation: hub-dock-pulse 1.2s ease-in-out infinite;
+}
+@keyframes hub-dock-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+/* Collected-orbs counter (appears after the first pickup). */
+.hub-score {
+  position: absolute; top: clamp(64px, 9vh, 88px); left: clamp(16px, 4vw, 40px); z-index: 19;
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 15px; border-radius: 999px; pointer-events: none;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-size: 0.85rem; font-weight: 700; color: #fff; letter-spacing: 0.04em;
+  animation: hub-score-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hub-score__icon { color: #fff; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
+@keyframes hub-score-pop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* Nearest-station compass — points to the closest beacon when it's off-screen. */
+.hub-compass {
+  position: absolute; top: clamp(62px, 9vh, 92px); left: 50%; transform: translateX(-50%); z-index: 18;
+  display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.hub-compass__dial {
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.hub-compass__arrow { width: 22px; height: 22px; fill: #ffffff; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7)); transition: transform 0.12s linear; }
+.hub-compass__label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; color: rgba(255, 255, 255, 0.75); white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7); }
+
+/* High-score (best) shown beside the live orb count. */
+.hub-score__best {
+  font-size: 0.72rem; font-weight: 600; color: rgba(255, 255, 255, 0.5); letter-spacing: 0.03em;
+  margin-left: 2px; padding-left: 7px; border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Screen-shake on warp — rattles the canvas (view); the HUD stays put. */
+.hub-shake { animation: hub-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+@keyframes hub-shake {
+  0% { transform: translate(0, 0); }
+  12% { transform: translate(-6px, 4px); }
+  24% { transform: translate(6px, -5px); }
+  36% { transform: translate(-5px, -4px); }
+  48% { transform: translate(5px, 4px); }
+  62% { transform: translate(-3px, 2px); }
+  76% { transform: translate(3px, -2px); }
+  88% { transform: translate(-1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* "NEW BEST!" celebratory flash on beating your record. */
+.hub-newbest {
+  position: absolute; top: 38%; left: 50%; z-index: 27; pointer-events: none; white-space: nowrap;
+  transform: translate(-50%, -50%);
+  font-size: clamp(2rem, 6vw, 4.5rem); font-weight: 900; letter-spacing: 0.04em; color: #fff;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.7), 0 0 60px rgba(255, 255, 255, 0.4);
+  animation: hub-newbest 1.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hub-newbest {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+/* Coin combo multiplier (top-left, under the score). Re-keyed each collect so
+   the depleting bar + pop restart while you keep the chain alive. */
+.hub-combo {
+  position: absolute; top: clamp(104px, 14vh, 138px); left: clamp(16px, 4vw, 40px); z-index: 19;
+  display: flex; flex-direction: column; gap: 5px; pointer-events: none;
+}
+.hub-combo__mult {
+  font-size: 1.15rem; font-weight: 900; color: #fff; letter-spacing: 0.04em;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.75);
+  animation: hub-combo-pop 0.25s ease;
+}
+.hub-combo__bar {
+  display: block; width: 58px; height: 3px; border-radius: 2px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.22); position: relative;
+}
+.hub-combo__bar::after {
+  content: ''; position: absolute; inset: 0; background: #fff; transform-origin: left;
+  animation: hub-combo-bar var(--combo-ms, 3s) linear forwards;
+}
+@keyframes hub-combo-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes hub-combo-pop { from { transform: scale(1.5); } to { transform: scale(1); } }
+
+@keyframes hub-spin { to { transform: rotate(360deg); } }
+@keyframes hub-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hub-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hub-panel-in { from { opacity: 0; transform: translateY(18px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes hub-intro { 0% { opacity: 0; transform: translateY(-10px); } 12% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes hub-prompt-in { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
