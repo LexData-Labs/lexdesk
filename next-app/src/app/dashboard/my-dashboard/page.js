@@ -5,20 +5,8 @@ import PageHeader from '@/components/PageHeader';
 import MonthNav from '@/components/MonthNav';
 import MonthCalendar from '@/components/MonthCalendar';
 import KpiCard from '@/components/KpiCard';
-import Avatar from '@/components/Avatar';
 import CheckInCard from '@/components/CheckInCard';
 import { employeeCalendarMonth, bdDateKey, approvedLeaveDays, canonicalDays } from '@/lib/attend';
-
-function initials(name) {
-  if (!name) return '?';
-  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
-function fmtDate(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-}
 
 function timeFmt(ms) {
   try {
@@ -26,15 +14,6 @@ function timeFmt(ms) {
   } catch {
     return '—';
   }
-}
-
-function Row({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[var(--color-card-border)] py-1 last:border-0">
-      <span className="text-[var(--color-text-muted)]">{label}</span>
-      <span className="text-[var(--color-text-main)] truncate max-w-[60%] text-right">{value}</span>
-    </div>
-  );
 }
 
 export default function MyDashboardPage() {
@@ -117,33 +96,14 @@ export default function MyDashboardPage() {
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card flex flex-col gap-3">
-          <div className="flex items-center gap-4">
-            <Avatar image={profile?.photoUrl} initials={initials(profile?.name)} alt={profile?.name || ''} className="w-16 h-16 text-lg shrink-0" />
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-[var(--color-text-main)] truncate">{profile?.name || '—'}</h2>
-              <p className="text-xs text-[var(--color-text-muted)] capitalize">{(profile?.role || '').toLowerCase() || '—'}</p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 text-sm">
-            <Row label="Employee ID" value={profile?.employeeId || '—'} />
-            <Row label="Department" value={profile?.teamName || '—'} />
-            <Row label="Branch" value={office?.name || '—'} />
-            <Row label="Joining date" value={fmtDate(profile?.joiningDate)} />
-            <Row label="Email" value={profile?.email || '—'} />
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 flex flex-col gap-3">
-          <h2 className="text-base font-semibold text-[var(--color-text-main)]">At a Glance</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            <KpiCard label="Leave Spent" value={loading ? '…' : leaveStats.takenDays} color="purple" />
-            <KpiCard label="Visit Taken" value={0} color="blue" />
-            <KpiCard label="Missed Attendance" value={loading ? '…' : cal.counts.missed} color="red" />
-            <KpiCard label="Pending Approval" value={loading ? '…' : leaveStats.pending} color="yellow" />
-            <KpiCard label="Asset Assigned" value={loading ? '…' : (assets || []).filter((a) => a.status === 'approved').length} color="green" />
-          </div>
+      <div className="flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-[var(--color-text-main)]">At a Glance</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <KpiCard label="Leave Spent" value={loading ? '…' : leaveStats.takenDays} color="purple" />
+          <KpiCard label="Visit Taken" value={0} color="blue" />
+          <KpiCard label="Missed Attendance" value={loading ? '…' : cal.counts.missed} color="violet" />
+          <KpiCard label="Pending Approval" value={loading ? '…' : leaveStats.pending} color="yellow" />
+          <KpiCard label="Asset Assigned" value={loading ? '…' : (assets || []).filter((a) => a.status === 'approved').length} color="green" />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ const COLORS = {
   yellow: { bg: 'rgba(234,179,8,0.15)',  fg: 'var(--color-yellow)' },
   red:    { bg: 'rgba(239,68,68,0.15)',  fg: 'var(--color-red)' },
   blue:   { bg: 'rgba(120,120,120,0.15)', fg: 'var(--color-blue)' },
+  violet: { bg: 'rgba(167,139,250,0.15)', fg: '#A78BFA' },
 };
 
 export default function KpiCard({ label, value, color = 'purple', icon }) {

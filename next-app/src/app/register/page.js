@@ -263,13 +263,14 @@ export default function Register() {
       <div className="relative flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-10 md:py-0">
         {/* Marketing side */}
         <div className="flex-1 max-w-[600px] text-center md:text-left">
-          <Link href="/" className="inline-flex items-center gap-3 mb-8 no-underline">
-            <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">L</div>
-            <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">LexDesk</span>
+          <Link href="/" className="inline-flex items-center gap-3 mb-2 no-underline">
+            <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">T</div>
+            <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">TeamOS</span>
           </Link>
+          <p className="text-xs text-[var(--color-text-muted)] mb-8 md:ml-[52px]">powered by LexData Labs</p>
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] mb-4 sm:mb-6 bg-gradient-to-br from-[var(--color-text-main)] to-[var(--color-text-muted)] text-transparent bg-clip-text">
-            Next-Gen Attendance Management
+            Where Teams Work Better Together.
           </h1>
           <p className="text-base sm:text-xl text-[var(--color-text-muted)] mb-6 md:mb-10 leading-relaxed">
             A high-fidelity platform for employee attendance, leave, and team management with robust role-based access.
