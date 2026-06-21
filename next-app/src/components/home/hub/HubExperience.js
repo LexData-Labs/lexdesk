@@ -17,6 +17,8 @@ import Joystick from './Joystick';
 import { audio } from './audio';
 import { STATIONS_BY_ID } from './stations';
 
+const COMBO_WINDOW = 3000; // ms to chain a coin and keep the multiplier alive
+
 export default function HubExperience({ onExit, lowPerf = false }) {
   const [selected, setSelected] = useState(null);
   const [focused, setFocused] = useState(null);
@@ -26,6 +28,8 @@ export default function HubExperience({ onExit, lowPerf = false }) {
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
   const [newBest, setNewBest] = useState(false);
+  const [multiplier, setMultiplier] = useState(1);
+  const [comboKey, setComboKey] = useState(0);
   const pointer = useRef({ x: 0, y: 0 });
   const control = useRef({ thrust: 0, turn: 0, boost: false }); // keyboard + joystick
   const shipRef = useRef({ x: 0, z: 0, heading: 0, speed: 0, boost: false });
@@ -33,6 +37,9 @@ export default function HubExperience({ onExit, lowPerf = false }) {
   const prevSelected = useRef(null);
   const recordToBeat = useRef(0);
   const flashedRef = useRef(false);
+  const comboRef = useRef(0);
+  const lastCollectRef = useRef(0);
+  const comboTimerRef = useRef(null);
 
   useEffect(() => {
     const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -61,10 +68,25 @@ export default function HubExperience({ onExit, lowPerf = false }) {
     };
   }, []);
 
+  // Collecting in quick succession builds a combo multiplier (x1 → x5).
   const handleCollect = useCallback((n) => {
-    setScore((s) => s + n);
     audio.collect();
+    const now = performance.now();
+    const chaining = now - lastCollectRef.current < COMBO_WINDOW;
+    lastCollectRef.current = now;
+    comboRef.current = chaining ? comboRef.current + n : n;
+    const mult = Math.min(1 + Math.floor(comboRef.current / 4), 5);
+    setMultiplier(mult);
+    setComboKey((k) => k + 1);
+    setScore((s) => s + n * mult);
+    clearTimeout(comboTimerRef.current);
+    comboTimerRef.current = setTimeout(() => {
+      comboRef.current = 0;
+      setMultiplier(1);
+    }, COMBO_WINDOW);
   }, []);
+
+  useEffect(() => () => clearTimeout(comboTimerRef.current), []);
 
   // Persistent orb high-score.
   useEffect(() => {
@@ -163,6 +185,13 @@ export default function HubExperience({ onExit, lowPerf = false }) {
       )}
 
       {newBest && <div className="hub-newbest" aria-hidden="true">NEW BEST!</div>}
+
+      {multiplier > 1 && (
+        <div className="hub-combo" key={comboKey} aria-hidden="true" style={{ '--combo-ms': `${COMBO_WINDOW}ms` }}>
+          <span className="hub-combo__mult">x{multiplier}</span>
+          <span className="hub-combo__bar" />
+        </div>
+      )}
 
       <header className="hub-topbar">
         <button type="button" className="hub-brand" onClick={() => setSelected(null)}>

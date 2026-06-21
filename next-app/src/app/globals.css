@@ -485,6 +485,28 @@ kbd {
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
 }
 
+/* Coin combo multiplier (top-left, under the score). Re-keyed each collect so
+   the depleting bar + pop restart while you keep the chain alive. */
+.hub-combo {
+  position: absolute; top: clamp(104px, 14vh, 138px); left: clamp(16px, 4vw, 40px); z-index: 19;
+  display: flex; flex-direction: column; gap: 5px; pointer-events: none;
+}
+.hub-combo__mult {
+  font-size: 1.15rem; font-weight: 900; color: #fff; letter-spacing: 0.04em;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.75);
+  animation: hub-combo-pop 0.25s ease;
+}
+.hub-combo__bar {
+  display: block; width: 58px; height: 3px; border-radius: 2px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.22); position: relative;
+}
+.hub-combo__bar::after {
+  content: ''; position: absolute; inset: 0; background: #fff; transform-origin: left;
+  animation: hub-combo-bar var(--combo-ms, 3s) linear forwards;
+}
+@keyframes hub-combo-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes hub-combo-pop { from { transform: scale(1.5); } to { transform: scale(1); } }
+
 @keyframes hub-spin { to { transform: rotate(360deg); } }
 @keyframes hub-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes hub-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }

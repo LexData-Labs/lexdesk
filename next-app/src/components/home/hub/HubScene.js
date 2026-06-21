@@ -169,7 +169,16 @@ function Backdrop() {
 }
 
 /* ---------------------------------------------------------------- spaceship */
-function Spaceship() {
+function Spaceship({ shipRef }) {
+  const glow = useRef();
+  const light = useRef();
+  useFrame(() => {
+    const sp = shipRef ? Math.abs(shipRef.current.speed) : 0;
+    const boost = shipRef ? shipRef.current.boost : false;
+    const f = Math.min(sp / 20, 1) + (boost ? 0.45 : 0); // engine flares with speed + boost
+    if (glow.current) glow.current.scale.setScalar(0.85 + f * 0.9);
+    if (light.current) light.current.intensity = 5 + f * 9;
+  });
   return (
     <group scale={0.95}>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -192,7 +201,7 @@ function Spaceship() {
         <sphereGeometry args={[0.16, 20, 20]} />
         <meshStandardMaterial color="#7f8893" metalness={1} roughness={0.05} envMapIntensity={1.5} />
       </mesh>
-      <mesh position={[0, 0, -0.62]}>
+      <mesh ref={glow} position={[0, 0, -0.62]}>
         <sphereGeometry args={[0.13, 16, 16]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
@@ -203,7 +212,7 @@ function Spaceship() {
           <meshBasicMaterial color="#ffffff" />
         </mesh>
       </Trail>
-      <pointLight position={[0, 0.1, -0.85]} color="#ffffff" intensity={7} distance={7} />
+      <pointLight ref={light} position={[0, 0.1, -0.85]} color="#ffffff" intensity={7} distance={7} />
     </group>
   );
 }
@@ -251,7 +260,7 @@ function Player({ selected, warping, onSelect, onFocusChange, onBoost, pointer, 
     const k = keys.current;
 
     // hyperspace FOV punch during warp
-    const targetFov = warping ? 82 : 50;
+    const targetFov = warping ? 82 : 50 + Math.min(Math.abs(d.speed), 32) * 0.5; // widen with speed (max speed 32)
     if (Math.abs(camera.fov - targetFov) > 0.05) {
       camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, warping ? 16 : 6, dt);
       camera.updateProjectionMatrix();
@@ -338,7 +347,7 @@ function Player({ selected, warping, onSelect, onFocusChange, onBoost, pointer, 
 
   return (
     <group ref={ship}>
-      <Spaceship />
+      <Spaceship shipRef={shipRef} />
     </group>
   );
 }
@@ -427,6 +436,24 @@ function Coin({ x, z, born }) {
   );
 }
 
+// A quick expanding ring burst when a coin is collected. Geometry is shared
+// across all pops (they're identical); only material opacity/scale vary.
+const POP_GEO = new THREE.RingGeometry(0.5, 0.62, 32);
+function Pop({ x, z, born }) {
+  const ref = useRef();
+  const mat = useRef();
+  useFrame((st) => {
+    const t = Math.min((st.clock.elapsedTime - born) / 0.5, 1);
+    if (ref.current) ref.current.scale.setScalar(0.5 + t * 2.6);
+    if (mat.current) mat.current.opacity = (1 - t) * 0.6;
+  });
+  return (
+    <mesh ref={ref} position={[x, 0.7, z]} rotation={[Math.PI / 2, 0, 0]} geometry={POP_GEO}>
+      <meshBasicMaterial ref={mat} color="#ffffff" transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
 // Coins scattered across the world that pop in one-by-one over time, capped at
 // COIN_MAX alive — so the supply never runs dry. Fly through one to collect it.
 const COIN_MAX = 16;
@@ -441,10 +468,17 @@ function Coins({ shipRef, selected, onCollect }) {
   const coinsRef = useRef(Array.from({ length: 6 }, (_, i) => spawnCoin(i, 0, 16)));
   const idRef = useRef(6);
   const timer = useRef(1.2);
+  const popsRef = useRef([]);
   const [, force] = useReducer((x) => x + 1, 0);
 
   useFrame((st, delta) => {
     const s = shipRef.current;
+
+    // retire collect-pops that have finished their burst
+    if (popsRef.current.length && st.clock.elapsedTime - popsRef.current[0].born >= 0.55) {
+      popsRef.current = popsRef.current.filter((p) => st.clock.elapsedTime - p.born < 0.55);
+      force();
+    }
 
     // spawn one coin at a time, up to the cap
     timer.current -= delta;
@@ -469,11 +503,15 @@ function Coins({ shipRef, selected, onCollect }) {
       if (hit) {
         let collected = 0;
         const remaining = [];
+        const pops = [];
         for (const c of coinsRef.current) {
-          if (Math.hypot(s.x - c.x, s.z - c.z) < COIN_COLLECT_R) collected++;
-          else remaining.push(c);
+          if (Math.hypot(s.x - c.x, s.z - c.z) < COIN_COLLECT_R) {
+            collected++;
+            pops.push({ key: `pop${c.key}-${st.clock.elapsedTime}`, x: c.x, z: c.z, born: st.clock.elapsedTime });
+          } else remaining.push(c);
         }
         coinsRef.current = remaining;
+        popsRef.current = [...popsRef.current, ...pops];
         force();
         onCollect(collected);
       }
@@ -484,6 +522,9 @@ function Coins({ shipRef, selected, onCollect }) {
     <group>
       {coinsRef.current.map((c) => (
         <Coin key={c.key} x={c.x} z={c.z} born={c.born} />
+      ))}
+      {popsRef.current.map((p) => (
+        <Pop key={p.key} x={p.x} z={p.z} born={p.born} />
       ))}
     </group>
   );
