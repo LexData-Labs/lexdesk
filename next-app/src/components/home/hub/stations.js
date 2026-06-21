@@ -8,7 +8,7 @@
 //   look   — what the camera points at while docked (the node)
 //   angle  — ring azimuth in radians (used by the radar + waypoint math)
 
-const RING = 34;      // node ring radius — wide, destinations far apart
+const RING = 42;      // node ring radius — wide, destinations far apart
 const APPROACH = 6;   // how far outside the node the camera sits when docked
 
 const onRing = (deg, y = 0) => {
@@ -29,7 +29,7 @@ const DEFS = [
   { id: 'app', label: 'Mobile', sub: 'Get the app', deg: 288 },
 ];
 
-export const WORLD_RADIUS = RING + 16; // soft boundary the ship can roam to
+export const WORLD_RADIUS = RING + 20; // soft boundary the ship can roam to
 
 export const STATIONS = DEFS.map((d) => ({
   ...d,

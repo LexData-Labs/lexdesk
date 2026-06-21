@@ -25,11 +25,14 @@ export default function HubExperience({ onExit, lowPerf = false }) {
   const [touch, setTouch] = useState(false);
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
+  const [newBest, setNewBest] = useState(false);
   const pointer = useRef({ x: 0, y: 0 });
   const control = useRef({ thrust: 0, turn: 0, boost: false }); // keyboard + joystick
   const shipRef = useRef({ x: 0, z: 0, heading: 0, speed: 0, boost: false });
   const compassRef = useRef({ angle: 0, name: '', dist: 0, hidden: true });
   const prevSelected = useRef(null);
+  const recordToBeat = useRef(0);
+  const flashedRef = useRef(false);
 
   useEffect(() => {
     const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -48,8 +51,8 @@ export default function HubExperience({ onExit, lowPerf = false }) {
       audio.startAmbient();
       audio.engineStart();
     };
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
     return () => {
       window.removeEventListener('pointerdown', unlock);
       window.removeEventListener('keydown', unlock);
@@ -67,6 +70,7 @@ export default function HubExperience({ onExit, lowPerf = false }) {
   useEffect(() => {
     try {
       const v = parseInt(localStorage.getItem('teamos_orb_best') || '0', 10);
+      recordToBeat.current = v;
       if (v > 0) setBest(v);
     } catch {}
   }, []);
@@ -76,6 +80,21 @@ export default function HubExperience({ onExit, lowPerf = false }) {
       try { localStorage.setItem('teamos_orb_best', String(score)); } catch {}
     }
   }, [score, best]);
+
+  // Fire a one-time "NEW BEST!" flash the first time you beat this session's record.
+  useEffect(() => {
+    if (!flashedRef.current && score >= 3 && score > recordToBeat.current) {
+      flashedRef.current = true;
+      setNewBest(true);
+      audio.fanfare();
+    }
+  }, [score]);
+  // Auto-dismiss the flash — keyed on the flash itself so later collects can't cancel it.
+  useEffect(() => {
+    if (!newBest) return undefined;
+    const t = setTimeout(() => setNewBest(false), 1900);
+    return () => clearTimeout(t);
+  }, [newBest]);
 
   // Dock / undock chimes + a hyperspace warp on both arrival and departure.
   useEffect(() => {
@@ -142,6 +161,8 @@ export default function HubExperience({ onExit, lowPerf = false }) {
           {best > 0 && <span className="hub-score__best">best {best}</span>}
         </div>
       )}
+
+      {newBest && <div className="hub-newbest" aria-hidden="true">NEW BEST!</div>}
 
       <header className="hub-topbar">
         <button type="button" className="hub-brand" onClick={() => setSelected(null)}>

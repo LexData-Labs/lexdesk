@@ -111,6 +111,18 @@ function engineStop() {
   } catch {}
 }
 
+// One reusable noise buffer for whoosh bursts.
+let noiseBuf = null;
+function getNoise(c) {
+  if (!noiseBuf) {
+    const len = Math.floor(c.sampleRate * 0.4);
+    noiseBuf = c.createBuffer(1, len, c.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
+}
+
 export const audio = {
   init: () => ensure(),
   startAmbient,
@@ -118,6 +130,31 @@ export const audio = {
   engineStart,
   engineSet,
   engineStop,
+  // asteroid near-miss — a filtered-noise whoosh that sweeps down (doppler-ish)
+  whoosh: () => {
+    const c = ensure();
+    if (!c || !master) return;
+    const t0 = c.currentTime;
+    const dur = 0.34;
+    const src = c.createBufferSource();
+    src.buffer = getNoise(c);
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 1.3;
+    bp.frequency.setValueAtTime(1500, t0);
+    bp.frequency.exponentialRampToValueAtTime(320, t0 + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.1, t0 + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  },
+  // new high-score — a short triumphant arpeggio
+  fanfare: () => {
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone({ freq: f, dur: 0.5, type: 'triangle', gain: 0.13, delay: i * 0.09 }));
+  },
   // collecting an orb — a bright rising pluck
   collect: () => tone({ freq: 1046, dur: 0.12, type: 'sine', gain: 0.11, slideTo: 1568 }),
   setMuted: (m) => {

@@ -79,24 +79,45 @@ function ParticleField({ count = 2400 }) {
 }
 
 /* ----------------------------------------------------- scattered asteroids */
-function Asteroids({ count = 110 }) {
+function Asteroids({ count = 130, shipRef, selected }) {
   const group = useRef();
   const rocks = useMemo(() => {
     const out = [];
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
-      const r = 12 + Math.random() * 38;
+      const r = 12 + Math.random() * 48;
       out.push({
-        p: [Math.sin(a) * r, -2 + Math.random() * 10, Math.cos(a) * r],
-        s: 0.3 + Math.random() * 1.4,
+        p: [Math.sin(a) * r, -2 + Math.random() * 11, Math.cos(a) * r],
+        s: 0.3 + Math.random() * 1.5,
         rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
         detail: Math.random() > 0.7 ? 1 : 0,
       });
     }
     return out;
   }, [count]);
+  const near = useRef(new Array(count).fill(false));
+  const cooldown = useRef(0);
   useFrame((st, delta) => {
     if (group.current) group.current.rotation.y += delta * 0.004;
+    cooldown.current -= delta;
+    if (selected || !shipRef) return;
+    const s = shipRef.current;
+    if (Math.abs(s.speed) < 4) return; // only whoosh past at speed
+    const theta = group.current ? group.current.rotation.y : 0;
+    const cos = Math.cos(theta);
+    const sin = Math.sin(theta);
+    for (let i = 0; i < rocks.length; i++) {
+      const p = rocks[i].p;
+      if (Math.abs(p[1]) > 3.5) { near.current[i] = false; continue; } // not on the ship's plane
+      const wx = p[0] * cos + p[2] * sin;
+      const wz = -p[0] * sin + p[2] * cos;
+      const isNear = Math.hypot(s.x - wx, s.z - wz) < 2.6 + rocks[i].s;
+      if (isNear && !near.current[i] && cooldown.current <= 0) {
+        audio.whoosh();
+        cooldown.current = 0.22;
+      }
+      near.current[i] = isNear;
+    }
   });
   return (
     <group ref={group}>
@@ -380,85 +401,89 @@ function StationNode({ data, active, focused, dimmed, onSelect }) {
   );
 }
 
-/* ----------------------------------------------------- collectible orbs */
-function Orb({ pos, t }) {
+/* ----------------------------------------------------- collectible coins */
+function Coin({ x, z, born }) {
   const ref = useRef();
   useFrame((st) => {
-    if (ref.current) ref.current.position.y = pos[1] + Math.sin(st.clock.elapsedTime * 2 + pos[0]) * 0.18;
+    const m = ref.current;
+    if (!m) return;
+    m.rotation.y += 0.05;
+    m.position.y = 0.7 + Math.sin(st.clock.elapsedTime * 2 + x) * 0.15;
+    const pop = Math.min(1, (st.clock.elapsedTime - born) / 0.4); // scale-in pop
+    m.scale.setScalar(pop);
   });
-  const glow = 0.4 + t * 0.7; // brighter the closer the orb is to the target node
   return (
-    <group ref={ref} position={pos}>
-      <mesh>
-        <icosahedronGeometry args={[0.28, 0]} />
-        <meshBasicMaterial color="#ffffff" />
+    <group ref={ref} position={[x, 0.7, z]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.34, 0.34, 0.07, 24]} />
+        <meshStandardMaterial color="#ffffff" metalness={0.9} roughness={0.2} emissive="#ffffff" emissiveIntensity={0.6} />
       </mesh>
       <mesh>
-        <sphereGeometry args={[0.55, 16, 16]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.14 * glow} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <sphereGeometry args={[0.6, 16, 16]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.12} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
-      <pointLight color="#ffffff" intensity={glow * 2.5} distance={3.5} />
+      <pointLight color="#ffffff" intensity={1.8} distance={3.8} />
     </group>
   );
 }
 
-// Lays a guiding trail of orbs from the ship toward the nearest undocked node,
-// re-laying as you collect them; orbs vanish (with a chime) when you fly through.
-function Breadcrumbs({ shipRef, selected, onCollect }) {
-  const orbsRef = useRef([]);
-  const targetRef = useRef(null);
+// Coins scattered across the world that pop in one-by-one over time, capped at
+// COIN_MAX alive — so the supply never runs dry. Fly through one to collect it.
+const COIN_MAX = 16;
+const COIN_COLLECT_R = 2.4;
+function spawnCoin(id, born, minR = 9) {
+  const a = Math.random() * Math.PI * 2;
+  const r = minR + Math.random() * (WORLD_RADIUS - minR - 4); // out in the world, clear of the core
+  return { key: `coin${id}`, x: Math.cos(a) * r, z: Math.sin(a) * r, born };
+}
+function Coins({ shipRef, selected, onCollect }) {
+  // initial coins spawn well away from the ship's start so they aren't auto-collected
+  const coinsRef = useRef(Array.from({ length: 6 }, (_, i) => spawnCoin(i, 0, 16)));
+  const idRef = useRef(6);
+  const timer = useRef(1.2);
   const [, force] = useReducer((x) => x + 1, 0);
 
-  useFrame(() => {
-    if (selected) return;
+  useFrame((st, delta) => {
     const s = shipRef.current;
-    let best = null;
-    let bd = Infinity;
-    for (const n of STATIONS) {
-      const d = Math.hypot(s.x - n.pos[0], s.z - n.pos[2]);
-      if (d < bd) { bd = d; best = n; }
-    }
-    if (!best) return;
 
-    // Close enough — no breadcrumbs needed.
-    if (bd < 7) {
-      if (orbsRef.current.length) { orbsRef.current = []; force(); }
-      targetRef.current = best.id;
-      return;
-    }
-
-    // (Re)lay a fresh trail toward the target from the ship's current spot.
-    if (targetRef.current !== best.id || orbsRef.current.length === 0) {
-      targetRef.current = best.id;
-      const N = 6;
-      const arr = [];
-      for (let i = 1; i <= N; i++) {
-        const f = i / (N + 1);
-        arr.push({ key: `${best.id}:${i}:${Math.round(s.x)}:${Math.round(s.z)}`, pos: [s.x + (best.pos[0] - s.x) * f, 0.7, s.z + (best.pos[2] - s.z) * f], t: f });
+    // spawn one coin at a time, up to the cap
+    timer.current -= delta;
+    if (timer.current <= 0 && coinsRef.current.length < COIN_MAX) {
+      const coin = spawnCoin(idRef.current++, st.clock.elapsedTime);
+      if (Math.hypot(s.x - coin.x, s.z - coin.z) > 6) { // don't pop right on the ship
+        coinsRef.current = [...coinsRef.current, coin];
+        force();
+        timer.current = 0.8 + Math.random() * 1.8;
+      } else {
+        timer.current = 0.15; // rejected near the ship — retry shortly so the field refills
       }
-      orbsRef.current = arr;
-      force();
-      return;
     }
 
-    // Collect any orb the ship flies through.
-    let collected = 0;
-    const remaining = [];
-    for (const o of orbsRef.current) {
-      if (Math.hypot(s.x - o.pos[0], s.z - o.pos[2]) < 2.2) collected++;
-      else remaining.push(o);
-    }
-    if (collected) {
-      orbsRef.current = remaining;
-      force();
-      onCollect(collected);
+    // collect coins the ship flies through (not while docked). Cheap first pass
+    // so we only allocate the filtered array on the rare frame something's hit.
+    if (!selected) {
+      let hit = false;
+      for (const c of coinsRef.current) {
+        if (Math.hypot(s.x - c.x, s.z - c.z) < COIN_COLLECT_R) { hit = true; break; }
+      }
+      if (hit) {
+        let collected = 0;
+        const remaining = [];
+        for (const c of coinsRef.current) {
+          if (Math.hypot(s.x - c.x, s.z - c.z) < COIN_COLLECT_R) collected++;
+          else remaining.push(c);
+        }
+        coinsRef.current = remaining;
+        force();
+        onCollect(collected);
+      }
     }
   });
 
   return (
     <group>
-      {orbsRef.current.map((o) => (
-        <Orb key={o.key} pos={o.pos} t={o.t} />
+      {coinsRef.current.map((c) => (
+        <Coin key={c.key} x={c.x} z={c.z} born={c.born} />
       ))}
     </group>
   );
@@ -555,7 +580,7 @@ export default function HubScene({ selected, focused, warping, lowPerf, onSelect
   return (
     <>
       <color attach="background" args={['#000000']} />
-      <fog attach="fog" args={['#000000', 30, 96]} />
+      <fog attach="fog" args={['#000000', 36, 120]} />
       <ambientLight intensity={0.45} />
       <directionalLight position={[8, 14, 10]} intensity={1.1} />
 
@@ -575,14 +600,14 @@ export default function HubScene({ selected, focused, warping, lowPerf, onSelect
         sectionSize={10}
         sectionThickness={1}
         sectionColor="#484848"
-        fadeDistance={110}
+        fadeDistance={130}
         fadeStrength={2}
         infiniteGrid
       />
 
       <Backdrop />
-      <Asteroids count={lowPerf ? 42 : 110} />
-      <ParticleField count={lowPerf ? 900 : 2400} />
+      <Asteroids count={lowPerf ? 50 : 130} shipRef={shipRef} selected={selected} />
+      <ParticleField count={lowPerf ? 1000 : 2600} />
       <LiquidCore pointer={pointer} />
 
       {STATIONS.map((s) => (
@@ -596,7 +621,7 @@ export default function HubScene({ selected, focused, warping, lowPerf, onSelect
         />
       ))}
 
-      <Breadcrumbs shipRef={shipRef} selected={selected} onCollect={onCollect} />
+      <Coins shipRef={shipRef} selected={selected} onCollect={onCollect} />
       <CompassTracker shipRef={shipRef} selected={selected} compassRef={compassRef} />
       <WarpStreaks warping={warping} />
 

@@ -469,6 +469,22 @@ kbd {
   100% { transform: translate(0, 0); }
 }
 
+/* "NEW BEST!" celebratory flash on beating your record. */
+.hub-newbest {
+  position: absolute; top: 38%; left: 50%; z-index: 27; pointer-events: none; white-space: nowrap;
+  transform: translate(-50%, -50%);
+  font-size: clamp(2rem, 6vw, 4.5rem); font-weight: 900; letter-spacing: 0.04em; color: #fff;
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.7), 0 0 60px rgba(255, 255, 255, 0.4);
+  animation: hub-newbest 1.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hub-newbest {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  30% { transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.05); }
+}
+
 @keyframes hub-spin { to { transform: rotate(360deg); } }
 @keyframes hub-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes hub-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
