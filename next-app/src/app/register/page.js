@@ -1,11 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AuthDecor, FeatureChip, SyncIcon, ChartIcon, ShieldIcon, UsersIcon } from '@/components/authDecor';
+import RoboAssistant from '@/components/RoboAssistant';
 
 const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
+
+// Shape the RoboAssistant reads. The child forms patch this via `onState` so the
+// bot above the card reacts to focus, password reveal, submit, and success.
+const INITIAL_FORM_STATE = {
+  focusedField: null,
+  isPasswordVisible: false,
+  isSubmitting: false,
+  hasError: false,
+  isSuccess: false,
+};
 
 function EyeButton({ shown, onToggle }) {
   return (
@@ -28,18 +39,35 @@ const inputClass =
   'w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-4 py-3 text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)] focus:shadow-[0_0_10px_rgba(150,150,150,0.2)] transition-all';
 const labelClass = 'block text-sm font-semibold mb-2 text-[var(--color-text-muted)]';
 
-function SignInForm() {
+function SignInForm({ onState }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
   const router = useRouter();
+
+  // Clearing the error as soon as the user edits lets the bot recover from its
+  // frown instead of sulking until the next submit.
+  const clearErrorOnEdit = () => {
+    if (error) {
+      setError('');
+      onState({ hasError: false });
+    }
+  };
+
+  const togglePassword = () => {
+    const next = !showPassword;
+    setShowPassword(next);
+    onState({ isPasswordVisible: next });
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    onState({ isSubmitting: true, hasError: false });
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -54,9 +82,13 @@ function SignInForm() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      router.push('/dashboard');
+      // Let the bot celebrate for a beat before we navigate away.
+      setDone(true);
+      onState({ isSubmitting: false, isSuccess: true });
+      setTimeout(() => router.push('/dashboard'), 750);
     } catch (err) {
       setError(err.message);
+      onState({ isSubmitting: false, hasError: true });
     } finally {
       setLoading(false);
     }
@@ -70,8 +102,14 @@ function SignInForm() {
         <label className={labelClass}>Email Address</label>
         <input
           type="email"
+          autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            clearErrorOnEdit();
+          }}
+          onFocus={() => onState({ focusedField: 'email' })}
+          onBlur={() => onState({ focusedField: null })}
           placeholder="you@company.com"
           required
           className={inputClass}
@@ -83,35 +121,52 @@ function SignInForm() {
         <div className="relative">
           <input
             type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              clearErrorOnEdit();
+            }}
+            onFocus={() => onState({ focusedField: 'password' })}
+            onBlur={() => onState({ focusedField: null })}
             placeholder="••••••••"
             required
             className={`${inputClass} pr-10`}
           />
-          <EyeButton shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+          <EyeButton shown={showPassword} onToggle={togglePassword} />
         </div>
       </div>
 
-      <button type="submit" disabled={loading} className="w-full btn-primary py-3.5 text-[0.95rem] flex justify-center items-center">
-        {loading ? 'Authenticating...' : 'Access Dashboard'}
+      <button
+        type="submit"
+        disabled={loading || done}
+        className="w-full btn-primary py-3.5 text-[0.95rem] flex justify-center items-center disabled:opacity-80"
+      >
+        {done ? 'Welcome!' : loading ? 'Authenticating...' : 'Access Dashboard'}
       </button>
     </form>
   );
 }
 
-function SignUpForm() {
+function SignUpForm({ onState }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const togglePassword = () => {
+    const next = !showPassword;
+    setShowPassword(next);
+    onState({ isPasswordVisible: next });
+  };
+
   const handleSignUp = (e) => {
     e.preventDefault();
     // No public registration endpoint — accounts are provisioned by an admin.
     // We capture intent and confirm, without creating an account.
     setSubmitted(true);
+    onState({ focusedField: null, isPasswordVisible: false, isSuccess: true });
   };
 
   if (submitted) {
@@ -135,8 +190,11 @@ function SignUpForm() {
         <label className={labelClass}>Full Name</label>
         <input
           type="text"
+          autoComplete="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onFocus={() => onState({ focusedField: 'name' })}
+          onBlur={() => onState({ focusedField: null })}
           placeholder="Jane Doe"
           required
           className={inputClass}
@@ -147,8 +205,11 @@ function SignUpForm() {
         <label className={labelClass}>Work Email</label>
         <input
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onFocus={() => onState({ focusedField: 'email' })}
+          onBlur={() => onState({ focusedField: null })}
           placeholder="you@company.com"
           required
           className={inputClass}
@@ -160,13 +221,16 @@ function SignUpForm() {
         <div className="relative">
           <input
             type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => onState({ focusedField: 'password' })}
+            onBlur={() => onState({ focusedField: null })}
             placeholder="••••••••"
             required
             className={`${inputClass} pr-10`}
           />
-          <EyeButton shown={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+          <EyeButton shown={showPassword} onToggle={togglePassword} />
         </div>
       </div>
 
@@ -179,7 +243,18 @@ function SignUpForm() {
 
 export default function Register() {
   const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
+  const [formState, setFormState] = useState(INITIAL_FORM_STATE);
   const isSignIn = mode === 'signin';
+
+  const updateFormState = useCallback((patch) => {
+    setFormState((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  // Switching tabs resets the bot so a mood from one form doesn't bleed into the other.
+  const switchMode = (next) => {
+    setMode(next);
+    setFormState(INITIAL_FORM_STATE);
+  };
 
   return (
     <div className="relative overflow-hidden flex flex-col min-h-screen bg-[var(--color-bg)]">
@@ -207,53 +282,57 @@ export default function Register() {
           </ul>
         </div>
 
-        {/* Auth card */}
-        <div className="w-full sm:max-w-[450px] p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl">
-          {/* Toggle */}
-          <div className="grid grid-cols-2 gap-1 p-1 mb-8 rounded-xl bg-[var(--color-bg)] border border-[var(--color-card-border)]">
-            <button
-              type="button"
-              onClick={() => setMode('signin')}
-              className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                isSignIn
-                  ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('signup')}
-              className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                !isSignIn
-                  ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow'
-                  : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
+        {/* Auth column — bot watches over the card */}
+        <div className="w-full sm:max-w-[450px] flex flex-col items-center">
+          <RoboAssistant formState={formState} />
 
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">
-              {isSignIn ? 'Sign In' : 'Create Account'}
-            </h2>
-            <p className="text-[var(--color-text-muted)] text-[0.95rem]">
-              {isSignIn ? 'Access your workspace based on your role' : 'Request access to your organization'}
-            </p>
-          </div>
-
-          {isSignIn ? <SignInForm /> : <SignUpForm />}
-
-          {APP_DOWNLOAD_URL && (
-            <div className="mt-6 pt-5 border-t border-[var(--color-card-border)] text-center text-sm text-[var(--color-text-muted)]">
-              Use the mobile app to check in ·{' '}
-              <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" download className="text-[var(--color-purple)] hover:underline font-medium">
-                Download the app
-              </a>
+          <div className="w-full -mt-2 p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl relative z-10">
+            {/* Toggle */}
+            <div className="grid grid-cols-2 gap-1 p-1 mb-8 rounded-xl bg-[var(--color-bg)] border border-[var(--color-card-border)]">
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  isSignIn
+                    ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode('signup')}
+                className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  !isSignIn
+                    ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
+                }`}
+              >
+                Sign Up
+              </button>
             </div>
-          )}
+
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">
+                {isSignIn ? 'Sign In' : 'Create Account'}
+              </h2>
+              <p className="text-[var(--color-text-muted)] text-[0.95rem]">
+                {isSignIn ? 'Access your workspace based on your role' : 'Request access to your organization'}
+              </p>
+            </div>
+
+            {isSignIn ? <SignInForm onState={updateFormState} /> : <SignUpForm onState={updateFormState} />}
+
+            {APP_DOWNLOAD_URL && (
+              <div className="mt-6 pt-5 border-t border-[var(--color-card-border)] text-center text-sm text-[var(--color-text-muted)]">
+                Use the mobile app to check in ·{' '}
+                <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" download className="text-[var(--color-purple)] hover:underline font-medium">
+                  Download the app
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
