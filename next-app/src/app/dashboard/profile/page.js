@@ -81,10 +81,10 @@ export default function MyProfilePage() {
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('user') || 'null');
-      if (!stored) { router.push('/'); return; }
+      if (!stored) { router.push('/register'); return; }
       setUser(stored);
     } catch {
-      router.push('/');
+      router.push('/register');
     }
   }, [router]);
 
