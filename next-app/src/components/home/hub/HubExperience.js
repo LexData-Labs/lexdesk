@@ -24,6 +24,7 @@ export default function HubExperience({ onExit, lowPerf = false }) {
   const [warping, setWarping] = useState(false);
   const [touch, setTouch] = useState(false);
   const [score, setScore] = useState(0);
+  const [best, setBest] = useState(0);
   const pointer = useRef({ x: 0, y: 0 });
   const control = useRef({ thrust: 0, turn: 0, boost: false }); // keyboard + joystick
   const shipRef = useRef({ x: 0, z: 0, heading: 0, speed: 0, boost: false });
@@ -62,6 +63,20 @@ export default function HubExperience({ onExit, lowPerf = false }) {
     audio.collect();
   }, []);
 
+  // Persistent orb high-score.
+  useEffect(() => {
+    try {
+      const v = parseInt(localStorage.getItem('teamos_orb_best') || '0', 10);
+      if (v > 0) setBest(v);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    if (score > best) {
+      setBest(score);
+      try { localStorage.setItem('teamos_orb_best', String(score)); } catch {}
+    }
+  }, [score, best]);
+
   // Dock / undock chimes + a hyperspace warp on both arrival and departure.
   useEffect(() => {
     let t;
@@ -95,7 +110,7 @@ export default function HubExperience({ onExit, lowPerf = false }) {
   return (
     <div className="hub-root" onPointerMove={onPointerMove}>
       <Canvas
-        className="hub-canvas"
+        className={`hub-canvas${warping ? ' hub-shake' : ''}`}
         dpr={lowPerf ? [1, 1.25] : [1, 1.75]}
         gl={{ antialias: !lowPerf, alpha: false, powerPreference: 'high-performance' }}
         camera={{ position: [0, 3.9, -18], fov: 50 }}
@@ -120,10 +135,11 @@ export default function HubExperience({ onExit, lowPerf = false }) {
 
       {warping && <div className="hub-warp" aria-hidden="true" />}
 
-      {score > 0 && (
+      {(score > 0 || best > 0) && (
         <div className="hub-score" aria-hidden="true">
           <span className="hub-score__icon">✦</span>
           {score}
+          {best > 0 && <span className="hub-score__best">best {best}</span>}
         </div>
       )}
 

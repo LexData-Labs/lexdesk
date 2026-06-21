@@ -449,6 +449,26 @@ kbd {
 .hub-compass__arrow { width: 22px; height: 22px; fill: #ffffff; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.7)); transition: transform 0.12s linear; }
 .hub-compass__label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; color: rgba(255, 255, 255, 0.75); white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7); }
 
+/* High-score (best) shown beside the live orb count. */
+.hub-score__best {
+  font-size: 0.72rem; font-weight: 600; color: rgba(255, 255, 255, 0.5); letter-spacing: 0.03em;
+  margin-left: 2px; padding-left: 7px; border-left: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Screen-shake on warp — rattles the canvas (view); the HUD stays put. */
+.hub-shake { animation: hub-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+@keyframes hub-shake {
+  0% { transform: translate(0, 0); }
+  12% { transform: translate(-6px, 4px); }
+  24% { transform: translate(6px, -5px); }
+  36% { transform: translate(-5px, -4px); }
+  48% { transform: translate(5px, 4px); }
+  62% { transform: translate(-3px, 2px); }
+  76% { transform: translate(3px, -2px); }
+  88% { transform: translate(-1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+
 @keyframes hub-spin { to { transform: rotate(360deg); } }
 @keyframes hub-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes hub-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
