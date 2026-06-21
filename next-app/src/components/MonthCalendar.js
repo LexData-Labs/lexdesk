@@ -2,14 +2,14 @@
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Per-status cell styling. Leave and missed are both red but carry different
-// markers (LV vs A) so they stay distinguishable at a glance.
+// Per-status cell styling. Leave is red and missed is light purple; they also
+// carry different markers (LV vs A) so they stay distinguishable at a glance.
 const STATUS_STYLE = {
   ontime: { bg: 'rgba(34,197,94,0.32)', border: 'rgba(34,197,94,0.65)', color: '#22C55E', mark: 'P' },
   late: { bg: 'rgba(234,179,8,0.32)', border: 'rgba(234,179,8,0.65)', color: '#EAB308', mark: 'L' },
   leave: { bg: 'rgba(239,68,68,0.32)', border: 'rgba(239,68,68,0.65)', color: '#EF4444', mark: 'LV' },
-  missed: { bg: 'rgba(239,68,68,0.32)', border: 'rgba(239,68,68,0.65)', color: '#EF4444', mark: 'A' },
-  holiday: { bg: 'rgba(236,72,153,0.32)', border: 'rgba(236,72,153,0.65)', color: '#EC4899', mark: 'H' },
+  missed: { bg: 'rgba(167,139,250,0.32)', border: 'rgba(167,139,250,0.65)', color: '#A78BFA', mark: 'A' },
+  holiday: { bg: 'rgba(56,189,248,0.32)', border: 'rgba(56,189,248,0.65)', color: '#38BDF8', mark: 'H' },
   future: { bg: 'transparent', border: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted)', mark: '', dashed: true },
   today: { bg: 'rgba(150,150,150,0.08)', border: 'rgba(150,150,150,0.4)', color: 'var(--color-text-main)', mark: '' },
 };
@@ -18,8 +18,8 @@ const LEGEND = [
   { key: 'ontime', label: 'On-time', color: '#22C55E' },
   { key: 'late', label: 'Late', color: '#EAB308' },
   { key: 'leave', label: 'Leave', color: '#EF4444' },
-  { key: 'missed', label: 'Missed', color: '#EF4444' },
-  { key: 'holiday', label: 'Holiday', color: '#EC4899' },
+  { key: 'missed', label: 'Missed', color: '#A78BFA' },
+  { key: 'holiday', label: 'Holiday', color: '#38BDF8' },
 ];
 
 // Renders a color-coded month grid from an `employeeCalendarMonth` result

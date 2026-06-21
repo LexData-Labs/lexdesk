@@ -102,7 +102,7 @@ export default function HolidaysPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Holidays"
-        subtitle="Custom company holidays — shown in pink on every employee's calendar"
+        subtitle="Custom company holidays — shown in light blue on every employee's calendar"
         actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
       />
 
@@ -143,7 +143,7 @@ export default function HolidaysPage() {
                 <tr key={h.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.03]">
                   <td className="py-3.5 px-5 text-[var(--color-text-main)] font-medium">
                     <span className="inline-flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#EC4899' }} />
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#38BDF8' }} />
                       {h.name}
                     </span>
                   </td>

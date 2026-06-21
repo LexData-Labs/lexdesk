@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import Avatar from '@/components/Avatar';
-import KpiCard from '@/components/KpiCard';
-import MonthNav from '@/components/MonthNav';
-import { canonicalStats, inBdMonth } from '@/lib/attend';
 
 function initialsFromName(name) {
   const parts = (name || '').trim().split(/\s+/).filter(Boolean);
@@ -15,10 +12,19 @@ function initialsFromName(name) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-function fmtLastSeen(ms) {
-  if (!ms) return '—';
-  const d = new Date(ms);
-  return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-3 border-b border-[var(--color-card-border)] last:border-0">
+      <span className="text-[var(--color-text-muted)]">{label}</span>
+      <span className="text-[var(--color-text-main)] font-medium truncate max-w-[60%] text-right">{value}</span>
+    </div>
+  );
 }
 
 // Downscale an image to a small JPEG data URL so it fits in localStorage.
@@ -50,20 +56,11 @@ function fileToResizedDataUrl(file, maxSize = 512) {
   });
 }
 
-const ICONS = {
-  check: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>),
-  clock: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>),
-  star: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>),
-  percent: (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg>),
-};
-
 export default function MyProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [events, setEvents] = useState(null);
-  const [attLoading, setAttLoading] = useState(true);
-  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [adProfile, setAdProfile] = useState(null);
+  const [office, setOffice] = useState(null);
 
   const [editing, setEditing] = useState(false);
   const [formName, setFormName] = useState('');
@@ -93,30 +90,20 @@ export default function MyProfilePage() {
     (async () => {
       try {
         const token = localStorage.getItem('token');
-        const [attRes, profRes] = await Promise.all([
-          fetch('/api/me/attendance?limit=500', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }),
-          fetch('/api/me/profile', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }),
+        const headers = { Authorization: `Bearer ${token}` };
+        const [profRes, offRes] = await Promise.all([
+          fetch('/api/me/profile', { headers, cache: 'no-store' }),
+          fetch('/api/me/office', { headers, cache: 'no-store' }),
         ]);
-        const attJson = await attRes.json().catch(() => ({}));
         const profJson = await profRes.json().catch(() => ({}));
+        const offJson = await offRes.json().catch(() => ({}));
         if (!active) return;
-        setEvents(attRes.ok ? attJson.events || [] : []);
         if (profRes.ok) setAdProfile(profJson.profile || null);
-      } catch {
-        if (active) setEvents([]);
-      } finally {
-        if (active) setAttLoading(false);
-      }
+        if (offRes.ok) setOffice(offJson || null);
+      } catch { /* ignore */ }
     })();
     return () => { active = false; };
   }, []);
-
-  const monthEvents = useMemo(() => (events || []).filter((e) => inBdMonth(e.timestamp, ym.y, ym.m)), [events, ym]);
-  const stats = useMemo(() => {
-    const s = canonicalStats(monthEvents);
-    const rate = s.presentDays ? Math.round((s.onTimeDays / s.presentDays) * 100) : 0;
-    return { ...s, rate };
-  }, [monthEvents]);
 
   if (!user) return null;
 
@@ -206,140 +193,122 @@ export default function MyProfilePage() {
     }
   };
 
-  const cards = [
-    { label: 'Present days', value: stats.presentDays, color: 'green', icon: ICONS.check },
-    { label: 'Late', value: stats.lateDays, color: 'yellow', icon: ICONS.clock },
-    { label: 'On-time', value: stats.onTimeDays, color: 'blue', icon: ICONS.star },
-    { label: 'On-time rate', value: `${stats.rate}%`, color: 'purple', icon: ICONS.percent },
-  ];
-
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="My Profile" subtitle="Your account and attendance summary" actions={<MonthNav value={ym} onChange={setYm} />} />
+      <PageHeader title="My Profile" subtitle="Manage your account and password" />
 
-      <div className="relative rounded-2xl overflow-hidden mb-2 shadow-sm border border-[var(--color-card-border)]">
-        <div className="h-32 bg-gradient-to-r from-[rgba(150,150,150,0.15)] to-[rgba(120,120,120,0.15)] dark:from-[rgba(150,150,150,0.2)] dark:to-[rgba(120,120,120,0.2)]"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Left: profile card */}
+        <div className="card flex flex-col">
+          <div className="flex items-start gap-4">
+            <div className="relative shrink-0">
+              <Avatar
+                image={editing ? (formImage || photo) : photo}
+                initials={editing ? initialsFromName(formName) : (user.avatar || initialsFromName(displayName))}
+                alt={displayName}
+                className="w-16 h-16 text-lg font-bold"
+              />
+              {editing && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] flex items-center justify-center shadow-md hover:opacity-90"
+                    title="Change photo"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePick} className="hidden" />
+                </>
+              )}
+            </div>
 
-        <div className="bg-[var(--color-card-bg)] px-4 sm:px-8 pb-8 pt-0 flex flex-col sm:flex-row items-center sm:items-end gap-5">
-          <div className="relative -mt-12 z-10">
-            <Avatar
-              image={editing ? (formImage || photo) : photo}
-              initials={editing ? initialsFromName(formName) : (user.avatar || initialsFromName(displayName))}
-              alt={displayName}
-              className="w-24 h-24 font-bold text-white text-3xl shadow-lg ring-4 ring-[var(--color-card-bg)]"
-            />
-            {editing && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[var(--color-purple)] text-white flex items-center justify-center shadow-md hover:opacity-90"
-                  title="Change photo"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                </button>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePick} className="hidden" />
-              </>
+            <div className="min-w-0 flex-1">
+              {editing ? (
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Your name"
+                  maxLength={80}
+                  className="w-full bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-1.5 text-xl font-bold text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]"
+                />
+              ) : (
+                <h2 className="text-xl font-bold text-[var(--color-text-main)] truncate">{displayName}</h2>
+              )}
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className="text-sm text-[var(--color-text-muted)] capitalize">{(user.role || '').toLowerCase() || '—'}</span>
+                {adProfile?.faceEnrolledAt && (
+                  <span className="inline-block px-2 py-0.5 rounded-full bg-[rgba(34,197,94,0.15)] text-[var(--color-green)] text-[0.65rem] font-semibold">
+                    Face enrolled
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {!editing && (
+              <button onClick={startEdit} className="btn-outline py-1.5 px-3 text-xs shrink-0">Edit</button>
             )}
           </div>
 
-          <div className="flex-1 w-full text-center sm:text-left mt-2 sm:mt-0">
-            {editing ? (
-              <input
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Your name"
-                maxLength={80}
-                className="w-full max-w-sm bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-2xl font-bold text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]"
-              />
-            ) : (
-              <h2 className="text-2xl font-bold text-[var(--color-text-main)]">{displayName}</h2>
-            )}
-            <div className="flex items-center justify-center sm:justify-start gap-3 mt-1.5 flex-wrap">
-              <span className="text-sm text-[var(--color-text-muted)]">{user.email}</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] text-xs font-bold uppercase tracking-wider">
-                {user.role}
-              </span>
-              {adProfile?.faceEnrolledAt && (
-                <span className="inline-block px-2.5 py-0.5 rounded-full bg-[rgba(34,197,94,0.15)] text-[var(--color-green)] text-xs font-semibold">
-                  Face enrolled
-                </span>
-              )}
-            </div>
-            {editing && (
-              <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+          <div className="mt-5 flex flex-col text-sm">
+            <Row label="Employee ID" value={adProfile?.employeeId || '—'} />
+            <Row label="Department" value={adProfile?.teamName || '—'} />
+            <Row label="Branch" value={office?.name || '—'} />
+            <Row label="Joining date" value={fmtDate(adProfile?.joiningDate)} />
+            <Row label="Email" value={user.email || adProfile?.email || '—'} />
+          </div>
+
+          {error && <p className="mt-3 text-xs text-[var(--color-red)]">{error}</p>}
+
+          {editing && (
+            <>
+              <p className="mt-3 text-xs text-[var(--color-text-muted)]">
                 Name and photo are saved to AttendDesk and sync everywhere.
                 {formImage && (
                   <button type="button" onClick={() => setFormImage(null)} className="ml-2 text-[var(--color-red)] hover:underline">Clear selection</button>
                 )}
               </p>
-            )}
-            {error && <p className="mt-2 text-xs text-[var(--color-red)]">{error}</p>}
-          </div>
-
-          <div className="flex gap-2 sm:self-end shrink-0">
-            {editing ? (
-              <>
+              <div className="mt-4 flex gap-2">
                 <button onClick={handleSave} disabled={saving} className="btn-primary py-2 px-4 text-sm disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
                 <button onClick={cancelEdit} disabled={saving} className="btn-outline py-2 px-4 text-sm">Cancel</button>
-              </>
-            ) : (
-              <button onClick={startEdit} className="btn-outline py-2 px-4 text-sm">Edit Profile</button>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
-      </div>
 
-      <div>
-        <h3 className="text-lg font-bold text-[var(--color-text-main)] mb-4">At a Glance</h3>
-        {attLoading ? (
-          <div className="card text-[var(--color-text-muted)] text-sm">Loading attendance…</div>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              {cards.map((c) => (
-                <KpiCard key={c.label} label={c.label} value={c.value} color={c.color} icon={c.icon} />
-              ))}
+        {/* Right: Change Password — updates the AttendDesk sign-in password */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-lg text-[var(--color-text-main)]">Change Password</h3>
+            <button type="button" onClick={() => setShowPw((v) => !v)} className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">
+              {showPw ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)] mb-5">Updates your AttendDesk sign-in password (web, mobile, and kiosk).</p>
+          <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Current password</label>
+              <input type={showPw ? 'text' : 'password'} autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
             </div>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Last check-in: <span className="text-[var(--color-text-main)]">{fmtLastSeen(stats.lastCheckIn)}</span>
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* Change Password — updates the AttendDesk sign-in password */}
-      <div className="card max-w-xl">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-semibold text-lg text-[var(--color-text-main)]">Change Password</h3>
-          <button type="button" onClick={() => setShowPw((v) => !v)} className="text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]">
-            {showPw ? 'Hide' : 'Show'}
-          </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">New password</label>
+                <input type={showPw ? 'text' : 'password'} autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Confirm new password</label>
+                <input type={showPw ? 'text' : 'password'} autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
+              </div>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)]">Use at least 8 characters.</p>
+            {pwError && <p className="text-sm text-[var(--color-red)]">{pwError}</p>}
+            {pwSuccess && <p className="text-sm text-[var(--color-green)]">{pwSuccess}</p>}
+            <div>
+              <button type="submit" disabled={pwBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-60">{pwBusy ? 'Saving…' : 'Update password'}</button>
+            </div>
+          </form>
         </div>
-        <p className="text-xs text-[var(--color-text-muted)] mb-5">Updates your AttendDesk sign-in password (web, mobile, and kiosk).</p>
-        <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-[var(--color-text-muted)]">Current password</label>
-            <input type={showPw ? 'text' : 'password'} autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[var(--color-text-muted)]">New password</label>
-              <input type={showPw ? 'text' : 'password'} autoComplete="new-password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[var(--color-text-muted)]">Confirm new password</label>
-              <input type={showPw ? 'text' : 'password'} autoComplete="new-password" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} className="bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]" />
-            </div>
-          </div>
-          <p className="text-xs text-[var(--color-text-muted)]">Use at least 8 characters.</p>
-          {pwError && <p className="text-sm text-[var(--color-red)]">{pwError}</p>}
-          {pwSuccess && <p className="text-sm text-[var(--color-green)]">{pwSuccess}</p>}
-          <div>
-            <button type="submit" disabled={pwBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-60">{pwBusy ? 'Saving…' : 'Update password'}</button>
-          </div>
-        </form>
       </div>
     </div>
   );

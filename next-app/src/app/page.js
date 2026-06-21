@@ -52,8 +52,8 @@ const STEPS = [
 function Logo() {
   return (
     <div className="inline-flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">L</div>
-      <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">LexDesk</span>
+      <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">T</div>
+      <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">TeamOS</span>
     </div>
   );
 }
@@ -79,10 +79,10 @@ export default function Home() {
         <section className="flex flex-col items-center text-center py-12 md:py-24">
           <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-card-border)] bg-[var(--color-card-bg)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-muted)] backdrop-blur mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-green)]" />
-            HRM &amp; Attendance Platform
+            TeamOS · powered by LexData Labs
           </span>
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] mb-6 max-w-[900px] bg-gradient-to-br from-[var(--color-text-main)] to-[var(--color-text-muted)] text-transparent bg-clip-text">
-            Next-Gen Attendance Management
+            Where Teams Work Better Together.
           </h1>
           <p className="text-base sm:text-xl text-[var(--color-text-muted)] mb-8 leading-relaxed max-w-[680px]">
             A high-fidelity platform for employee attendance, leave, and team management with robust
@@ -179,9 +179,12 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="flex flex-col sm:flex-row items-center justify-between gap-4 py-10 border-t border-[var(--color-card-border)]">
-          <Logo />
+          <div className="flex flex-col items-center sm:items-start gap-1">
+            <Logo />
+            <span className="text-xs text-[var(--color-text-muted)]">powered by LexData Labs</span>
+          </div>
           <p className="text-sm text-[var(--color-text-muted)]">
-            &copy; {2026} LexDesk. All rights reserved.
+            &copy; 2026 TeamOS. All rights reserved.
           </p>
         </footer>
       </div>

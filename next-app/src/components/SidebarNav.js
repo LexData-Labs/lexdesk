@@ -5,41 +5,91 @@ import { usePathname } from 'next/navigation';
 
 const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
 
-function NavLink({ href, children, exact, onNavigate }) {
+// Shared stroke-icon props so every glyph reads consistently in the rail.
+const ic = {
+  width: 20,
+  height: 20,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+};
+
+const Icons = {
+  dashboard: (<svg {...ic}><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></svg>),
+  employees: (<svg {...ic}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>),
+  teams: (<svg {...ic}><circle cx="12" cy="8" r="3" /><circle cx="5" cy="17" r="2.5" /><circle cx="19" cy="17" r="2.5" /><path d="M12 11v3M9.5 15.5 7 16M14.5 15.5 17 16" /></svg>),
+  leave: (<svg {...ic}><path d="M3 9.5 12 4l9 5.5" /><path d="M5 11v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" /><path d="M9 19v-5h6v5" /></svg>),
+  assets: (<svg {...ic}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12" /></svg>),
+  approvals: (<svg {...ic}><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>),
+  attendance: (<svg {...ic}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>),
+  calendar: (<svg {...ic}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>),
+  analytics: (<svg {...ic}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>),
+  remote: (<svg {...ic}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>),
+  notices: (<svg {...ic}><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>),
+  holidays: (<svg {...ic}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" /></svg>),
+  attenddesk: (<svg {...ic}><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>),
+  organization: (<svg {...ic}><path d="M3 21h18" /><path d="M5 21V7l8-4v18" /><path d="M19 21V11l-6-4" /><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" /></svg>),
+  download: (<svg {...ic}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>),
+};
+
+function NavLink({ href, label, icon, exact, onNavigate }) {
   const pathname = usePathname();
   const active = exact ? pathname === href : pathname === href || pathname.startsWith(href + '/');
   return (
-    <Link href={href} onClick={onNavigate} className={`nav-item ${active ? 'active' : ''}`}>
-      {children}
+    <Link
+      href={href}
+      onClick={onNavigate}
+      title={label}
+      aria-label={label}
+      className={`grid place-items-center w-11 h-11 rounded-xl transition-all duration-200 ${
+        active
+          ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-[0_4px_14px_rgba(0,0,0,0.35)]'
+          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)]'
+      }`}
+    >
+      {icon}
     </Link>
   );
 }
 
 export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
+  const admin = role !== 'employee';
   return (
-    <nav className="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
-      {role !== 'employee' && <NavLink href="/dashboard" exact onNavigate={onNavigate}>Dashboard</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/employees" onNavigate={onNavigate}>Employees</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/teams" onNavigate={onNavigate}>Teams</NavLink>}
-      {role === 'employee' && <NavLink href="/dashboard/my-dashboard" onNavigate={onNavigate}>Dashboard</NavLink>}
-      {role === 'employee' && <NavLink href="/dashboard/my-leave" onNavigate={onNavigate}>My Leave</NavLink>}
-      {role === 'employee' && <NavLink href="/dashboard/my-assets" onNavigate={onNavigate}>Assets</NavLink>}
-      {role === 'employee' && isTeamLeader && <NavLink href="/dashboard/team-approvals" onNavigate={onNavigate}>Team Approvals</NavLink>}
-      {role === 'employee' && isTeamLeader && <NavLink href="/dashboard/team-attendance" onNavigate={onNavigate}>Team Attendance</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/attendance" onNavigate={onNavigate}>Attendance</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/calendar" onNavigate={onNavigate}>Calendar</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/analytics" onNavigate={onNavigate}>Analytics</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/leave-approvals" onNavigate={onNavigate}>Leave Approvals</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/asset-approvals" onNavigate={onNavigate}>Asset Approvals</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/remote-approvals" onNavigate={onNavigate}>Remote Approvals</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/notices" onNavigate={onNavigate}>Notice Board</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/holidays" onNavigate={onNavigate}>Holidays</NavLink>}
-      {role !== 'employee' && <NavLink href="/dashboard/attenddesk" onNavigate={onNavigate}>AttendDesk</NavLink>}
-      {(role === 'admin' || role === 'superadmin') && <NavLink href="/dashboard/organization" onNavigate={onNavigate}>Organization</NavLink>}
+    <nav className="flex-1 w-full flex flex-col items-center gap-1.5 overflow-y-auto py-2 [&::-webkit-scrollbar]:w-0">
+      {admin && <NavLink href="/dashboard" exact label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/employees" label="Employees" icon={Icons.employees} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/teams" label="Teams" icon={Icons.teams} onNavigate={onNavigate} />}
+      {!admin && <NavLink href="/dashboard/my-dashboard" label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
+      {!admin && <NavLink href="/dashboard/my-leave" label="My Leave" icon={Icons.leave} onNavigate={onNavigate} />}
+      {!admin && <NavLink href="/dashboard/my-assets" label="Assets" icon={Icons.assets} onNavigate={onNavigate} />}
+      {!admin && isTeamLeader && <NavLink href="/dashboard/team-approvals" label="Team Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
+      {!admin && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/attendance" label="Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/calendar" label="Calendar" icon={Icons.calendar} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/analytics" label="Analytics" icon={Icons.analytics} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/leave-approvals" label="Leave Approvals" icon={Icons.leave} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/asset-approvals" label="Asset Approvals" icon={Icons.assets} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/remote-approvals" label="Remote Approvals" icon={Icons.remote} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/notices" label="Notice Board" icon={Icons.notices} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/holidays" label="Holidays" icon={Icons.holidays} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/attenddesk" label="AttendDesk" icon={Icons.attenddesk} onNavigate={onNavigate} />}
+      {(role === 'admin' || role === 'superadmin') && <NavLink href="/dashboard/organization" label="Organization" icon={Icons.organization} onNavigate={onNavigate} />}
       {APP_DOWNLOAD_URL && (
-        <a href={APP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" download onClick={onNavigate} className="nav-item mt-1">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-          Download App
+        <a
+          href={APP_DOWNLOAD_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          download
+          onClick={onNavigate}
+          title="Download App"
+          aria-label="Download App"
+          className="grid place-items-center w-11 h-11 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)] transition-all duration-200 mt-1"
+        >
+          {Icons.download}
         </a>
       )}
     </nav>
