@@ -6,12 +6,14 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  // suppressHydrationWarning: browser extensions (e.g. QuillBot) inject
-  // attributes into <html> before React hydrates; also the theme toggle sets
-  // the 'light' class from localStorage. Applies to this tag only.
+  // suppressHydrationWarning: browser extensions (e.g. QuillBot, Grammarly,
+  // ColorZilla) inject attributes into <html> AND <body> before React hydrates;
+  // the theme toggle also sets the 'light' class on <html> from localStorage.
+  // The flag only suppresses each element's OWN attribute/text mismatches — it
+  // does not cascade, so real mismatches inside {children} are still reported.
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
