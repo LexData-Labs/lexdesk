@@ -83,8 +83,8 @@ fun AttendanceTab(
         add(ModuleItem("Recon. Application", Icons.Outlined.EditCalendar, onClick = { onNavigate(Routes.RECON) }))
         add(ModuleItem("Remote Attendance", Icons.Outlined.PhonelinkRing, onClick = { onNavigate(Routes.REMOTE) }))
         if (isManager) {
-            add(ModuleItem("Recon. Approval", Icons.Outlined.RuleFolder, onClick = { onNavigate(Routes.approvals(4)) }))
-            add(ModuleItem("Remote Att. Approval", Icons.Outlined.TaskAlt, onClick = { onNavigate(Routes.approvals(5)) }))
+            add(ModuleItem("Recon. Approval", Icons.Outlined.RuleFolder, onClick = { onNavigate(Routes.approvals(2)) }))
+            add(ModuleItem("Remote Att. Approval", Icons.Outlined.TaskAlt, onClick = { onNavigate(Routes.approvals(3)) }))
             add(ModuleItem("Subordinates", Icons.Outlined.Groups, onClick = { onNavigate(Routes.TEAM) }))
         }
     }

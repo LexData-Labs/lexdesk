@@ -23,7 +23,6 @@ export default function MyDashboardPage() {
   const [holidays, setHolidays] = useState([]);
   const [office, setOffice] = useState(null);
   const [assets, setAssets] = useState([]);
-  const [visits, setVisits] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
@@ -34,14 +33,13 @@ export default function MyDashboardPage() {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [pRes, aRes, lRes, hRes, oRes, asRes, vRes] = await Promise.all([
+      const [pRes, aRes, lRes, hRes, oRes, asRes] = await Promise.all([
         fetch('/api/me/profile', { headers, cache: 'no-store' }),
         fetch('/api/me/attendance?limit=1000', { headers, cache: 'no-store' }),
         fetch('/api/me/leave', { headers, cache: 'no-store' }),
         fetch('/api/holidays', { headers, cache: 'no-store' }),
         fetch('/api/me/office', { headers, cache: 'no-store' }),
         fetch('/api/me/asset', { headers, cache: 'no-store' }),
-        fetch('/api/me/visit', { headers, cache: 'no-store' }),
       ]);
       const aJson = await aRes.json();
       if (!aRes.ok) throw new Error(aJson.error || `HTTP ${aRes.status}`);
@@ -51,7 +49,6 @@ export default function MyDashboardPage() {
       const hJson = await hRes.json(); if (hRes.ok) setHolidays(hJson.holidays || []);
       const oJson = await oRes.json(); if (oRes.ok) setOffice(oJson || null);
       const asJson = await asRes.json(); if (asRes.ok) setAssets(asJson.requests || []);
-      const vJson = await vRes.json(); if (vRes.ok) setVisits(vJson.requests || []);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -103,7 +100,7 @@ export default function MyDashboardPage() {
         <h2 className="text-base font-semibold text-[var(--color-text-main)]">At a Glance</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <KpiCard label="Leave Spent" value={loading ? '…' : leaveStats.takenDays} color="purple" />
-          <KpiCard label="Visit Taken" value={loading ? '…' : (visits || []).filter((v) => v.status === 'approved').length} color="blue" />
+          <KpiCard label="Visit Taken" value={0} color="blue" />
           <KpiCard label="Missed Attendance" value={loading ? '…' : cal.counts.missed} color="violet" />
           <KpiCard label="Pending Approval" value={loading ? '…' : leaveStats.pending} color="yellow" />
           <KpiCard label="Asset Assigned" value={loading ? '…' : (assets || []).filter((a) => a.status === 'approved').length} color="green" />
