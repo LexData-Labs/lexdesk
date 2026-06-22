@@ -25,10 +25,6 @@ export const Paths = {
   assetRequests: (orgId) => `organizations/${orgId}/assetRequests`,
   assetRequest: (orgId, id) => `organizations/${orgId}/assetRequests/${id}`,
   // Coming-soon modules (request→approval + announcements + break events).
-  claims: (orgId) => `organizations/${orgId}/claims`,
-  claim: (orgId, id) => `organizations/${orgId}/claims/${id}`,
-  visitRequests: (orgId) => `organizations/${orgId}/visitRequests`,
-  visitRequest: (orgId, id) => `organizations/${orgId}/visitRequests/${id}`,
   reconRequests: (orgId) => `organizations/${orgId}/reconRequests`,
   reconRequest: (orgId, id) => `organizations/${orgId}/reconRequests/${id}`,
   remoteRequests: (orgId) => `organizations/${orgId}/remoteRequests`,

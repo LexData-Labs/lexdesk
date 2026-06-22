@@ -46,7 +46,7 @@ import com.attenddesk.ui.theme.DangerFg
 import com.attenddesk.ui.theme.SuccessFg
 import kotlinx.coroutines.launch
 
-private val TABS = listOf("Leave", "Asset", "Claim", "Visit", "Recon", "Remote")
+private val TABS = listOf("Leave", "Asset", "Recon", "Remote")
 
 private class ApprovalItem(
     val id: String,
@@ -74,13 +74,7 @@ fun ApprovalsScreen(container: AppContainer, onBack: () -> Unit, initialTab: Int
                 1 -> api.manageAsset().requests.map { r ->
                     ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${r.assetName}", listOfNotNull(r.assetType.ifBlank { null }, "${r.fromDay} → ${r.toDay}").joinToString(" · ")) { d, n -> api.decideAsset(r.id, DecisionRequest(d, n)) }
                 }
-                2 -> api.manageClaim().requests.map { r ->
-                    ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${r.currency} ${r.amount}", "${r.subject} · ${r.day}") { d, n -> api.decideClaim(r.id, DecisionRequest(d, n)) }
-                }
-                3 -> api.manageVisit().requests.map { r ->
-                    ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${r.subject}", "${r.place} · ${range(r.fromDay, r.toDay)}") { d, n -> api.decideVisit(r.id, DecisionRequest(d, n)) }
-                }
-                4 -> api.manageRecon().requests.map { r ->
+                2 -> api.manageRecon().requests.map { r ->
                     ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${r.day}", r.reason) { d, n -> api.decideRecon(r.id, DecisionRequest(d, n)) }
                 }
                 else -> api.manageRemote().requests.map { r ->

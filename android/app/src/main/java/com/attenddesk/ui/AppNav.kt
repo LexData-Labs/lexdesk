@@ -16,7 +16,6 @@ import com.attenddesk.ui.assets.AssetsScreen
 import com.attenddesk.ui.attendance.MyAttendanceScreen
 import com.attenddesk.ui.attendance.TeamScreen
 import com.attenddesk.ui.breaks.BreakTimeScreen
-import com.attenddesk.ui.claim.ClaimScreen
 import com.attenddesk.ui.comingsoon.ComingSoonScreen
 import com.attenddesk.ui.directory.DirectoryScreen
 import com.attenddesk.ui.faceenroll.FaceEnrollScreen
@@ -35,7 +34,6 @@ import com.attenddesk.ui.reminder.ReminderSettingsScreen
 import com.attenddesk.ui.remote.RemoteScreen
 import com.attenddesk.ui.setpw.SetPasswordScreen
 import com.attenddesk.ui.verification.CheckInScreen
-import com.attenddesk.ui.visit.VisitScreen
 import com.google.firebase.auth.FirebaseAuth
 
 object Routes {
@@ -50,8 +48,6 @@ object Routes {
     const val DIRECTORY = "directory"
     const val NOTICES = "notices"
     const val BREAK_TIME = "break-time"
-    const val CLAIM = "claim"
-    const val VISIT = "visit"
     const val RECON = "recon"
     const val REMOTE = "remote"
     const val TEAM = "team"
@@ -117,8 +113,6 @@ fun AppNav(container: AppContainer) {
         composable(Routes.DIRECTORY) { DirectoryScreen(container = container, onBack = { back() }) }
         composable(Routes.NOTICES) { NoticeBoardScreen(container = container, onBack = { back() }) }
         composable(Routes.BREAK_TIME) { BreakTimeScreen(container = container, onBack = { back() }) }
-        composable(Routes.CLAIM) { ClaimScreen(container = container, onBack = { back() }) }
-        composable(Routes.VISIT) { VisitScreen(container = container, onBack = { back() }) }
         composable(Routes.RECON) { ReconScreen(container = container, onBack = { back() }) }
         composable(Routes.REMOTE) { RemoteScreen(container = container, onBack = { back() }) }
         composable(Routes.TEAM) { TeamScreen(container = container, onBack = { back() }) }

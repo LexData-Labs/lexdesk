@@ -24,8 +24,6 @@ const reconProposed = (r) => [fmtTime(r.proposedInIso) && `in ${fmtTime(r.propos
 const MODES = [
   { key: 'leave', label: 'Leave', h1: 'Dates', h2: 'Subject', c1: (r) => fmtRange(r.fromDay, r.toDay), c2: (r) => r.subject || '—', c2sub: (r) => r.details },
   { key: 'asset', label: 'Assets', h1: 'Asset', h2: 'Dates', c1: (r) => r.assetName || '—', c1sub: (r) => [r.assetType, r.description].filter(Boolean).join(' · '), c2: (r) => fmtRange(r.fromDay, r.toDay) },
-  { key: 'claim', label: 'Claim', h1: 'Date', h2: 'Amount · Subject', c1: (r) => r.day || '—', c2: (r) => `${r.currency || ''} ${r.amount} · ${r.subject || ''}`, c2sub: (r) => r.category },
-  { key: 'visit', label: 'Visit', h1: 'Dates', h2: 'Purpose', c1: (r) => fmtRange(r.fromDay, r.toDay), c2: (r) => r.subject || '—', c2sub: (r) => r.place },
   { key: 'recon', label: 'Recon', h1: 'Day', h2: 'Reason', c1: (r) => r.day || '—', c2: (r) => r.reason || '—', c2sub: (r) => reconProposed(r) },
   { key: 'remote', label: 'Remote', h1: 'Day', h2: 'Reason', c1: (r) => r.day || '—', c2: (r) => r.reason || '—', c2sub: (r) => r.place },
 ];

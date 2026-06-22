@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.EventAvailable
-import androidx.compose.material.icons.outlined.Luggage
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -130,7 +129,6 @@ fun LeaveTab(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     LeaveNavCard("My Leave Balance", Icons.Outlined.EventAvailable, { onNavigate(Routes.LEAVE_BALANCE) }, Modifier.weight(1f))
-                    LeaveNavCard("Visit Applications", Icons.Outlined.Luggage, { onNavigate(Routes.VISIT) }, Modifier.weight(1f))
                 }
 
                 Button(onClick = { showSubmit = true }, modifier = Modifier.fillMaxWidth()) {
