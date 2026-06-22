@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }) {
       // Redirect employee to their allowed landing page
       if (parsed.role === 'employee') {
         const path = window.location.pathname;
-        const allowed = ['/dashboard/my-dashboard', '/dashboard/my-leave', '/dashboard/my-assets', '/dashboard/team-approvals', '/dashboard/team-attendance', '/dashboard/profile'];
+        const allowed = ['/dashboard/my-dashboard', '/dashboard/application', '/dashboard/my-assets', '/dashboard/team-approvals', '/dashboard/team-attendance', '/dashboard/profile'];
         if (!allowed.includes(path)) {
           router.replace('/dashboard/my-dashboard');
         }
@@ -102,8 +102,6 @@ export default function DashboardLayout({ children }) {
     router.push('/register');
   };
 
-  const homeHref = user.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';
-
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[100px_1fr] lg:h-screen lg:overflow-hidden bg-[var(--color-bg)]">
         {/* Mobile top bar */}
@@ -115,7 +113,7 @@ export default function DashboardLayout({ children }) {
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <Link href={homeHref} className="flex items-center gap-2 text-lg font-bold text-[var(--color-text-main)] no-underline">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[var(--color-text-main)] no-underline">
             <div className="w-7 h-7 rounded-lg bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-xs text-white">T</div>
             TeamOS
           </Link>
@@ -139,7 +137,7 @@ export default function DashboardLayout({ children }) {
         )}
 
         <aside className={`fixed inset-y-0 left-0 z-50 w-[84px] flex flex-col items-center bg-[var(--color-card-bg)] border border-[var(--color-card-border)] transform transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:my-3 lg:ml-3 lg:h-[calc(100vh-1.5rem)] lg:rounded-2xl lg:shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <Link href={homeHref} onClick={() => setSidebarOpen(false)} title="TeamOS" aria-label="TeamOS home" className="mt-5 mb-4 shrink-0 no-underline">
+          <Link href="/" onClick={() => setSidebarOpen(false)} title="TeamOS home" aria-label="TeamOS home" className="mt-5 mb-4 shrink-0 no-underline">
             <div className="w-11 h-11 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-lg font-bold text-white">T</div>
           </Link>
 

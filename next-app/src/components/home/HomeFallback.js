@@ -3,9 +3,49 @@
 // The classic, dependency-free landing page. Rendered on the server (SEO),
 // on mobile / reduced-motion / no-WebGL devices, and whenever the visitor
 // chooses "classic view" from the 3D hub. All real content lives here.
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import ProfileMenu from '@/components/ProfileMenu';
 import { AuthDecor, FeatureChip, SyncIcon, ChartIcon, ShieldIcon, UsersIcon } from '@/components/authDecor';
 import { FEATURES, STEPS, APP_DOWNLOAD_URL } from './content';
+
+// Reads the persisted session (localStorage) so the landing page can greet a
+// logged-in visitor with their profile menu instead of a "Sign in" button.
+// The session lives in localStorage, so it survives tab/window close and is
+// only cleared when the user signs out.
+function useSession() {
+  const [user, setUser] = useState(null);
+  const [photoUrl, setPhotoUrl] = useState(null);
+
+  useEffect(() => {
+    let token, stored;
+    try {
+      token = localStorage.getItem('token');
+      stored = localStorage.getItem('user');
+    } catch { return; }
+    if (!token || !stored) return;
+    let parsed;
+    try { parsed = JSON.parse(stored); } catch { return; }
+    setUser(parsed);
+    if (parsed.role !== 'lexsysadmin') {
+      fetch('/api/me/profile', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d?.profile) setPhotoUrl(d.profile.photoUrl || null); })
+        .catch(() => {});
+    }
+  }, []);
+
+  const logout = () => {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch {}
+    setUser(null);
+    setPhotoUrl(null);
+  };
+
+  return { user, photoUrl, logout };
+}
 
 function Logo() {
   return (
@@ -17,6 +57,10 @@ function Logo() {
 }
 
 export default function HomeFallback({ onEnterHub }) {
+  const { user, photoUrl, logout } = useSession();
+  // Where a logged-in visitor's primary CTA should point.
+  const dashHref = user?.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';
+
   return (
     <div className="relative overflow-hidden min-h-screen bg-[var(--color-bg)]">
       <AuthDecor />
@@ -36,9 +80,13 @@ export default function HomeFallback({ onEnterHub }) {
                 Immersive mode
               </button>
             )}
-            <Link href="/register" className="btn-primary px-5 py-2.5 text-[0.9rem] no-underline">
-              Sign in
-            </Link>
+            {user ? (
+              <ProfileMenu user={user} photoUrl={photoUrl} onLogout={logout} />
+            ) : (
+              <Link href="/register" className="btn-primary px-5 py-2.5 text-[0.9rem] no-underline">
+                Sign in
+              </Link>
+            )}
           </div>
         </header>
 
@@ -56,8 +104,8 @@ export default function HomeFallback({ onEnterHub }) {
             role-based access — built for modern teams.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/register" className="btn-primary px-7 py-3.5 text-[0.95rem] no-underline">
-              Get started
+            <Link href={user ? dashHref : '/register'} className="btn-primary px-7 py-3.5 text-[0.95rem] no-underline">
+              {user ? 'Go to dashboard' : 'Get started'}
             </Link>
             <a href="#features" className="btn-outline px-7 py-3.5 text-[0.95rem] no-underline">
               Explore features
@@ -123,8 +171,8 @@ export default function HomeFallback({ onEnterHub }) {
               Sign in to your workspace, or download the mobile app to start checking in.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link href="/register" className="btn-primary px-7 py-3.5 text-[0.95rem] no-underline">
-                Sign in
+              <Link href={user ? dashHref : '/register'} className="btn-primary px-7 py-3.5 text-[0.95rem] no-underline">
+                {user ? 'Go to dashboard' : 'Sign in'}
               </Link>
               {APP_DOWNLOAD_URL && (
                 <a
