@@ -24,7 +24,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
  * @param {boolean} [props.formState.hasError]
  * @param {boolean} [props.formState.isSuccess]
  */
-export default function RoboAssistant({ formState = {} }) {
+export default function RoboAssistant({ formState = {}, className = 'w-[196px] h-[224px] sm:w-[224px] sm:h-[256px]' }) {
   const {
     focusedField = null,
     isPasswordVisible = false,
@@ -162,7 +162,7 @@ export default function RoboAssistant({ formState = {} }) {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className={`relative w-[196px] h-[224px] sm:w-[224px] sm:h-[256px] transition-opacity duration-700 ${
+      className={`relative ${className} transition-opacity duration-700 ${
         mounted ? 'opacity-100' : 'opacity-0'
       }`}
     >

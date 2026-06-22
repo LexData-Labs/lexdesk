@@ -44,11 +44,13 @@ export default function HomeExperience() {
   const [capable, setCapable] = useState(false);
   const [lowPerf, setLowPerf] = useState(false);
 
+  // Default to Classic mode. We still detect 3D capability so the "Immersive
+  // mode" toggle appears, but the visitor opts in rather than being dropped
+  // straight into the hub.
   useEffect(() => {
     if (canRun3D()) {
       setCapable(true);
       setLowPerf(isLowPerf());
-      setMode('hub');
     }
   }, []);
 

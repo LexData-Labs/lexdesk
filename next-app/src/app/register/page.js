@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AuthDecor, FeatureChip, SyncIcon, ChartIcon, ShieldIcon, UsersIcon } from '@/components/authDecor';
+import { AuthDecor } from '@/components/authDecor';
 import RoboAssistant from '@/components/RoboAssistant';
 
 const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
@@ -148,182 +148,45 @@ function SignInForm({ onState }) {
   );
 }
 
-function SignUpForm({ onState }) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  const togglePassword = () => {
-    const next = !showPassword;
-    setShowPassword(next);
-    onState({ isPasswordVisible: next });
-  };
-
-  const handleSignUp = (e) => {
-    e.preventDefault();
-    // No public registration endpoint — accounts are provisioned by an admin.
-    // We capture intent and confirm, without creating an account.
-    setSubmitted(true);
-    onState({ focusedField: null, isPasswordVisible: false, isSuccess: true });
-  };
-
-  if (submitted) {
-    return (
-      <div className="text-center py-6">
-        <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-full bg-white/10 text-[var(--color-green)]">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-        </div>
-        <h3 className="text-xl font-bold mb-2 text-[var(--color-text-main)]">Request received</h3>
-        <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-          Thanks{name ? `, ${name.split(' ')[0]}` : ''} — an administrator will set up your account and share your
-          login details. Already have access? Use the Sign In tab.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <form onSubmit={handleSignUp}>
-      <div className="mb-5">
-        <label className={labelClass}>Full Name</label>
-        <input
-          type="text"
-          autoComplete="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onFocus={() => onState({ focusedField: 'name' })}
-          onBlur={() => onState({ focusedField: null })}
-          placeholder="Jane Doe"
-          required
-          className={inputClass}
-        />
-      </div>
-
-      <div className="mb-5">
-        <label className={labelClass}>Work Email</label>
-        <input
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onFocus={() => onState({ focusedField: 'email' })}
-          onBlur={() => onState({ focusedField: null })}
-          placeholder="you@company.com"
-          required
-          className={inputClass}
-        />
-      </div>
-
-      <div className="mb-8 relative">
-        <label className={labelClass}>Password</label>
-        <div className="relative">
-          <input
-            type={showPassword ? 'text' : 'password'}
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onFocus={() => onState({ focusedField: 'password' })}
-            onBlur={() => onState({ focusedField: null })}
-            placeholder="••••••••"
-            required
-            className={`${inputClass} pr-10`}
-          />
-          <EyeButton shown={showPassword} onToggle={togglePassword} />
-        </div>
-      </div>
-
-      <button type="submit" className="w-full btn-primary py-3.5 text-[0.95rem] flex justify-center items-center">
-        Request Access
-      </button>
-    </form>
-  );
-}
-
 export default function Register() {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup'
   const [formState, setFormState] = useState(INITIAL_FORM_STATE);
-  const isSignIn = mode === 'signin';
 
   const updateFormState = useCallback((patch) => {
     setFormState((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  // Switching tabs resets the bot so a mood from one form doesn't bleed into the other.
-  const switchMode = (next) => {
-    setMode(next);
-    setFormState(INITIAL_FORM_STATE);
-  };
-
   return (
     <div className="relative overflow-hidden flex flex-col min-h-screen bg-[var(--color-bg)]">
       <AuthDecor />
 
-      <div className="relative flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-10 md:py-0">
-        {/* Marketing side */}
-        <div className="flex-1 max-w-[600px] text-center md:text-left">
-          <Link href="/" className="inline-flex items-center gap-3 mb-2 no-underline">
-            <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">T</div>
-            <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">TeamOS</span>
-          </Link>
-          <p className="text-xs text-[var(--color-text-muted)] mb-8 md:ml-[52px]">powered by LexData Labs</p>
+      {/* Navbar — TeamOS branding pinned to the top-left corner */}
+      <nav className="relative z-20 px-4 sm:px-8 md:px-16 py-5 max-w-[1400px] mx-auto w-full">
+        <Link href="/" className="inline-flex items-center gap-3 no-underline">
+          <div className="w-10 h-10 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-white font-bold">T</div>
+          <span className="text-xl font-bold tracking-tight text-[var(--color-text-main)]">TeamOS</span>
+        </Link>
+      </nav>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] mb-4 sm:mb-6 bg-gradient-to-br from-[var(--color-text-main)] to-[var(--color-text-muted)] text-transparent bg-clip-text">
-            Where Teams Work Better Together.
-          </h1>
-          <p className="text-base sm:text-xl text-[var(--color-text-muted)] mb-6 md:mb-10 leading-relaxed">
-            A high-fidelity platform for employee attendance, leave, and team management with robust role-based access.
-          </p>
-          <ul className="flex flex-wrap gap-3 justify-center md:justify-start max-w-lg mx-auto md:mx-0 list-none p-0">
-            <FeatureChip label="Real-time Sync" icon={<SyncIcon />} />
-            <FeatureChip label="Advanced Analytics" icon={<ChartIcon />} />
-            <FeatureChip label="Role-based Access" icon={<ShieldIcon />} />
-            <FeatureChip label="Leave & Teams" icon={<UsersIcon />} />
-          </ul>
+      <div className="relative flex-1 flex flex-col md:flex-row items-center md:justify-between px-4 sm:px-8 md:px-16 max-w-[1400px] mx-auto w-full gap-8 md:gap-16 py-10 md:py-0">
+        {/* Bot side — moved left and enlarged */}
+        <div className="flex-1 flex flex-col items-center md:items-start">
+          <RoboAssistant
+            formState={formState}
+            className="w-[280px] h-[320px] sm:w-[340px] sm:h-[390px]"
+          />
         </div>
 
-        {/* Auth column — bot watches over the card */}
+        {/* Auth column — sign in only */}
         <div className="w-full sm:max-w-[450px] flex flex-col items-center">
-          <RoboAssistant formState={formState} />
-
-          <div className="w-full -mt-2 p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl relative z-10">
-            {/* Toggle */}
-            <div className="grid grid-cols-2 gap-1 p-1 mb-8 rounded-xl bg-[var(--color-bg)] border border-[var(--color-card-border)]">
-              <button
-                type="button"
-                onClick={() => switchMode('signin')}
-                className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                  isSignIn
-                    ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode('signup')}
-                className={`py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                  !isSignIn
-                    ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
-                }`}
-              >
-                Sign Up
-              </button>
-            </div>
-
+          <div className="w-full p-6 sm:p-10 bg-[var(--color-card-bg)] border border-[var(--color-card-border)] rounded-2xl backdrop-blur-xl shadow-2xl relative z-10">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">
-                {isSignIn ? 'Sign In' : 'Create Account'}
-              </h2>
+              <h2 className="text-3xl font-bold mb-2 text-[var(--color-text-main)]">Sign In</h2>
               <p className="text-[var(--color-text-muted)] text-[0.95rem]">
-                {isSignIn ? 'Access your workspace based on your role' : 'Request access to your organization'}
+                Access your workspace based on your role
               </p>
             </div>
 
-            {isSignIn ? <SignInForm onState={updateFormState} /> : <SignUpForm onState={updateFormState} />}
+            <SignInForm onState={updateFormState} />
 
             {APP_DOWNLOAD_URL && (
               <div className="mt-6 pt-5 border-t border-[var(--color-card-border)] text-center text-sm text-[var(--color-text-muted)]">

@@ -139,7 +139,7 @@ export default function MyLeavePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="My Leave"
+        title="Application"
         subtitle="Your leave requests from AttendDesk"
         actions={
           <div className="flex items-center gap-2">

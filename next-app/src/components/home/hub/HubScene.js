@@ -233,6 +233,7 @@ function Player({ selected, warping, onSelect, onFocusChange, onBoost, pointer, 
 
   useEffect(() => {
     const down = (e) => {
+      if (!e.key) return;
       const k = e.key.toLowerCase();
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
       if (k === 'enter' || k === ' ') {
@@ -245,7 +246,7 @@ function Player({ selected, warping, onSelect, onFocusChange, onBoost, pointer, 
       }
       keys.current[k] = true;
     };
-    const up = (e) => { keys.current[e.key.toLowerCase()] = false; };
+    const up = (e) => { if (e.key) keys.current[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => {
@@ -327,7 +328,7 @@ function Player({ selected, warping, onSelect, onFocusChange, onBoost, pointer, 
     desiredCam.current.x += pointer.current.x * 1.2;
     camera.position.lerp(desiredCam.current, smooth(dt, warping ? 6 : 3.2));
     scratch.current.copy(d.pos).addScaledVector(fwd.current, 3.2);
-    scratch.current.y = 0.9;
+    scratch.current.y = 1.7; // aim higher so the core sits centered, not near the top
     lookAt.current.lerp(scratch.current, smooth(dt, 4.5));
     camera.lookAt(lookAt.current);
 

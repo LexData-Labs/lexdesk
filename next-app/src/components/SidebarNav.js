@@ -59,15 +59,17 @@ function NavLink({ href, label, icon, exact, onNavigate }) {
 export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
   const admin = role !== 'employee';
   return (
-    <nav className="flex-1 w-full flex flex-col items-center gap-1.5 overflow-y-auto py-2 [&::-webkit-scrollbar]:w-0">
+    <nav className="flex-1 w-full flex flex-col items-center min-h-0 py-2">
+      {/* Scrollable menu items */}
+      <div className="flex-1 w-full flex flex-col items-center gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-0">
       {admin && <NavLink href="/dashboard" exact label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/employees" label="Employees" icon={Icons.employees} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/teams" label="Teams" icon={Icons.teams} onNavigate={onNavigate} />}
       {!admin && <NavLink href="/dashboard/my-dashboard" label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
-      {!admin && <NavLink href="/dashboard/my-leave" label="My Leave" icon={Icons.leave} onNavigate={onNavigate} />}
+      {!admin && <NavLink href="/dashboard/application" label="Application" icon={Icons.leave} onNavigate={onNavigate} />}
       {!admin && <NavLink href="/dashboard/my-assets" label="Assets" icon={Icons.assets} onNavigate={onNavigate} />}
       {!admin && isTeamLeader && <NavLink href="/dashboard/team-approvals" label="Team Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
-      {!admin && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
+      {!admin && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.employees} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attendance" label="Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/calendar" label="Calendar" icon={Icons.calendar} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/analytics" label="Analytics" icon={Icons.analytics} onNavigate={onNavigate} />}
@@ -78,19 +80,25 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
       {admin && <NavLink href="/dashboard/holidays" label="Holidays" icon={Icons.holidays} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attenddesk" label="AttendDesk" icon={Icons.attenddesk} onNavigate={onNavigate} />}
       {(role === 'admin' || role === 'superadmin') && <NavLink href="/dashboard/organization" label="Organization" icon={Icons.organization} onNavigate={onNavigate} />}
+      </div>
+
+      {/* Pinned to the bottom of the rail, below the scrolling menu */}
       {APP_DOWNLOAD_URL && (
-        <a
-          href={APP_DOWNLOAD_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          download
-          onClick={onNavigate}
-          title="Download App"
-          aria-label="Download App"
-          className="grid place-items-center w-11 h-11 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)] transition-all duration-200 mt-1"
-        >
-          {Icons.download}
-        </a>
+        <>
+          <div className="w-7 h-px bg-[var(--color-card-border)] mt-2 mb-1 shrink-0" />
+          <a
+            href={APP_DOWNLOAD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            onClick={onNavigate}
+            title="Download App"
+            aria-label="Download App"
+            className="grid place-items-center w-11 h-11 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)] transition-all duration-200 shrink-0"
+          >
+            {Icons.download}
+          </a>
+        </>
       )}
     </nav>
   );
