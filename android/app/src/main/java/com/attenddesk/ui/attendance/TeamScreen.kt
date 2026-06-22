@@ -46,19 +46,19 @@ fun TeamScreen(container: AppContainer, onBack: () -> Unit) {
     var data by remember { mutableStateOf<TeamSummaryResponse?>(null) }
 
     LaunchedEffect(Unit) {
-        scope.launch { runCatching { container.api.teamSummary() }.onSuccess { data = it }.onFailure { data = TeamSummaryResponse(false, emptyList()) } }
+        scope.launch { runCatching { container.api.viewAttendance() }.onSuccess { data = it }.onFailure { data = TeamSummaryResponse(false, emptyList()) } }
     }
 
     Scaffold(
-        topBar = { GradientHeader(title = "Subordinates", onBack = onBack) },
+        topBar = { GradientHeader(title = "View Attendance", onBack = onBack) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         val d = data
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when {
                 d == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { LoadingDots() }
-                !d.isLeader || d.members.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    EmptyState(icon = Icons.Outlined.Groups, title = "No team", description = "You don't lead a team yet, or it has no members.")
+                d.members.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    EmptyState(icon = Icons.Outlined.Groups, title = "No attendance", description = "No employee attendance to show yet.")
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(d.members, key = { it.uid }) { m -> MemberCard(m) }

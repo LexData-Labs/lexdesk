@@ -350,4 +350,5 @@ data class TeamMemberSummaryDto(
 data class TeamSummaryResponse(
     val isLeader: Boolean = false,
     val members: List<TeamMemberSummaryDto> = emptyList(),
+    val scope: String? = null, // "admin" | "lead" (set by /manage/attendance)
 )
