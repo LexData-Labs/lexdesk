@@ -11,13 +11,27 @@ const STATUS_STYLE = {
   cancelled: 'text-[var(--color-text-muted)]',
 };
 
-function fmtRange(from, to) {
-  if (!from) return '—';
-  return from === to ? from : `${from} → ${to}`;
+const fmtRange = (from, to) => (!from ? '—' : from === to ? from : `${from} → ${to}`);
+function fmtTime(iso) {
+  if (!iso) return null;
+  const s = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}+06:00`;
+  const d = new Date(s);
+  return isNaN(d) ? null : new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Dhaka', hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
 }
+const reconProposed = (r) => [fmtTime(r.proposedInIso) && `in ${fmtTime(r.proposedInIso)}`, fmtTime(r.proposedOutIso) && `out ${fmtTime(r.proposedOutIso)}`].filter(Boolean).join(' · ') || '—';
+
+// Per-module column config so all six request types share one table.
+const MODES = [
+  { key: 'leave', label: 'Leave', h1: 'Dates', h2: 'Subject', c1: (r) => fmtRange(r.fromDay, r.toDay), c2: (r) => r.subject || '—', c2sub: (r) => r.details },
+  { key: 'asset', label: 'Assets', h1: 'Asset', h2: 'Dates', c1: (r) => r.assetName || '—', c1sub: (r) => [r.assetType, r.description].filter(Boolean).join(' · '), c2: (r) => fmtRange(r.fromDay, r.toDay) },
+  { key: 'claim', label: 'Claim', h1: 'Date', h2: 'Amount · Subject', c1: (r) => r.day || '—', c2: (r) => `${r.currency || ''} ${r.amount} · ${r.subject || ''}`, c2sub: (r) => r.category },
+  { key: 'visit', label: 'Visit', h1: 'Dates', h2: 'Purpose', c1: (r) => fmtRange(r.fromDay, r.toDay), c2: (r) => r.subject || '—', c2sub: (r) => r.place },
+  { key: 'recon', label: 'Recon', h1: 'Day', h2: 'Reason', c1: (r) => r.day || '—', c2: (r) => r.reason || '—', c2sub: (r) => reconProposed(r) },
+  { key: 'remote', label: 'Remote', h1: 'Day', h2: 'Reason', c1: (r) => r.day || '—', c2: (r) => r.reason || '—', c2sub: (r) => r.place },
+];
 
 export default function TeamApprovalsPage() {
-  const [mode, setMode] = useState('leave'); // 'leave' | 'asset'
+  const [mode, setMode] = useState('leave');
   const [requests, setRequests] = useState(null);
   const [isLeader, setIsLeader] = useState(true);
   const [status, setStatus] = useState('pending');
@@ -76,14 +90,14 @@ export default function TeamApprovalsPage() {
   };
 
   const list = requests || [];
+  const cfg = MODES.find((m) => m.key === mode) || MODES[0];
   const isAsset = mode === 'asset';
-  const isRemote = mode === 'remote';
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Team Approvals"
-        subtitle="Review and decide your team's leave, asset & remote requests"
+        subtitle="Review and decide your team's requests"
         actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
       />
 
@@ -97,11 +111,9 @@ export default function TeamApprovalsPage() {
       ) : (
         <>
           <div className="card flex flex-wrap items-center gap-3">
-            <div className="flex gap-2">
-              {['leave', 'asset', 'remote'].map((m) => (
-                <button key={m} onClick={() => setMode(m)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize ${mode === m ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>
-                  {m === 'asset' ? 'Assets' : m === 'remote' ? 'Remote' : 'Leave'}
-                </button>
+            <div className="flex flex-wrap gap-2">
+              {MODES.map((m) => (
+                <button key={m.key} onClick={() => setMode(m.key)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${mode === m.key ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>{m.label}</button>
               ))}
             </div>
             <div className="h-5 w-px bg-[var(--color-card-border)]" />
@@ -118,47 +130,32 @@ export default function TeamApprovalsPage() {
                 <thead>
                   <tr className="text-left text-[var(--color-text-muted)] text-xs border-b border-[var(--color-card-border)]">
                     <th className="py-3 px-4 font-medium">Employee</th>
-                    <th className="py-3 px-4 font-medium">{isAsset ? 'Asset' : isRemote ? 'Day' : 'Dates'}</th>
-                    <th className="py-3 px-4 font-medium">{isAsset ? 'Dates' : isRemote ? 'Reason' : 'Subject'}</th>
+                    <th className="py-3 px-4 font-medium">{cfg.h1}</th>
+                    <th className="py-3 px-4 font-medium">{cfg.h2}</th>
                     <th className="py-3 px-4 font-medium">Status</th>
                     <th className="py-3 px-4 font-medium text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {list.map((r) => {
-                    // Asset: lead acts only while the lead side is still pending.
-                    const canAct = isAsset
-                      ? (r.status === 'pending' && r.leadStatus === 'pending')
-                      : (r.status === 'pending');
+                    // Asset: the lead acts only while the lead side is still pending.
+                    const canAct = isAsset ? (r.status === 'pending' && r.leadStatus === 'pending') : (r.status === 'pending');
+                    const c1sub = cfg.c1sub ? cfg.c1sub(r) : '';
+                    const c2sub = cfg.c2sub ? cfg.c2sub(r) : '';
                     return (
                       <tr key={r.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.02] align-top">
                         <td className="py-3 px-4">
                           <div className="text-[var(--color-text-main)] font-medium">{r.userName || '—'}</div>
                           <div className="text-xs text-[var(--color-text-muted)]">{r.userEmail}</div>
                         </td>
-                        {isAsset ? (
-                          <td className="py-3 px-4">
-                            <div className="text-[var(--color-text-main)]">{r.assetName || '—'}</div>
-                            <div className="text-xs text-[var(--color-text-muted)]">{r.assetType || '—'}{r.description ? ` · ${r.description}` : ''}</div>
-                          </td>
-                        ) : isRemote ? (
-                          <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{r.day || '—'}</td>
-                        ) : (
-                          <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{fmtRange(r.fromDay, r.toDay)}</td>
-                        )}
-                        {isAsset ? (
-                          <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{fmtRange(r.fromDay, r.toDay)}</td>
-                        ) : isRemote ? (
-                          <td className="py-3 px-4">
-                            <div className="text-[var(--color-text-main)] max-w-[260px]">{r.reason || '—'}</div>
-                            {r.place && <div className="text-xs text-[var(--color-text-muted)]">{r.place}</div>}
-                          </td>
-                        ) : (
-                          <td className="py-3 px-4">
-                            <div className="text-[var(--color-text-main)]">{r.subject || '—'}</div>
-                            {r.details && <div className="text-xs text-[var(--color-text-muted)] max-w-[260px]">{r.details}</div>}
-                          </td>
-                        )}
+                        <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">
+                          {cfg.c1(r)}
+                          {c1sub ? <div className="text-xs text-[var(--color-text-muted)]">{c1sub}</div> : null}
+                        </td>
+                        <td className="py-3 px-4 text-[var(--color-text-main)]">
+                          <div className="max-w-[280px]">{cfg.c2(r)}</div>
+                          {c2sub ? <div className="text-xs text-[var(--color-text-muted)] max-w-[280px]">{c2sub}</div> : null}
+                        </td>
                         <td className="py-3 px-4">
                           <div className={`font-semibold capitalize ${STATUS_STYLE[r.status] || ''}`}>{r.status}</div>
                           {isAsset && (
