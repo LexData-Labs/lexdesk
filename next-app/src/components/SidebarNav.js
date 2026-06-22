@@ -34,6 +34,8 @@ const Icons = {
   attenddesk: (<svg {...ic}><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>),
   organization: (<svg {...ic}><path d="M3 21h18" /><path d="M5 21V7l8-4v18" /><path d="M19 21V11l-6-4" /><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" /></svg>),
   download: (<svg {...ic}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>),
+  // Application form — used for the "Application" section (request leave & assets).
+  application: (<svg {...ic}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="13" y2="17" /><line x1="9" y1="9" x2="11" y2="9" /></svg>),
 };
 
 function NavLink({ href, label, icon, exact, onNavigate }) {
@@ -60,14 +62,16 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
   const admin = role !== 'employee';
   return (
     <nav className="flex-1 w-full flex flex-col items-center min-h-0 py-2">
-      {/* Scrollable menu items */}
-      <div className="flex-1 w-full flex flex-col items-center gap-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-0">
+      {/* Scrollable menu items, vertically centered in the rail (my-auto centers
+          when there's free space and collapses to 0 when the list overflows, so
+          a long admin menu still scrolls from the top). */}
+      <div className="flex-1 w-full flex flex-col items-center overflow-y-auto min-h-0 [&::-webkit-scrollbar]:w-0">
+      <div className="my-auto w-full flex flex-col items-center gap-1.5 py-2">
       {admin && <NavLink href="/dashboard" exact label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/employees" label="Employees" icon={Icons.employees} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/teams" label="Teams" icon={Icons.teams} onNavigate={onNavigate} />}
       {!admin && <NavLink href="/dashboard/my-dashboard" label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
-      {!admin && <NavLink href="/dashboard/application" label="Application" icon={Icons.leave} onNavigate={onNavigate} />}
-      {!admin && <NavLink href="/dashboard/my-assets" label="Assets" icon={Icons.assets} onNavigate={onNavigate} />}
+      {!admin && <NavLink href="/dashboard/application" label="Application" icon={Icons.application} onNavigate={onNavigate} />}
       {!admin && isTeamLeader && <NavLink href="/dashboard/team-approvals" label="Team Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
       {!admin && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.employees} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attendance" label="Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
@@ -80,6 +84,7 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
       {admin && <NavLink href="/dashboard/holidays" label="Holidays" icon={Icons.holidays} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attenddesk" label="AttendDesk" icon={Icons.attenddesk} onNavigate={onNavigate} />}
       {(role === 'admin' || role === 'superadmin') && <NavLink href="/dashboard/organization" label="Organization" icon={Icons.organization} onNavigate={onNavigate} />}
+      </div>
       </div>
 
       {/* Pinned to the bottom of the rail, below the scrolling menu */}

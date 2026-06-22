@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }) {
       // Redirect employee to their allowed landing page
       if (parsed.role === 'employee') {
         const path = window.location.pathname;
-        const allowed = ['/dashboard/my-dashboard', '/dashboard/application', '/dashboard/my-assets', '/dashboard/team-approvals', '/dashboard/team-attendance', '/dashboard/profile'];
+        const allowed = ['/dashboard/my-dashboard', '/dashboard/application', '/dashboard/team-approvals', '/dashboard/team-attendance', '/dashboard/profile'];
         if (!allowed.includes(path)) {
           router.replace('/dashboard/my-dashboard');
         }
