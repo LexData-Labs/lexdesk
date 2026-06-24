@@ -23,7 +23,6 @@ import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.FreeBreakfast
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -99,7 +98,6 @@ fun HomeTab(
     val modules = listOf(
         ModuleItem("Check In / Out", Icons.Outlined.FactCheck, onClick = { onNavigate(Routes.CHECK_IN) }),
         ModuleItem("Break Time", Icons.Outlined.FreeBreakfast, onClick = { onNavigate(Routes.BREAK_TIME) }),
-        ModuleItem("Claim", Icons.Outlined.ReceiptLong, onClick = { onNavigate(Routes.CLAIM) }),
         ModuleItem("Directory", Icons.Outlined.Groups, onClick = { onNavigate(Routes.DIRECTORY) }),
         ModuleItem("Assets", Icons.Outlined.Inventory2, onClick = { onNavigate(Routes.ASSETS) }),
     )

@@ -1,0 +1,8 @@
+# Vercel deploys only next-app (rootDirectory=next-app). Keep the native Android
+# app and all build artifacts out of the CLI upload so it stays under the
+# 100 MB single-file limit (e.g. android/app/build/.../app-debug.apk ~117 MB).
+android/
+**/build/
+*.apk
+*.aab
+*.keystore
