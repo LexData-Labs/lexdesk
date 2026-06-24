@@ -8,6 +8,8 @@ import { firebaseAdmin } from './firebase';
 import { Paths } from './paths';
 import { processCheckIn, listAttendance } from './services/attendance';
 
+export { signedReadUrls } from './storage';
+
 export { addManualAttendance } from './services/attendance';
 
 export {
@@ -15,6 +17,7 @@ export {
   getEmployee,
   createEmployee,
   setEmployeeTeam,
+  updateEmployee,
   deleteEmployee,
   resetUserPassword,
   enrollFace,
@@ -32,6 +35,7 @@ export { getReconRequests, submitRecon, decideRecon, getRecon } from './services
 export { getRemoteRequests, submitRemote, decideRemote, getRemote } from './services/remote';
 export { listNotices, createNotice, deleteNotice } from './services/notices';
 export { recordBreak, listMyBreaks } from './services/breaks';
+
 export { getHolidays, createHoliday, deleteHoliday } from './services/holidays';
 export { getOffice, updateOffice } from './services/office';
 export { getPolicy, updatePolicy } from './services/policy';

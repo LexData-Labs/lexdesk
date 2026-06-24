@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import SidebarNav from '@/components/SidebarNav';
 import ProfileMenu from '@/components/ProfileMenu';
+import BrandMark from '@/components/BrandMark';
 
 export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
@@ -114,7 +115,7 @@ export default function DashboardLayout({ children }) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           <Link href="/" className="flex items-center gap-2 text-lg font-bold text-[var(--color-text-main)] no-underline">
-            <div className="w-7 h-7 rounded-lg bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-xs text-white">T</div>
+            <BrandMark size={28} />
             TeamOS
           </Link>
           <div className="flex items-center gap-1.5">
@@ -138,7 +139,7 @@ export default function DashboardLayout({ children }) {
 
         <aside className={`fixed inset-y-0 left-0 z-50 w-[84px] flex flex-col items-center bg-[var(--color-card-bg)] border border-[var(--color-card-border)] transform transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:my-3 lg:ml-3 lg:h-[calc(100vh-1.5rem)] lg:rounded-2xl lg:shadow-[0_10px_40px_rgba(0,0,0,0.45)] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <Link href="/" onClick={() => setSidebarOpen(false)} title="TeamOS home" aria-label="TeamOS home" className="mt-5 mb-4 shrink-0 no-underline">
-            <div className="w-11 h-11 rounded-xl bg-black border border-white/20 bg-gradient-to-br from-white/15 to-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_2px_8px_rgba(0,0,0,0.25)] flex items-center justify-center text-lg font-bold text-white">T</div>
+            <BrandMark size={44} />
           </Link>
 
           <SidebarNav role={user.role} isTeamLeader={isTeamLeader} onNavigate={() => setSidebarOpen(false)} />
@@ -147,34 +148,44 @@ export default function DashboardLayout({ children }) {
 
         <main className="flex flex-col flex-1 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_50%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.03),transparent_50%)] lg:overflow-hidden relative">
 
-          {/* Top Right: theme toggle + profile (desktop) */}
-          <div className="hidden lg:flex items-center gap-3 absolute top-6 right-8 z-50">
-            <div className="bg-white dark:bg-[#1a1f2e] p-1 rounded-full flex items-center shadow-[0_2px_10px_rgba(0,0,0,0.08)] border border-gray-100 dark:border-gray-800">
-              <button
-                onClick={() => toggleTheme('light')}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                  theme === 'light' 
-                    ? 'bg-[var(--color-text-main)] text-[var(--color-bg)] shadow-sm' 
-                    : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'
+          {/* Desktop controls row — transparent (no navbar bar), but reserves its
+              own height (shrink-0) so the scroll region below starts under it and
+              cards never slide beneath the theme toggle / profile icon. */}
+          <div className="hidden lg:flex shrink-0 justify-end items-center h-[60px] px-8 relative z-50">
+            <div className="flex items-center gap-3 pl-3 pr-2 py-2 rounded-full bg-[var(--color-bg)]/75 backdrop-blur-md border border-[var(--color-card-border)] shadow-[0_6px_24px_rgba(0,0,0,0.12)]">
+            <button
+              onClick={() => toggleTheme(theme === 'light' ? 'dark' : 'light')}
+              role="switch"
+              aria-checked={theme === 'dark'}
+              aria-label="Toggle theme"
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              className="relative w-[76px] h-10 rounded-full p-1.5 flex items-center bg-[var(--color-bg)] border border-[var(--color-card-border)] backdrop-blur-md shadow-[inset_3px_3px_6px_rgba(0,0,0,0.16),inset_-3px_-3px_6px_rgba(255,255,255,0.7)] dark:shadow-[inset_3px_3px_6px_rgba(0,0,0,0.5),inset_-2px_-2px_6px_rgba(255,255,255,0.05)] transition-colors"
+            >
+              {/* faint track icons */}
+              <span className="flex-1 flex items-center justify-center text-[var(--color-text-muted)] opacity-50">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              </span>
+              <span className="flex-1 flex items-center justify-center text-[var(--color-text-muted)] opacity-50">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              </span>
+              {/* sliding knob with the active icon */}
+              <span
+                className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full bg-[var(--color-primary)] bg-gradient-to-br from-white/20 to-black/10 text-[var(--color-on-primary)] shadow-[3px_3px_7px_rgba(0,0,0,0.3),-1px_-1px_4px_rgba(255,255,255,0.25)] flex items-center justify-center transition-transform duration-300 ease-out ${
+                  theme === 'dark' ? 'translate-x-9' : 'translate-x-0'
                 }`}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              </button>
-              <button
-                onClick={() => toggleTheme('dark')}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                  theme === 'dark' 
-                    ? 'bg-[var(--color-text-main)] text-[var(--color-bg)] shadow-sm' 
-                    : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'
-                }`}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-              </button>
-            </div>
+                {theme === 'light' ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                )}
+              </span>
+            </button>
             <ProfileMenu user={user} photoUrl={photoUrl} onLogout={handleLogout} />
+            </div>
           </div>
 
-          <div className="flex-1 lg:overflow-auto p-4 lg:p-8 lg:pt-20">
+          <div className="flex-1 lg:overflow-auto p-4 lg:px-8 lg:pb-8 lg:pt-2">
             {children}
           </div>
         </main>

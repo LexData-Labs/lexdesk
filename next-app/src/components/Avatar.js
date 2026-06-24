@@ -11,7 +11,7 @@ export default function Avatar({ image, initials, className = '', alt = '' }) {
   const showImage = image && !failed;
   return (
     <div
-      className={`rounded-full bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] flex items-center justify-center overflow-hidden ${className}`}
+      className={`rounded-full bg-gradient-to-br from-[var(--color-purple)] to-[var(--color-blue)] text-white flex items-center justify-center overflow-hidden ${className}`}
     >
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element

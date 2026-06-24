@@ -66,7 +66,10 @@ function timeFmt(ms) {
   }
 }
 
-export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
+// `bare` drops the .card wrapper so the caller can embed the check-in UI inside
+// another card. `title` sets the section heading; pass null to hide it (e.g.
+// when the embedding card already has its own title).
+export default function CheckInCard({ onSuccess, todayIn, todayOut, bare = false, title = 'Verify & Check In' }) {
   const [phase, setPhase] = useState('idle'); // idle | locating | submitting
   const [info, setInfo] = useState(null); // { policy, office } — pre-warnings only, non-fatal if missing
   const [result, setResult] = useState(null); // last check-in response + { type, dist }
@@ -195,9 +198,9 @@ export default function CheckInCard({ onSuccess, todayIn, todayOut }) {
   const busy = phase !== 'idle';
 
   return (
-    <div className="card flex flex-col gap-3">
+    <div className={`${bare ? '' : 'card '}flex flex-col gap-3`}>
       <div>
-        <h2 className="text-base font-semibold text-[var(--color-text-main)]">Verify &amp; Check In</h2>
+        {title && <h2 className="text-base font-semibold text-[var(--color-text-main)]">{title}</h2>}
         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
           Location-verified from your browser
           {info?.policy?.gpsAccuracyMaxMeters ? ` · GPS accuracy ≤ ${info.policy.gpsAccuracyMaxMeters} m` : ''}
