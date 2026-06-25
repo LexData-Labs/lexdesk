@@ -36,10 +36,21 @@ function userRow(id, data, photoUrl) {
   };
 }
 
-export async function getEmployees(orgId) {
+// signPhotos:false skips the org-wide signed-URL work and instead returns each
+// row's raw photoStoragePath, so a caller that only needs photos for a subset
+// (e.g. one team) can sign just those. Default keeps the original behavior.
+export async function getEmployees(orgId, { signPhotos = true } = {}) {
   const { db } = firebaseAdmin();
   const snap = await db.collection(Paths.users(orgId)).orderBy('createdAt', 'desc').get();
   const docs = snap.docs.map((d) => ({ id: d.id, data: d.data() }));
+  if (!signPhotos) {
+    return {
+      employees: docs.map((d) => ({
+        ...userRow(d.id, d.data, null),
+        photoStoragePath: d.data.photoStoragePath ?? null,
+      })),
+    };
+  }
   const photoUrls = await signedReadUrls(docs.map((d) => d.data.photoStoragePath));
   return { employees: docs.map((d, i) => userRow(d.id, d.data, photoUrls[i])) };
 }
@@ -115,6 +126,27 @@ export async function setEmployeeTeam(uid, teamId, orgId) {
   }
   await userRef.update({ teamId: resolvedTeamId, teamName });
   return { ok: true, teamId: resolvedTeamId, teamName };
+}
+
+// Edit a member's basic profile fields (name, employeeId). Email/role/team are
+// intentionally excluded here — those are identity/structure changes handled by
+// dedicated flows. Keeps the Firebase Auth displayName in sync when name changes.
+export async function updateEmployee(uid, { name, employeeId } = {}, orgId) {
+  const { auth, db } = firebaseAdmin();
+  const ref = db.doc(Paths.user(orgId, uid));
+  const snap = await ref.get();
+  if (!snap.exists) throw Object.assign(new Error('not_found'), { status: 404 });
+
+  const updates = {};
+  if (typeof name === 'string' && name.trim()) updates.name = name.trim();
+  if (employeeId !== undefined) updates.employeeId = String(employeeId || '').trim() || null;
+  if (Object.keys(updates).length === 0) return { ok: true };
+
+  await ref.update(updates);
+  if (updates.name) {
+    try { await auth.updateUser(uid, { displayName: updates.name }); } catch { /* non-fatal */ }
+  }
+  return { ok: true, ...updates };
 }
 
 export async function deleteEmployee(uid, orgId) {

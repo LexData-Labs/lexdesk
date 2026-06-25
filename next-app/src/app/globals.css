@@ -23,17 +23,20 @@
 
 @layer base {
   :root.light {
-    /* Same palette, inverted for light mode. */
-    --color-bg: #FFFFFF;          /* palette: #FFFFFF */
-    --color-card-bg: #FFFFFF;
-    --color-card-border: #AFAFAF; /* palette: #AFAFAF */
-    --color-text-main: #000000;   /* palette: #000000 */
-    --color-text-muted: #414141;  /* palette: #414141 */
-    --color-purple: #212121;      /* palette: #212121 */
-    --color-blue: #414141;        /* palette: #414141 */
-    --color-primary: #000000;     /* palette: #000000 */
-    --color-on-primary: #FFFFFF;  /* palette: #FFFFFF */
-    --color-accent-soft: rgba(0, 0, 0, 0.06);
+    /* Light theme modelled on the reference dashboard: a soft grey canvas that
+       lets white cards float, a leaf-green brand accent, a sky-blue secondary,
+       near-black headings and soft-grey muted text over hairline borders. */
+    --color-bg: #EAEBED;          /* soft neutral canvas */
+    --color-card-bg: #FFFFFF;     /* white elevated surfaces */
+    --color-card-border: #E6E7EA; /* near-invisible hairline */
+    --color-text-main: #1A1A1A;   /* near-black headings */
+    --color-text-muted: #8A9099;  /* soft grey secondary text */
+    --color-purple: #3E3D4F;      /* dark slate accent */
+    --color-blue: #3E3D4F;        /* dark slate accent */
+    --color-green: #74B816;       /* reference leaf-green */
+    --color-primary: #3E3D4F;     /* dark slate brand accent (buttons / active nav) */
+    --color-on-primary: #FFFFFF;  /* white text — strong contrast on the slate */
+    --color-accent-soft: rgba(0, 0, 0, 0.05);
   }
 
   body {
@@ -53,12 +56,6 @@
     @apply px-4 py-2 font-semibold rounded-[8px] cursor-pointer transition-all duration-300 hover:-translate-y-0.5 border-none outline-none;
     color: var(--color-on-primary);
     background-color: var(--color-primary);
-    /* Top-light / bottom-dark sheen makes the solid colour read "glossy". */
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.10));
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px rgba(0, 0, 0, 0.35);
-  }
-  .btn-primary:hover {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 10px 26px rgba(0, 0, 0, 0.45);
   }
 
   .btn-outline {
@@ -77,7 +74,8 @@
   }
   :root.light .card {
     background: var(--color-card-bg);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0, 0, 0, 0.05);
+    /* Soft, diffuse lift so white cards float off the grey canvas (ref look). */
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
   }
 
   /* Glossy glass surface for pop-ups / modals (defined after .card so it wins). */

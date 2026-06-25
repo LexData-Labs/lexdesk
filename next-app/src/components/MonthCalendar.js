@@ -8,8 +8,9 @@ const STATUS_STYLE = {
   ontime: { bg: 'rgba(34,197,94,0.32)', border: 'rgba(34,197,94,0.65)', color: '#22C55E', mark: 'P' },
   late: { bg: 'rgba(234,179,8,0.32)', border: 'rgba(234,179,8,0.65)', color: '#EAB308', mark: 'L' },
   leave: { bg: 'rgba(239,68,68,0.32)', border: 'rgba(239,68,68,0.65)', color: '#EF4444', mark: 'LV' },
-  missed: { bg: 'rgba(167,139,250,0.32)', border: 'rgba(167,139,250,0.65)', color: '#A78BFA', mark: 'A' },
-  holiday: { bg: 'rgba(56,189,248,0.32)', border: 'rgba(56,189,248,0.65)', color: '#38BDF8', mark: 'H' },
+  missed: { bg: 'rgba(174,61,99,0.32)', border: 'rgba(174,61,99,0.55)', color: '#BC5A7D', mark: 'A' },
+  holiday: { bg: 'rgba(85,148,248,0.30)', border: 'rgba(85,148,248,0.6)', color: '#5594F8', mark: 'H' },
+  remote: { bg: 'rgba(181,151,255,0.32)', border: 'rgba(181,151,255,0.6)', color: '#B597FF', mark: 'R' },
   future: { bg: 'transparent', border: 'rgba(255,255,255,0.06)', color: 'var(--color-text-muted)', mark: '', dashed: true },
   today: { bg: 'rgba(150,150,150,0.08)', border: 'rgba(150,150,150,0.4)', color: 'var(--color-text-main)', mark: '' },
 };
@@ -18,14 +19,17 @@ const LEGEND = [
   { key: 'ontime', label: 'On-time', color: '#22C55E' },
   { key: 'late', label: 'Late', color: '#EAB308' },
   { key: 'leave', label: 'Leave', color: '#EF4444' },
-  { key: 'missed', label: 'Missed', color: '#A78BFA' },
-  { key: 'holiday', label: 'Holiday', color: '#38BDF8' },
+  { key: 'missed', label: 'Missed', color: '#BC5A7D' },
+  { key: 'holiday', label: 'Holiday', color: '#5594F8' },
+  { key: 'remote', label: 'Remote', color: '#B597FF' },
 ];
 
 // Renders a color-coded month grid from an `employeeCalendarMonth` result
 // ({ year, month, daysInMonth, firstWeekday, days, counts }). Pass `compact`
 // for a shorter grid (e.g. embedded on the employee dashboard).
-export default function MonthCalendar({ cal, loading, compact = false }) {
+// `bare` drops the .card wrapper so the grid can render the calendar inside an
+// outer card alongside a heading (keeps row heights aligned).
+export default function MonthCalendar({ cal, loading, compact = false, bare = false }) {
   if (!cal) return null;
 
   const cells = [];
@@ -37,19 +41,19 @@ export default function MonthCalendar({ cal, loading, compact = false }) {
     today.getFullYear() === cal.year && today.getMonth() === cal.month && today.getDate() === day;
 
   const gap = compact ? 'gap-1' : 'gap-1 sm:gap-1.5';
-  const cellMinH = compact ? 'min-h-[34px]' : 'min-h-[44px] sm:min-h-[64px]';
-  const cellPad = compact ? 'p-0.5' : 'p-1';
+  const cellMinH = compact ? 'min-h-[26px]' : 'min-h-[44px] sm:min-h-[64px]';
+  const cellPad = compact ? 'p-0' : 'p-1';
+  const cellRound = compact ? 'rounded-md' : 'rounded-lg';
   const dayText = compact ? 'text-[10px]' : 'text-[9px] sm:text-xs';
   const markText = compact ? 'text-[8px]' : 'text-[7px] sm:text-[9px]';
 
   return (
-    <div className={`card flex flex-col ${compact ? 'gap-3' : 'gap-4'}`}>
+    <div className={`${bare ? '' : 'card '}flex flex-col ${compact ? 'gap-3' : 'gap-4'}`}>
       <div className={`flex flex-wrap items-center ${compact ? 'gap-x-4 gap-y-1.5 text-[11px]' : 'gap-x-3 sm:gap-x-5 gap-y-2 text-[11px] sm:text-sm'}`}>
         {LEGEND.map((l) => (
           <span key={l.label} className="flex items-center gap-1.5">
             <span className="inline-block w-3 h-3 rounded-[4px]" style={{ background: l.color }} />
             <span className="text-[var(--color-text-muted)]">{l.label}</span>
-            <span className="font-semibold" style={{ color: l.color }}>{cal.counts[l.key] ?? 0}</span>
           </span>
         ))}
       </div>
@@ -70,11 +74,10 @@ export default function MonthCalendar({ cal, loading, compact = false }) {
             <div
               key={i}
               title={tip}
-              className={`${cellMinH} rounded-lg flex flex-col items-center justify-center gap-0.5 ${cellPad}`}
+              className={`${cellMinH} ${cellRound} flex flex-col items-center justify-center gap-0.5 ${cellPad}`}
               style={{ background: st.bg, border }}
             >
               <span className={`${dayText} font-semibold text-[var(--color-text-main)]`}>{day}</span>
-              {st.mark && <span className={`${markText} font-bold leading-none`} style={{ color: st.color }}>{st.mark}</span>}
             </div>
           );
         })}

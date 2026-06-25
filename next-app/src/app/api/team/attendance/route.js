@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { getTeams, getEmployees, getAttendance, addManualAttendance } from '@/lib/backend';
+import { getTeams, getEmployees, getAttendance, addManualAttendance, signedReadUrls } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,7 +66,15 @@ export async function GET(request) {
   const limit = Math.min(Math.max(parseInt(sp.get('limit'), 10) || 1000, 1), 1000);
 
   try {
-    const teamsData = await getTeams(user.orgId);
+    // These three reads are independent — run them concurrently instead of
+    // stacking their round-trips. Photos are NOT signed here (signPhotos:false);
+    // we sign only the lead's team members below, not the whole org.
+    const [teamsData, empData, data] = await Promise.all([
+      getTeams(user.orgId),
+      getEmployees(user.orgId, { signPhotos: false }),
+      getAttendance({ limit, from, to }, user.orgId),
+    ]);
+
     const myTeams = (teamsData.teams || []).filter((t) => String(t.leaderUid) === String(user.id));
     if (myTeams.length === 0) {
       return NextResponse.json({ isLeader: false, events: [], members: [], teams: [] });
@@ -74,19 +82,22 @@ export async function GET(request) {
     const myTeamIds = new Set(myTeams.map((t) => t.id));
     const teamNameById = new Map(myTeams.map((t) => [t.id, t.name || '']));
 
-    const empData = await getEmployees(user.orgId);
-    const members = (empData.employees || [])
-      .filter((e) => e.teamId && myTeamIds.has(e.teamId))
-      .map((e) => ({
-        id: String(e.id),
-        name: e.name || '',
-        email: e.email || '',
-        teamId: e.teamId,
-        teamName: teamNameById.get(e.teamId) || '',
-      }));
+    const teamEmployees = (empData.employees || []).filter((e) => e.teamId && myTeamIds.has(e.teamId));
+    // Sign photo URLs for just this team's members (small N), not the whole org.
+    const photoUrls = await signedReadUrls(teamEmployees.map((e) => e.photoStoragePath));
+    const members = teamEmployees.map((e, i) => ({
+      id: String(e.id),
+      name: e.name || '',
+      email: e.email || '',
+      teamId: e.teamId,
+      teamName: teamNameById.get(e.teamId) || '',
+      employeeId: e.employeeId || null,
+      joiningDate: e.createdAt || null,
+      birthDate: e.birthDate || null,
+      photoUrl: photoUrls[i] || null,
+    }));
     const memberUids = new Set(members.map((m) => m.id));
 
-    const data = await getAttendance({ limit, from, to }, user.orgId);
     const events = (data.events || []).filter((e) => memberUids.has(String(e.user?.id)));
     // The led teams (incl. empty ones) so the page can offer a team picker when
     // adding a member without a second request.

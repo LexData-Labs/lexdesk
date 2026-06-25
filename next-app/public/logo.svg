@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="TeamOS logo">
+  <style>
+    .hex { stroke: #141414; fill: none; stroke-width: 2.6; stroke-linejoin: round; }
+    .mono { fill: #141414; }
+    @media (prefers-color-scheme: dark) {
+      .hex { stroke: #ffffff; }
+      .mono { fill: #ffffff; }
+    }
+  </style>
+  <path class="hex" d="M34.5 5.8 L45 24 L34.5 42.2 L13.5 42.2 L3 24 L13.5 5.8 Z" />
+  <path class="mono" d="M13.5 13.5 H34.5 V20 H27 V35 H21 V20 H13.5 Z" />
+</svg>
