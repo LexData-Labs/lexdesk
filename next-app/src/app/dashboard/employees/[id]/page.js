@@ -8,6 +8,12 @@ import EmployeeAvatar from '@/components/EmployeeAvatar';
 import { useAttendData } from '@/lib/useAttendData';
 import { eventsForUser, perEmployeeStats, fmtTime, isLateCheckIn } from '@/lib/attend';
 
+const fmtDate = (v) => {
+  if (!v) return '—';
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
 export default function EmployeeProfilePage() {
   const { id } = useParams();
   const router = useRouter();
@@ -254,11 +260,18 @@ export default function EmployeeProfilePage() {
             </div>
             <div className="flex-1 min-w-[240px]">
               <h2 className="text-xl font-semibold text-[var(--color-text-main)]">{employee.name}</h2>
+              {employee.designation && <p className="text-sm text-[var(--color-purple)]">{employee.designation}</p>}
               <p className="text-sm text-[var(--color-text-muted)]">{employee.email}</p>
               {employee.employeeId && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">ID: {employee.employeeId}</p>}
               <p className="text-xs text-[var(--color-text-muted)] mt-1 capitalize">
                 {(employee.role || '').toLowerCase()}{employee.faceEnrolledAt ? ' · face enrolled' : ''}
               </p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1 mt-2 text-xs">
+                {(employee.department || employee.teamName) && <div><span className="text-[var(--color-text-muted)]">Department: </span><span className="text-[var(--color-text-main)]">{employee.department || employee.teamName}</span></div>}
+                {employee.contactNumber && <div><span className="text-[var(--color-text-muted)]">Contact: </span><span className="text-[var(--color-text-main)]">{employee.contactNumber}</span></div>}
+                {employee.joiningDate && <div><span className="text-[var(--color-text-muted)]">Joined: </span><span className="text-[var(--color-text-main)]">{fmtDate(employee.joiningDate)}</span></div>}
+                {employee.birthDate && <div><span className="text-[var(--color-text-muted)]">Born: </span><span className="text-[var(--color-text-main)]">{fmtDate(employee.birthDate)}</span></div>}
+              </div>
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-xs text-[var(--color-text-muted)]">Team</span>
                 <select

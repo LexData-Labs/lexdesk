@@ -30,7 +30,7 @@ export default function EmployeesPage() {
 
   // Add-employee modal state.
   const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', email: '', employeeId: '', teamId: '' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', employeeId: '', teamId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const [created, setCreated] = useState(null); // { email, temporaryPassword }
@@ -70,6 +70,22 @@ export default function EmployeesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
 
+  // Department view (admin-only page) groups every matching employee by their
+  // department, falling back to team name then "Unassigned". Not paginated — an
+  // org-wide overview. "Unassigned" sorts last.
+  const deptGroups = useMemo(() => {
+    const byDept = new Map();
+    for (const e of filtered) {
+      const name = (e.department || teamNameOf(e) || '').trim() || 'Unassigned';
+      if (!byDept.has(name)) byDept.set(name, []);
+      byDept.get(name).push(e);
+    }
+    return [...byDept.entries()]
+      .map(([name, emps]) => ({ name, emps }))
+      .sort((a, b) => (a.name === 'Unassigned' ? 1 : b.name === 'Unassigned' ? -1 : a.name.localeCompare(b.name)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, teams]);
+
   const submitAdd = async (e) => {
     e.preventDefault();
     setAddError('');
@@ -87,13 +103,18 @@ export default function EmployeesPage() {
           email: addForm.email.trim(),
           employeeId: addForm.employeeId.trim() || null,
           teamId: addForm.teamId || null,
+          designation: addForm.designation.trim() || null,
+          department: addForm.department.trim() || null,
+          contactNumber: addForm.contactNumber.trim() || null,
+          birthDate: addForm.birthDate || null,
+          joiningDate: addForm.joiningDate || null,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       const emp = json.employee || {};
       setCreated({ email: emp.email || addForm.email.trim(), temporaryPassword: emp.temporaryPassword || '' });
-      setAddForm({ name: '', email: '', employeeId: '', teamId: '' });
+      setAddForm({ name: '', email: '', employeeId: '', teamId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
       refresh();
     } catch (err) {
       setAddError(err.message);
@@ -107,6 +128,25 @@ export default function EmployeesPage() {
     setCreated(null);
     setAddError('');
   };
+
+  // One employee tile — shared by the Grid and Department views.
+  const empCard = (e) => (
+    <Link key={e.id} href={`/dashboard/employees/${encodeURIComponent(e.id)}`} className="card no-underline hover:border-[var(--color-purple)] transition-all">
+      <div className="flex flex-col items-center text-center gap-3">
+        <EmployeeAvatar id={e.id} name={e.name} size={56} />
+        <div>
+          <div className="font-semibold text-[var(--color-text-main)] truncate max-w-[150px] flex items-center justify-center gap-1.5">
+            {e.name || '—'}
+            {leaderUids.has(String(e.id)) && <span className="text-[9px] font-bold uppercase px-1 py-0.5 rounded bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)]">Lead</span>}
+          </div>
+          <div className="text-xs text-[var(--color-text-muted)] truncate max-w-[150px]">{e.email}</div>
+          {e.designation && <div className="text-xs text-[var(--color-text-muted)] truncate max-w-[150px]">{e.designation}</div>}
+          {teamNameOf(e) && <div className="text-xs text-[var(--color-purple)] mt-0.5">{teamNameOf(e)}</div>}
+        </div>
+        <div className="text-xs text-[var(--color-text-muted)]">{e.presentDays} present days · <span className="text-[var(--color-yellow)]">{e.late} late</span></div>
+      </div>
+    </Link>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,9 +193,31 @@ export default function EmployeesPage() {
                   <label className="text-xs font-medium text-[var(--color-text-muted)]">Email</label>
                   <input type="email" value={addForm.email} onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))} className={inputCls} required />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
-                  <input type="text" maxLength={50} value={addForm.employeeId} onChange={(e) => setAddForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={inputCls} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
+                    <input type="text" maxLength={50} value={addForm.employeeId} onChange={(e) => setAddForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Designation</label>
+                    <input type="text" maxLength={80} value={addForm.designation} onChange={(e) => setAddForm((f) => ({ ...f, designation: e.target.value }))} placeholder="e.g. Software Engineer" className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
+                    <input type="text" maxLength={80} value={addForm.department} onChange={(e) => setAddForm((f) => ({ ...f, department: e.target.value }))} placeholder="e.g. Engineering" className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Contact number</label>
+                    <input type="tel" maxLength={30} value={addForm.contactNumber} onChange={(e) => setAddForm((f) => ({ ...f, contactNumber: e.target.value }))} placeholder="e.g. +880 1XXX-XXXXXX" className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of joining</label>
+                    <input type="date" value={addForm.joiningDate} onChange={(e) => setAddForm((f) => ({ ...f, joiningDate: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of birth</label>
+                    <input type="date" value={addForm.birthDate} onChange={(e) => setAddForm((f) => ({ ...f, birthDate: e.target.value }))} className={inputCls} />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[var(--color-text-muted)]">Team</label>
@@ -186,6 +248,7 @@ export default function EmployeesPage() {
         <div className="flex gap-2">
           <button onClick={() => setView('list')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'list' ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>List</button>
           <button onClick={() => setView('grid')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'grid' ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>Grid</button>
+          <button onClick={() => setView('department')} className={`px-3 py-2 rounded-lg text-xs font-semibold ${view === 'department' ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border border-[var(--color-purple)]' : 'btn-outline'}`}>Department</button>
         </div>
         <select
           value={pageSize}
@@ -250,26 +313,30 @@ export default function EmployeesPage() {
             </div>
           </div>
         </div>
-      ) : (
+      ) : view === 'grid' ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {pageRows.map((e) => (
-            <Link key={e.id} href={`/dashboard/employees/${encodeURIComponent(e.id)}`} className="card no-underline hover:border-[var(--color-purple)] transition-all">
-              <div className="flex flex-col items-center text-center gap-3">
-                <EmployeeAvatar id={e.id} name={e.name} size={56} />
-                <div>
-                  <div className="font-semibold text-[var(--color-text-main)] truncate max-w-[150px] flex items-center justify-center gap-1.5">
-                    {e.name || '—'}
-                    {leaderUids.has(String(e.id)) && <span className="text-[9px] font-bold uppercase px-1 py-0.5 rounded bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)]">Lead</span>}
-                  </div>
-                  <div className="text-xs text-[var(--color-text-muted)] truncate max-w-[150px]">{e.email}</div>
-                  {teamNameOf(e) && <div className="text-xs text-[var(--color-purple)] mt-0.5">{teamNameOf(e)}</div>}
-                </div>
-                <div className="text-xs text-[var(--color-text-muted)]">{e.presentDays} present days · <span className="text-[var(--color-yellow)]">{e.late} late</span></div>
-              </div>
-            </Link>
-          ))}
+          {pageRows.map((e) => empCard(e))}
           {!loading && pageRows.length === 0 && (
             <div className="col-span-full text-center text-[var(--color-text-muted)] py-8">No employees found.</div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {deptGroups.map((g) => (
+            <div key={g.name} className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-base font-semibold text-[var(--color-text-main)]">{g.name}</h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[rgba(150,150,150,0.15)] text-[var(--color-text-muted)]">
+                  {g.emps.length} {g.emps.length === 1 ? 'person' : 'people'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {g.emps.map((e) => empCard(e))}
+              </div>
+            </div>
+          ))}
+          {!loading && filtered.length === 0 && (
+            <div className="text-center text-[var(--color-text-muted)] py-8">No employees found.</div>
           )}
         </div>
       )}

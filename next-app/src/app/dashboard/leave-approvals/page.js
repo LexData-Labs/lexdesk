@@ -16,6 +16,13 @@ function fmtRange(from, to) {
   return from === to ? from : `${from} → ${to}`;
 }
 
+const HALF_LABEL = { first: 'First half', second: 'Second half' };
+function leaveTypeLabel(r) {
+  if (!r?.leaveType) return '';
+  if (r.leaveType === 'Half Day' && r.halfDayPeriod) return `Half Day (${HALF_LABEL[r.halfDayPeriod] || r.halfDayPeriod})`;
+  return r.leaveType;
+}
+
 export default function LeaveApprovalsPage() {
   const [requests, setRequests] = useState(null);
   const [status, setStatus] = useState('pending');
@@ -109,7 +116,7 @@ export default function LeaveApprovalsPage() {
                 <th className="py-3 px-4 font-medium">Employee</th>
                 <th className="py-3 px-4 font-medium">Dates</th>
                 <th className="py-3 px-4 font-medium text-center">Days</th>
-                <th className="py-3 px-4 font-medium">Subject</th>
+                <th className="py-3 px-4 font-medium">Details</th>
                 <th className="py-3 px-4 font-medium">Status</th>
                 <th className="py-3 px-4 font-medium text-right">Action</th>
               </tr>
@@ -124,8 +131,15 @@ export default function LeaveApprovalsPage() {
                   <td className="py-3 px-4 text-[var(--color-text-main)] whitespace-nowrap">{fmtRange(r.fromDay, r.toDay)}</td>
                   <td className="py-3 px-4 text-center">{r.totalDays ?? '—'}</td>
                   <td className="py-3 px-4">
-                    <div className="text-[var(--color-text-main)]">{r.subject || '—'}</div>
+                    {r.leaveType && <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-purple)] mb-0.5">{leaveTypeLabel(r)}</div>}
+                    {r.approvedBy && <div className="text-[var(--color-text-main)]">Approved by: {r.approvedBy}</div>}
+                    {(r.department || r.lineManager) && (
+                      <div className="text-xs text-[var(--color-text-muted)]">
+                        {[r.lineManager && `Manager: ${r.lineManager}`, r.department && `Dept: ${r.department}`].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                     {r.details && <div className="text-xs text-[var(--color-text-muted)] max-w-[260px]">{r.details}</div>}
+                    {!r.approvedBy && !r.department && !r.lineManager && !r.details && <span className="text-[var(--color-text-muted)]">—</span>}
                   </td>
                   <td className={`py-3 px-4 font-semibold capitalize ${STATUS_STYLE[r.status] || ''}`}>
                     {r.status}

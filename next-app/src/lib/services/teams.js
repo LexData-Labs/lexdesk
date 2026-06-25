@@ -25,6 +25,16 @@ export async function getTeams(orgId) {
   return { teams };
 }
 
+// The line manager for a team = its (denormalized) leader name. Returns null
+// when the user has no team or the team has no leader.
+export async function getLineManager(orgId, teamId) {
+  if (!teamId) return null;
+  const { db } = firebaseAdmin();
+  const snap = await db.doc(Paths.team(orgId, teamId)).get();
+  if (!snap.exists) return null;
+  return snap.data()?.leaderName || null;
+}
+
 // body: { name, leaderUid? }
 export async function createTeam(body, orgId) {
   const { db } = firebaseAdmin();

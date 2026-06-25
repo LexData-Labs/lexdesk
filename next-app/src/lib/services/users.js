@@ -29,6 +29,11 @@ function userRow(id, data, photoUrl) {
     teamId: data.teamId ?? null,
     teamName: data.teamName ?? null,
     employeeId: data.employeeId ?? null,
+    designation: data.designation ?? null,
+    department: data.department ?? null,
+    contactNumber: data.contactNumber ?? null,
+    birthDate: data.birthDate ?? null,
+    joiningDate: data.joiningDate ?? null,
     mustChangePassword: data.mustChangePassword ?? false,
     faceEnrolledAt: data.faceEnrolledAt?.toDate?.()?.toISOString() ?? null,
     createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
@@ -64,7 +69,8 @@ export async function getEmployee(uid, orgId) {
   return { employee: userRow(snap.id, data, photoUrl) };
 }
 
-// body: { email, name, role: 'ADMIN'|'EMPLOYEE', teamId?, employeeId? }
+// body: { email, name, role: 'ADMIN'|'EMPLOYEE', teamId?, employeeId?,
+//         designation?, department?, contactNumber?, birthDate?, joiningDate? }
 export async function createEmployee(body, orgId) {
   const { auth, db } = firebaseAdmin();
   const email = String(body.email).toLowerCase();
@@ -96,6 +102,11 @@ export async function createEmployee(body, orgId) {
     teamId,
     teamName,
     employeeId: body.employeeId ?? null,
+    designation: body.designation ?? null,
+    department: body.department ?? null,
+    contactNumber: body.contactNumber ?? null,
+    birthDate: body.birthDate ?? null,
+    joiningDate: body.joiningDate ?? null,
     mustChangePassword: true,
     faceEmbeddingB64: null,
     faceEmbeddingModel: null,
@@ -128,10 +139,15 @@ export async function setEmployeeTeam(uid, teamId, orgId) {
   return { ok: true, teamId: resolvedTeamId, teamName };
 }
 
-// Edit a member's basic profile fields (name, employeeId). Email/role/team are
+// Edit a member's basic profile fields (name, employeeId, designation,
+// department, contactNumber, birthDate, joiningDate). Email/role/team are
 // intentionally excluded here — those are identity/structure changes handled by
 // dedicated flows. Keeps the Firebase Auth displayName in sync when name changes.
-export async function updateEmployee(uid, { name, employeeId } = {}, orgId) {
+export async function updateEmployee(
+  uid,
+  { name, employeeId, designation, department, contactNumber, birthDate, joiningDate } = {},
+  orgId,
+) {
   const { auth, db } = firebaseAdmin();
   const ref = db.doc(Paths.user(orgId, uid));
   const snap = await ref.get();
@@ -140,6 +156,11 @@ export async function updateEmployee(uid, { name, employeeId } = {}, orgId) {
   const updates = {};
   if (typeof name === 'string' && name.trim()) updates.name = name.trim();
   if (employeeId !== undefined) updates.employeeId = String(employeeId || '').trim() || null;
+  if (designation !== undefined) updates.designation = String(designation || '').trim() || null;
+  if (department !== undefined) updates.department = String(department || '').trim() || null;
+  if (contactNumber !== undefined) updates.contactNumber = String(contactNumber || '').trim() || null;
+  if (birthDate !== undefined) updates.birthDate = String(birthDate || '').trim() || null;
+  if (joiningDate !== undefined) updates.joiningDate = String(joiningDate || '').trim() || null;
   if (Object.keys(updates).length === 0) return { ok: true };
 
   await ref.update(updates);
