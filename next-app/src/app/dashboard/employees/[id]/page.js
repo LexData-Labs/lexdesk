@@ -98,7 +98,7 @@ export default function EmployeeProfilePage() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      router.push('/dashboard/employees');
+      router.push('/dashboard/people?tab=employees');
     } catch (e) {
       alert(e.message);
       setDeleting(false);
@@ -184,7 +184,7 @@ export default function EmployeeProfilePage() {
         subtitle="Employee profile · AttendDesk"
         actions={
           <div className="flex items-center gap-3">
-            <Link href="/dashboard/employees" className="btn-outline py-1.5 px-3 text-sm">Back</Link>
+            <Link href="/dashboard/people?tab=employees" className="btn-outline py-1.5 px-3 text-sm">Back</Link>
             <button onClick={refresh} className="btn-outline py-1.5 px-3 text-sm">Refresh</button>
             {employee && String(employeeId) !== String(currentUserId) &&
               (String(employee.role || '').toUpperCase() === 'EMPLOYEE' ||

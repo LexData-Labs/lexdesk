@@ -232,7 +232,7 @@ export default function AttendDeskPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="AttendDesk Settings"
+        title="Settings"
         subtitle="View and update your attendance policy and office settings"
         actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
       />

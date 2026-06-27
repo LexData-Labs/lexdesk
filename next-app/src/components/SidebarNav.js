@@ -69,23 +69,16 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
       <div className="flex-1 w-full flex flex-col items-center overflow-y-auto min-h-0 [&::-webkit-scrollbar]:w-0">
       <div className="my-auto w-full flex flex-col items-center gap-1.5 py-2">
       {admin && <NavLink href="/dashboard" exact label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/employees" label="Employees" icon={Icons.employees} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/teams" label="Teams" icon={Icons.teams} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/people" label="People" icon={Icons.employees} onNavigate={onNavigate} />}
       {!admin && <NavLink href="/dashboard/my-dashboard" label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
       {!admin && <NavLink href="/dashboard/application" label="Application" icon={Icons.application} onNavigate={onNavigate} />}
       {!admin && <NavLink href="/dashboard/my-recon" label="Reconciliation" icon={Icons.recon} onNavigate={onNavigate} />}
       {!admin && isTeamLeader && <NavLink href="/dashboard/team-approvals" label="Team Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
       {!admin && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.employees} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attendance" label="Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/calendar" label="Calendar" icon={Icons.calendar} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/analytics" label="Analytics" icon={Icons.analytics} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/leave-approvals" label="Leave Approvals" icon={Icons.leave} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/asset-approvals" label="Asset Approvals" icon={Icons.assets} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/remote-approvals" label="Remote Approvals" icon={Icons.remote} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/recon-approvals" label="Reconciliation Approvals" icon={Icons.recon} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/notices" label="Notice Board" icon={Icons.notices} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/holidays" label="Holidays" icon={Icons.holidays} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/attenddesk" label="AttendDesk" icon={Icons.attenddesk} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/approvals" label="Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/noticeboard" label="Notices & Holidays" icon={Icons.notices} onNavigate={onNavigate} />}
+      {admin && <NavLink href="/dashboard/attenddesk" label="Settings" icon={Icons.attenddesk} onNavigate={onNavigate} />}
       {(role === 'admin' || role === 'superadmin') && <NavLink href="/dashboard/organization" label="Organization" icon={Icons.organization} onNavigate={onNavigate} />}
       </div>
       </div>
