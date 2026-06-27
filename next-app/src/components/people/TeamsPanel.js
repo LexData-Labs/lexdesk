@@ -1,10 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import PageHeader from '@/components/PageHeader';
 
 const inputCls =
   'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
+
+const DEPARTMENTS = ['Engineering', 'Marketing', 'Project', 'IT'];
+const ROLE_OPTIONS = [
+  { key: 'team_leader', label: 'Team Leader' },
+  { key: 'it', label: 'IT' },
+];
 
 export default function TeamsPanel() {
   const [teams, setTeams] = useState([]);
@@ -12,19 +18,16 @@ export default function TeamsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [busy, setBusy] = useState(''); // keyed busy flag for row actions
 
-  const [name, setName] = useState('');
-  const [leaderUid, setLeaderUid] = useState('');
+  // "Add Management Role" modal.
+  const [showAdd, setShowAdd] = useState(false);
+  const [empQuery, setEmpQuery] = useState('');
+  const [selectedEmp, setSelectedEmp] = useState(null);
+  const [department, setDepartment] = useState('');
+  const [role, setRole] = useState('team_leader');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-
-  // IT Team role assignment.
-  const [itUid, setItUid] = useState('');
-  const [itBusy, setItBusy] = useState('');
-
-  const roleOf = (e) => String(e.role || '').toUpperCase();
-  const itMembers = employees.filter((e) => roleOf(e) === 'IT_TEAM');
-  const assignableToIt = employees.filter((e) => roleOf(e) === 'EMPLOYEE');
 
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
@@ -52,28 +55,60 @@ export default function TeamsPanel() {
     load();
   }, [load]);
 
-  const memberCount = (teamId) => employees.filter((e) => e.teamId === teamId).length;
+  const roleOf = (e) => String(e.role || '').toUpperCase();
 
-  const add = async (e) => {
+  // Only regular employees can be given a management role (not admins, and not
+  // people who already hold one).
+  const ledUids = useMemo(() => new Set(teams.filter((t) => t.leaderUid).map((t) => String(t.leaderUid))), [teams]);
+  const assignable = useMemo(
+    () => employees.filter((e) => roleOf(e) === 'EMPLOYEE' && !ledUids.has(String(e.id))),
+    [employees, ledUids],
+  );
+  const suggestions = useMemo(() => {
+    const q = empQuery.trim().toLowerCase();
+    if (!q) return [];
+    return assignable
+      .filter((e) => (e.name || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [assignable, empQuery]);
+
+  // Unified view of who currently holds a management role.
+  const roleRows = useMemo(() => {
+    const leaders = teams
+      .filter((t) => t.leaderUid)
+      .map((t) => ({ key: `lead:${t.id}`, kind: 'lead', refId: t.id, employee: t.leaderName || '—', department: t.name, role: 'Team Leader' }));
+    const its = employees
+      .filter((e) => roleOf(e) === 'IT_TEAM')
+      .map((e) => ({ key: `it:${e.id}`, kind: 'it', refId: e.id, employee: e.name || e.email, department: e.department || e.teamName || '—', role: 'IT' }));
+    return [...leaders, ...its];
+  }, [teams, employees]);
+
+  const closeModal = () => {
+    setShowAdd(false);
+    setEmpQuery('');
+    setSelectedEmp(null);
+    setDepartment('');
+    setRole('team_leader');
+    setFormError('');
+  };
+
+  const submit = async (e) => {
     e.preventDefault();
     setFormError('');
-    if (!name.trim()) {
-      setFormError('Team name is required.');
-      return;
-    }
+    if (!selectedEmp) { setFormError('Select an employee.'); return; }
+    if (!department) { setFormError('Select a department.'); return; }
     setSaving(true);
     try {
-      const res = await fetch('/api/teams', {
+      const res = await fetch('/api/management/role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ name: name.trim(), leaderUid: leaderUid || null }),
+        body: JSON.stringify({ uid: selectedEmp.id, department, role }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      setName('');
-      setLeaderUid('');
-      setFeedback('Team created.');
+      setFeedback('Management role assigned.');
       setTimeout(() => setFeedback(''), 3000);
+      closeModal();
       await load();
     } catch (err) {
       setFormError(err.message);
@@ -82,184 +117,164 @@ export default function TeamsPanel() {
     }
   };
 
-  const changeLeader = async (teamId, uid) => {
-    try {
-      const res = await fetch(`/api/teams/${encodeURIComponent(teamId)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ leaderUid: uid || null }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const remove = async (teamId) => {
-    if (!window.confirm('Delete this team? Members keep their records but lose the team label.')) return;
-    try {
-      const res = await fetch(`/api/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE', headers: authHeader() });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  // Grant ('IT_TEAM') or revoke ('EMPLOYEE') the IT Team role for a user.
-  const setItRole = async (uid, role) => {
-    setItBusy(uid);
+  // Revoke a role from the unified table.
+  const revoke = async (row) => {
+    if (!window.confirm(`Remove ${row.employee} as ${row.role}?`)) return;
+    setBusy(row.key);
     setError('');
     try {
-      const res = await fetch(`/api/employees/${encodeURIComponent(uid)}/role`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({ role }),
-      });
+      const res = row.kind === 'lead'
+        ? await fetch(`/api/teams/${encodeURIComponent(row.refId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: JSON.stringify({ leaderUid: null }),
+          })
+        : await fetch(`/api/employees/${encodeURIComponent(row.refId)}/role`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: JSON.stringify({ role: 'EMPLOYEE' }),
+          });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-      setFeedback(role === 'IT_TEAM' ? 'Added to IT Team.' : 'Removed from IT Team.');
+      setFeedback('Management role removed.');
       setTimeout(() => setFeedback(''), 3000);
       await load();
     } catch (err) {
       setError(err.message);
     } finally {
-      setItBusy('');
+      setBusy('');
     }
-  };
-
-  const addToIt = async (e) => {
-    e.preventDefault();
-    if (!itUid) return;
-    await setItRole(itUid, 'IT_TEAM');
-    setItUid('');
   };
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Management"
-        subtitle="Create teams, assign a team leader, and group your employees"
-        actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
+        subtitle="Assign team leaders and IT Team members by department"
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowAdd(true)} className="btn-primary py-2 px-4 text-sm">+ Add Management Role</button>
+            <button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>
+          </div>
+        }
       />
 
       {feedback && <div className="card text-[var(--color-green)] text-sm">{feedback}</div>}
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 
-      <form onSubmit={add} className="card flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-          <label className="text-xs font-medium text-[var(--color-text-muted)]">Team name</label>
-          <input type="text" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" className={inputCls} required />
+      {showAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeModal}>
+          <div className="card glossy w-full max-w-md flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Add management role</h2>
+              <button onClick={closeModal} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
+            </div>
+
+            <form onSubmit={submit} className="flex flex-col gap-4">
+              {/* Employee autocomplete */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee</label>
+                {selectedEmp ? (
+                  <div className="flex items-center justify-between gap-2 bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2">
+                    <div>
+                      <div className="text-sm text-[var(--color-text-main)]">{selectedEmp.name || '—'}</div>
+                      <div className="text-xs text-[var(--color-text-muted)]">{selectedEmp.email}</div>
+                    </div>
+                    <button type="button" onClick={() => { setSelectedEmp(null); setEmpQuery(''); }} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-sm" aria-label="Clear">✕</button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={empQuery}
+                      onChange={(e) => setEmpQuery(e.target.value)}
+                      placeholder="Type a name to search…"
+                      className={`${inputCls} w-full`}
+                      autoFocus
+                    />
+                    {suggestions.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full card p-1 max-h-56 overflow-y-auto">
+                        {suggestions.map((e) => (
+                          <button
+                            type="button"
+                            key={e.id}
+                            onClick={() => { setSelectedEmp(e); setEmpQuery(''); }}
+                            className="w-full text-left px-3 py-2 rounded hover:bg-white/[0.05]"
+                          >
+                            <div className="text-sm text-[var(--color-text-main)]">{e.name || '—'}</div>
+                            <div className="text-xs text-[var(--color-text-muted)]">{e.email}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {empQuery.trim() && suggestions.length === 0 && (
+                      <div className="absolute z-10 mt-1 w-full card p-3 text-xs text-[var(--color-text-muted)]">No matching employees.</div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Department */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
+                <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls} required>
+                  <option value="">— select department —</option>
+                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+
+              {/* Role */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Role</label>
+                <select value={role} onChange={(e) => setRole(e.target.value)} className={inputCls}>
+                  {ROLE_OPTIONS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                </select>
+              </div>
+
+              {formError && <p className="text-sm text-[var(--color-red)]">{formError}</p>}
+
+              <div className="flex gap-2 justify-end pt-1">
+                <button type="button" onClick={closeModal} className="btn-outline py-2 px-4 text-sm">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">
+                  {saving ? 'Saving…' : 'Assign role'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5 min-w-[200px]">
-          <label className="text-xs font-medium text-[var(--color-text-muted)]">Team leader (optional)</label>
-          <select value={leaderUid} onChange={(e) => setLeaderUid(e.target.value)} className={inputCls}>
-            <option value="">— none —</option>
-            {employees.map((e) => <option key={e.id} value={e.id}>{e.name || e.email}</option>)}
-          </select>
-        </div>
-        <button type="submit" disabled={saving} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">
-          {saving ? 'Creating…' : 'Create team'}
-        </button>
-      </form>
-      {formError && <div className="text-sm text-[var(--color-red)] -mt-3">{formError}</div>}
+      )}
 
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[var(--color-text-muted)] text-[11px] uppercase tracking-wider border-b border-[var(--color-card-border)]">
-                <th className="py-3 px-5 font-medium">Team</th>
-                <th className="py-3 px-5 font-medium">Leader</th>
-                <th className="py-3 px-5 font-medium text-center">Members</th>
+                <th className="py-3 px-5 font-medium">Employee</th>
+                <th className="py-3 px-5 font-medium">Department</th>
+                <th className="py-3 px-5 font-medium">Role</th>
                 <th className="py-3 px-5 font-medium text-right">Action</th>
               </tr>
             </thead>
             <tbody>
-              {teams.map((t) => (
-                <tr key={t.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.03] align-middle">
-                  <td className="py-3.5 px-5 text-[var(--color-text-main)] font-medium">{t.name}</td>
+              {roleRows.map((r) => (
+                <tr key={r.key} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.03]">
+                  <td className="py-3.5 px-5 text-[var(--color-text-main)] font-medium">{r.employee}</td>
+                  <td className="py-3.5 px-5 text-[var(--color-text-muted)]">{r.department}</td>
                   <td className="py-3.5 px-5">
-                    <select
-                      value={t.leaderUid || ''}
-                      onChange={(e) => changeLeader(t.id, e.target.value)}
-                      className={`${inputCls} py-1.5`}
-                    >
-                      <option value="">— none —</option>
-                      {employees.map((e) => <option key={e.id} value={e.id}>{e.name || e.email}</option>)}
-                    </select>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.kind === 'it' ? 'bg-[rgba(56,189,248,0.15)] text-[var(--color-blue)]' : 'bg-[rgba(124,58,237,0.15)] text-[var(--color-purple)]'}`}>{r.role}</span>
                   </td>
-                  <td className="py-3.5 px-5 text-center text-[var(--color-text-main)]">{memberCount(t.id)}</td>
                   <td className="py-3.5 px-5 text-right">
-                    <button onClick={() => remove(t.id)} className="btn-outline py-1 px-3 text-xs text-[var(--color-red)]">Delete</button>
-                  </td>
-                </tr>
-              ))}
-              {!loading && teams.length === 0 && (
-                <tr><td colSpan={4} className="py-12 text-center text-[var(--color-text-muted)]">No teams yet. Create one above.</td></tr>
-              )}
-              {loading && (
-                <tr><td colSpan={4} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* IT Team role — a distinct role from team leadership. */}
-      <div className="flex items-center gap-3 mt-2">
-        <h2 className="text-base font-semibold text-[var(--color-text-main)]">IT Team</h2>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[rgba(150,150,150,0.15)] text-[var(--color-text-muted)]">
-          {itMembers.length} {itMembers.length === 1 ? 'member' : 'members'}
-        </span>
-      </div>
-      <p className="text-xs text-[var(--color-text-muted)] -mt-3">
-        IT Team members manage hardware accessories, can edit employee profiles, and can view (but not decide) asset approvals.
-      </p>
-
-      <form onSubmit={addToIt} className="card flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-          <label className="text-xs font-medium text-[var(--color-text-muted)]">Add an employee to the IT Team</label>
-          <select value={itUid} onChange={(e) => setItUid(e.target.value)} className={inputCls}>
-            <option value="">— select employee —</option>
-            {assignableToIt.map((e) => <option key={e.id} value={e.id}>{e.name || e.email}</option>)}
-          </select>
-        </div>
-        <button type="submit" disabled={!itUid || itBusy === itUid} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">
-          {itBusy === itUid ? 'Adding…' : 'Add to IT Team'}
-        </button>
-      </form>
-
-      <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[var(--color-text-muted)] text-[11px] uppercase tracking-wider border-b border-[var(--color-card-border)]">
-                <th className="py-3 px-5 font-medium">Member</th>
-                <th className="py-3 px-5 font-medium">Email</th>
-                <th className="py-3 px-5 font-medium text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {itMembers.map((m) => (
-                <tr key={m.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.03]">
-                  <td className="py-3.5 px-5 text-[var(--color-text-main)] font-medium">{m.name || '—'}</td>
-                  <td className="py-3.5 px-5 text-[var(--color-text-muted)]">{m.email}</td>
-                  <td className="py-3.5 px-5 text-right">
-                    <button onClick={() => setItRole(m.id, 'EMPLOYEE')} disabled={itBusy === m.id} className="btn-outline py-1 px-3 text-xs text-[var(--color-red)] disabled:opacity-50">
-                      {itBusy === m.id ? '…' : 'Remove'}
+                    <button onClick={() => revoke(r)} disabled={busy === r.key} className="btn-outline py-1 px-3 text-xs text-[var(--color-red)] disabled:opacity-50">
+                      {busy === r.key ? '…' : 'Remove'}
                     </button>
                   </td>
                 </tr>
               ))}
-              {!loading && itMembers.length === 0 && (
-                <tr><td colSpan={3} className="py-12 text-center text-[var(--color-text-muted)]">No IT Team members yet. Add one above.</td></tr>
+              {!loading && roleRows.length === 0 && (
+                <tr><td colSpan={4} className="py-12 text-center text-[var(--color-text-muted)]">No management roles yet. Use “Add Management Role”.</td></tr>
               )}
               {loading && (
-                <tr><td colSpan={3} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
+                <tr><td colSpan={4} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
               )}
             </tbody>
           </table>
