@@ -60,7 +60,7 @@ function NavLink({ href, label, icon, exact, onNavigate }) {
 }
 
 export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
-  const admin = role !== 'employee';
+  const admin = role === 'admin' || role === 'superadmin';
   return (
     <nav className="flex-1 w-full flex flex-col items-center min-h-0 py-2">
       {/* Scrollable menu items, vertically centered in the rail (my-auto centers

@@ -18,6 +18,14 @@ export default function TeamsPanel() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // IT Team role assignment.
+  const [itUid, setItUid] = useState('');
+  const [itBusy, setItBusy] = useState('');
+
+  const roleOf = (e) => String(e.role || '').toUpperCase();
+  const itMembers = employees.filter((e) => roleOf(e) === 'IT_TEAM');
+  const assignableToIt = employees.filter((e) => roleOf(e) === 'EMPLOYEE');
+
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
   const load = useCallback(async () => {
@@ -101,10 +109,39 @@ export default function TeamsPanel() {
     }
   };
 
+  // Grant ('IT_TEAM') or revoke ('EMPLOYEE') the IT Team role for a user.
+  const setItRole = async (uid, role) => {
+    setItBusy(uid);
+    setError('');
+    try {
+      const res = await fetch(`/api/employees/${encodeURIComponent(uid)}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ role }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setFeedback(role === 'IT_TEAM' ? 'Added to IT Team.' : 'Removed from IT Team.');
+      setTimeout(() => setFeedback(''), 3000);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setItBusy('');
+    }
+  };
+
+  const addToIt = async (e) => {
+    e.preventDefault();
+    if (!itUid) return;
+    await setItRole(itUid, 'IT_TEAM');
+    setItUid('');
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Teams"
+        title="Management"
         subtitle="Create teams, assign a team leader, and group your employees"
         actions={<button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
       />
@@ -166,6 +203,63 @@ export default function TeamsPanel() {
               )}
               {loading && (
                 <tr><td colSpan={4} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* IT Team role — a distinct role from team leadership. */}
+      <div className="flex items-center gap-3 mt-2">
+        <h2 className="text-base font-semibold text-[var(--color-text-main)]">IT Team</h2>
+        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[rgba(150,150,150,0.15)] text-[var(--color-text-muted)]">
+          {itMembers.length} {itMembers.length === 1 ? 'member' : 'members'}
+        </span>
+      </div>
+      <p className="text-xs text-[var(--color-text-muted)] -mt-3">
+        IT Team members manage hardware accessories, can edit employee profiles, and can view (but not decide) asset approvals.
+      </p>
+
+      <form onSubmit={addToIt} className="card flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-xs font-medium text-[var(--color-text-muted)]">Add an employee to the IT Team</label>
+          <select value={itUid} onChange={(e) => setItUid(e.target.value)} className={inputCls}>
+            <option value="">— select employee —</option>
+            {assignableToIt.map((e) => <option key={e.id} value={e.id}>{e.name || e.email}</option>)}
+          </select>
+        </div>
+        <button type="submit" disabled={!itUid || itBusy === itUid} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">
+          {itBusy === itUid ? 'Adding…' : 'Add to IT Team'}
+        </button>
+      </form>
+
+      <div className="card overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[var(--color-text-muted)] text-[11px] uppercase tracking-wider border-b border-[var(--color-card-border)]">
+                <th className="py-3 px-5 font-medium">Member</th>
+                <th className="py-3 px-5 font-medium">Email</th>
+                <th className="py-3 px-5 font-medium text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itMembers.map((m) => (
+                <tr key={m.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.03]">
+                  <td className="py-3.5 px-5 text-[var(--color-text-main)] font-medium">{m.name || '—'}</td>
+                  <td className="py-3.5 px-5 text-[var(--color-text-muted)]">{m.email}</td>
+                  <td className="py-3.5 px-5 text-right">
+                    <button onClick={() => setItRole(m.id, 'EMPLOYEE')} disabled={itBusy === m.id} className="btn-outline py-1 px-3 text-xs text-[var(--color-red)] disabled:opacity-50">
+                      {itBusy === m.id ? '…' : 'Remove'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!loading && itMembers.length === 0 && (
+                <tr><td colSpan={3} className="py-12 text-center text-[var(--color-text-muted)]">No IT Team members yet. Add one above.</td></tr>
+              )}
+              {loading && (
+                <tr><td colSpan={3} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
               )}
             </tbody>
           </table>

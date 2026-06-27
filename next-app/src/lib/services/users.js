@@ -170,6 +170,36 @@ export async function updateEmployee(
   return { ok: true, ...updates };
 }
 
+// Assign/clear the IT Team role. Restricted to toggling between EMPLOYEE and
+// IT_TEAM — it never elevates to (or demotes) ADMIN/SUPER_ADMIN, which are
+// provisioned through their own dedicated flows. Updates the user doc, the
+// Firebase custom claims, and the cross-org user index so all three agree. The
+// LexDesk session JWT carries the role from login, so the change takes effect
+// when the user next signs in.
+const ASSIGNABLE_ROLES = new Set(['EMPLOYEE', 'IT_TEAM']);
+
+export async function setEmployeeRole(uid, role, orgId) {
+  const next = String(role || '').toUpperCase();
+  if (!ASSIGNABLE_ROLES.has(next)) throw Object.assign(new Error('invalid_role'), { status: 400 });
+  const { auth, db } = firebaseAdmin();
+  const ref = db.doc(Paths.user(orgId, uid));
+  const snap = await ref.get();
+  if (!snap.exists) throw Object.assign(new Error('not_found'), { status: 404 });
+  const data = snap.data() ?? {};
+  const current = String(data.role || '').toUpperCase();
+  if (current === 'ADMIN' || current === 'SUPER_ADMIN') {
+    throw Object.assign(new Error('cannot_change_admin_role'), { status: 403 });
+  }
+  const email = data.email ?? '';
+  await ref.update({ role: next });
+  try {
+    await auth.setCustomUserClaims(uid, { role: next, orgId, email });
+    await auth.revokeRefreshTokens(uid);
+  } catch { /* claims are best-effort; the Firestore role is the source of truth at login */ }
+  await db.doc(Paths.userIndex(uid)).set({ orgId, role: next, email }, { merge: true });
+  return { ok: true, role: next };
+}
+
 export async function deleteEmployee(uid, orgId) {
   const { auth, db } = firebaseAdmin();
   const userRef = db.doc(Paths.user(orgId, uid));

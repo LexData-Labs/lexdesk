@@ -17,6 +17,7 @@ export {
   getEmployee,
   createEmployee,
   setEmployeeTeam,
+  setEmployeeRole,
   updateEmployee,
   deleteEmployee,
   resetUserPassword,

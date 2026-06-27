@@ -7,7 +7,7 @@ import TeamsPanel from '@/components/people/TeamsPanel';
 // Employees and Teams now live in one "People" section as two tabs.
 const TABS = [
   { key: 'employees', label: 'Employees', Panel: EmployeesPanel },
-  { key: 'teams', label: 'Teams', Panel: TeamsPanel },
+  { key: 'teams', label: 'Management', Panel: TeamsPanel },
 ];
 
 // Read the initial tab from ?tab= so the old per-page routes can deep-link here.
