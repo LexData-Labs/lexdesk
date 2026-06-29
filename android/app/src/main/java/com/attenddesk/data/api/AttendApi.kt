@@ -76,6 +76,9 @@ interface AttendApi {
     @GET("notices") suspend fun notices(): NoticeListResponse
     @GET("me/team-summary") suspend fun teamSummary(): TeamSummaryResponse
 
+    // All-employees attendance roster (today in/out + 7-day counts). Any signed-in user.
+    @GET("attendance") suspend fun viewAttendance(): TeamSummaryResponse
+
     // Manager approval queues
     @GET("manage/leave") suspend fun manageLeave(@Query("status") status: String? = "pending"): LeaveManageResponse
     @GET("manage/asset") suspend fun manageAsset(@Query("status") status: String? = "pending"): AssetListResponse

@@ -17,7 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EditCalendar
-import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.material.icons.outlined.PhonelinkRing
 import androidx.compose.material.icons.outlined.QrCodeScanner
@@ -78,14 +77,13 @@ fun AttendanceTab(
 
     val actions = buildList {
         add(ModuleItem("My Attendance", Icons.Outlined.CalendarMonth, onClick = { onNavigate(Routes.MY_ATTENDANCE) }))
-        add(ModuleItem("View Attendance", Icons.Outlined.ListAlt, onClick = { onNavigate(Routes.MY_ATTENDANCE) }))
+        add(ModuleItem("View Attendance", Icons.Outlined.ListAlt, onClick = { onNavigate(Routes.TEAM) }))
         add(ModuleItem("QR / Face Att.", Icons.Outlined.QrCodeScanner, onClick = { onNavigate(Routes.CHECK_IN) }))
         add(ModuleItem("Recon. Application", Icons.Outlined.EditCalendar, onClick = { onNavigate(Routes.RECON) }))
         add(ModuleItem("Remote Attendance", Icons.Outlined.PhonelinkRing, onClick = { onNavigate(Routes.REMOTE) }))
         if (isManager) {
             add(ModuleItem("Recon. Approval", Icons.Outlined.RuleFolder, onClick = { onNavigate(Routes.approvals(2)) }))
             add(ModuleItem("Remote Att. Approval", Icons.Outlined.TaskAlt, onClick = { onNavigate(Routes.approvals(3)) }))
-            add(ModuleItem("Subordinates", Icons.Outlined.Groups, onClick = { onNavigate(Routes.TEAM) }))
         }
     }
 
@@ -136,7 +134,7 @@ fun AttendanceTab(
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Your last 7 days. Team summaries arrive once subordinate views are enabled.",
+                        "Your last 7 days. See everyone's in/out in View Attendance.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
