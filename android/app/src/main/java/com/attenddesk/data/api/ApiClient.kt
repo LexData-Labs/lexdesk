@@ -16,6 +16,7 @@ object ApiClient {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        coerceInputValues = true
     }
 
     fun build(baseUrl: String): AttendApi {
