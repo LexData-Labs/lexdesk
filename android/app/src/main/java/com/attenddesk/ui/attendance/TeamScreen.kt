@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -31,12 +30,10 @@ import androidx.compose.ui.unit.dp
 import com.attenddesk.AppContainer
 import com.attenddesk.data.api.TeamMemberSummaryDto
 import com.attenddesk.data.api.TeamSummaryResponse
-import com.attenddesk.ui.components.ChipTone
 import com.attenddesk.ui.components.EmptyState
 import com.attenddesk.ui.components.GradientHeader
 import com.attenddesk.ui.components.LoadingDots
 import com.attenddesk.ui.components.SectionCard
-import com.attenddesk.ui.components.StatusChip
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,12 +69,6 @@ fun TeamScreen(container: AppContainer, onBack: () -> Unit) {
 private fun MemberCard(m: TeamMemberSummaryDto) {
     SectionCard {
         Text(m.name.ifBlank { m.email }, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            StatusChip(text = "On-time ${m.onTime}", tone = ChipTone.Success, showDot = false)
-            StatusChip(text = "Late ${m.late}", tone = ChipTone.Warn, showDot = false)
-            StatusChip(text = "Absent ${m.absent}", tone = ChipTone.Muted, showDot = false)
-        }
         Spacer(Modifier.height(6.dp))
         Text(
             "Today · in ${m.todayIn ?: "—"} · out ${m.todayOut ?: "—"}",

@@ -14,6 +14,12 @@ export async function GET(request) {
   try { user = await getMobileUser(request); } catch (e) { return mobileAuthError(e); }
   try {
     const { employees } = await getEmployees(user.orgId);
+    // The attendance board lists employees only — exclude org admins/super-admins
+    // (they don't punch in and shouldn't appear in the roster).
+    const staff = employees.filter((e) => {
+      const r = String(e.role ?? '').toUpperCase();
+      return r !== 'ADMIN' && r !== 'SUPER_ADMIN' && r !== 'SUPERADMIN';
+    });
 
     // Bound the fetch to the trailing window so the 1000-event cap reflects the
     // 7-day window instead of silently truncating older days for a busy org
@@ -25,7 +31,7 @@ export async function GET(request) {
     const last7 = lastSevenDays(Date.now());
     const byUid = indexEventsByUid(events);
 
-    const members = employees.map((p) => ({
+    const members = staff.map((p) => ({
       uid: p.id,
       name: p.name || p.email || '',
       email: p.email || '',
