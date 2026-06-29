@@ -172,8 +172,8 @@ export function fmtTime(ms) {
 export const onlyEmployees = (employees) =>
   (employees || []).filter((e) => String(e.role || '').toUpperCase() === 'EMPLOYEE');
 
-// Weekly day(s) off (0=Sun … 6=Sat). The office works Sat–Thu, so Friday is off.
-export const WEEKLY_OFF = [5];
+// Weekly day(s) off (0=Sun … 6=Sat). Friday (5) and Saturday (6) are the weekend.
+export const WEEKLY_OFF = [5, 6];
 
 // The custom holiday (if any) whose inclusive [fromDay,toDay] range covers dayKey.
 export function holidayCovers(holidays, dayKey) {
@@ -191,6 +191,15 @@ export function approvedLeaveCovers(leave, dayKey) {
     if (r.status === 'approved' && r.fromDay && r.toDay && r.fromDay <= dayKey && dayKey <= r.toDay) {
       return r;
     }
+  }
+  return null;
+}
+
+// The approved remote-work request (if any) for dayKey. Remote requests are a
+// single `day`, unlike leave's [fromDay,toDay] range.
+export function approvedRemoteCovers(remote, dayKey) {
+  for (const r of remote || []) {
+    if (r.status === 'approved' && r.day === dayKey) return r;
   }
   return null;
 }
@@ -227,13 +236,14 @@ export function approvedLeaveDays(leave, holidays, year, opts = {}) {
 // (Friday/custom) → approved leave → future/today/missed.
 export function employeeCalendarMonth(events, leave, holidays, year, month, opts = {}) {
   const weeklyOff = opts.weeklyOff || WEEKLY_OFF;
+  const remote = opts.remote || [];
   const canon = canonicalDays(events);
   const todayKey = bdDateKey(new Date());
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstWeekday = new Date(year, month, 1).getDay();
   const mm = String(month + 1).padStart(2, '0');
   const days = {};
-  const counts = { ontime: 0, late: 0, holiday: 0, leave: 0, missed: 0 };
+  const counts = { ontime: 0, late: 0, holiday: 0, leave: 0, missed: 0, remote: 0 };
   for (let d = 1; d <= daysInMonth; d++) {
     const key = `${year}-${mm}-${String(d).padStart(2, '0')}`;
     const dow = new Date(year, month, d).getDay();
@@ -244,9 +254,14 @@ export function employeeCalendarMonth(events, leave, holidays, year, month, opts
       status = ci.isLate ? 'late' : 'ontime';
     } else {
       const hol = holidayCovers(holidays, key);
+      const rem = approvedRemoteCovers(remote, key);
       if (hol || weeklyOff.includes(dow)) {
         status = 'holiday';
         meta.name = hol?.name || 'Weekly off';
+      } else if (rem) {
+        // Approved remote work counts as present (remotely) for the day.
+        status = 'remote';
+        meta.subject = rem.reason || 'Remote';
       } else {
         const lv = approvedLeaveCovers(leave, key);
         if (lv) {

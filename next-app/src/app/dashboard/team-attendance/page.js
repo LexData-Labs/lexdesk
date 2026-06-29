@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import MonthNav from '@/components/MonthNav';
-import MonthCalendar from '@/components/MonthCalendar';
+import KpiCard from '@/components/KpiCard';
+import Avatar from '@/components/Avatar';
 import {
   perEmployeeStats,
   employeeCalendarMonth,
   eventsForUser,
+  canonicalDays,
+  hhmmInOfficeTz,
   isLateCheckIn,
   fmtTime,
   inBdMonth,
@@ -21,10 +24,41 @@ const FILTERS = [
 ];
 const PAGE_SIZE = 25;
 
+const initials = (name) =>
+  (name || '').trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '?';
+
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+// Calendar-matrix colors, aligned with MonthCalendar / the app palette.
+const MATRIX_STYLE = {
+  ontime: { bg: 'rgba(34,197,94,0.32)', border: 'rgba(34,197,94,0.55)' },
+  late: { bg: 'rgba(234,179,8,0.32)', border: 'rgba(234,179,8,0.6)' },
+  holiday: { bg: 'rgba(85,148,248,0.30)', border: 'rgba(85,148,248,0.55)' },
+  leave: { bg: 'rgba(239,68,68,0.30)', border: 'rgba(239,68,68,0.55)' },
+  missed: { bg: 'rgba(174,61,99,0.32)', border: 'rgba(174,61,99,0.55)' },
+  today: { bg: 'rgba(150,150,150,0.14)', border: 'rgba(150,150,150,0.5)' },
+  future: { bg: 'transparent', border: 'rgba(150,150,150,0.18)' },
+};
+const WEEKDAY_INITIAL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+const MATRIX_LEGEND = [
+  { key: 'ontime', label: 'On-time' },
+  { key: 'late', label: 'Late' },
+  { key: 'leave', label: 'Leave' },
+  { key: 'missed', label: 'Missed' },
+  { key: 'holiday', label: 'Holiday / off' },
+];
+
+
 // Team lead's view of their members' attendance: month summary table, a
 // per-member calendar, and a team-scoped event log. Leadership is enforced
 // server-side by /api/team/attendance — this page just renders what it gets.
 export default function TeamAttendancePage() {
+  const [tab, setTab] = useState('members'); // 'members' | 'attendance'
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
   const [events, setEvents] = useState([]);
   const [members, setMembers] = useState([]);
@@ -54,6 +88,11 @@ export default function TeamAttendancePage() {
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberErr, setMemberErr] = useState('');
   const [memberCreated, setMemberCreated] = useState(null); // { email, temporaryPassword }
+  // Edit member profile (name, employeeId) via the card's ⋮ menu.
+  const [editTarget, setEditTarget] = useState(null); // the member being edited
+  const [editForm, setEditForm] = useState({ name: '', employeeId: '' });
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -111,19 +150,51 @@ export default function TeamAttendancePage() {
     [members, stats],
   );
 
-  // Effective selection is DERIVED: falls back to the first member when
-  // nothing is selected yet or the roster changed under a stale selection.
+  // Team-level roll-up for the summary cards (this month).
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (a, m) => ({
+          present: a.present + (m.presentDays || 0),
+          late: a.late + (m.lateDays || 0),
+          onTime: a.onTime + (m.onTimeDays || 0),
+        }),
+        { present: 0, late: 0, onTime: 0 },
+      ),
+    [rows],
+  );
+
+  // Full team × day matrix for the calendar grid (one row per member).
+  const daysInMonth = useMemo(() => new Date(ym.y, ym.m + 1, 0).getDate(), [ym]);
+  const matrix = useMemo(() => {
+    const mm = String(ym.m + 1).padStart(2, '0');
+    return rows.map((m) => {
+      const evs = eventsForUser(monthEvents, m.id);
+      const memberLeave = (leave || []).filter((r) => String(r.uid) === String(m.id));
+      const cal = employeeCalendarMonth(evs, memberLeave, holidays, ym.y, ym.m);
+      const canon = canonicalDays(evs);
+      const cells = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const day = cal.days[d] || { status: 'future' };
+        const key = `${ym.y}-${mm}-${String(d).padStart(2, '0')}`;
+        const ci = canon[key]?.firstCheckIn;
+        cells.push({
+          d,
+          status: day.status,
+          time: day.status === 'late' && ci ? hhmmInOfficeTz(ci.ts) : null,
+          tip: day.name || day.subject || day.status,
+          dow: new Date(ym.y, ym.m, d).getDay(),
+        });
+      }
+      return { member: m, cells };
+    });
+  }, [rows, monthEvents, leave, holidays, ym, daysInMonth]);
+
+  // Effective selection drives the manual-attendance modal's default member.
   const effectiveUid = useMemo(
     () => (members.some((m) => m.id === selectedUid) ? selectedUid : members[0]?.id || ''),
     [members, selectedUid],
   );
-
-  const selected = useMemo(() => members.find((m) => m.id === effectiveUid) || null, [members, effectiveUid]);
-  const selectedCal = useMemo(() => {
-    if (!effectiveUid) return null;
-    const memberLeave = (leave || []).filter((r) => String(r.uid) === String(effectiveUid));
-    return employeeCalendarMonth(eventsForUser(monthEvents, effectiveUid), memberLeave, holidays, ym.y, ym.m);
-  }, [effectiveUid, monthEvents, leave, holidays, ym]);
 
   // Event log — mirrors the admin attendance page, scoped to this team+month.
   const sorted = useMemo(
@@ -255,6 +326,36 @@ export default function TeamAttendancePage() {
     setMemberErr('');
   };
 
+  const openEdit = (m) => {
+    setEditErr('');
+    setEditForm({ name: m.name || '', employeeId: m.employeeId || '' });
+    setEditTarget(m);
+  };
+  const closeEdit = () => { setEditTarget(null); setEditErr(''); };
+
+  const submitEdit = async (e) => {
+    e.preventDefault();
+    setEditErr('');
+    if (!editForm.name.trim()) { setEditErr('Name is required.'); return; }
+    setEditBusy(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/team/member/${editTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: editForm.name.trim(), employeeId: editForm.employeeId.trim() || null }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setEditTarget(null);
+      await load();
+    } catch (e2) {
+      setEditErr(e2.message);
+    } finally {
+      setEditBusy(false);
+    }
+  };
+
   const addInputCls =
     'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
 
@@ -265,17 +366,38 @@ export default function TeamAttendancePage() {
         subtitle={isLeader ? `${members.length} team member${members.length === 1 ? '' : 's'}` : 'Your team at a glance'}
         actions={
           <div className="flex items-center gap-2">
-            <MonthNav value={ym} onChange={setYm} />
-            {isLeader && (
+            {(tab === 'attendance' || tab === 'activity') && <MonthNav value={ym} onChange={setYm} />}
+            {isLeader && tab === 'members' && (
               <button onClick={openAddMember} className="btn-primary py-2 px-4 text-sm">+ Add member</button>
             )}
-            {isLeader && members.length > 0 && (
+            {isLeader && tab === 'attendance' && members.length > 0 && (
               <button onClick={openAdd} className="btn-outline py-2 px-4 text-sm">+ Add attendance</button>
             )}
             <button onClick={load} className="btn-outline py-2 px-4 text-sm">Refresh</button>
           </div>
         }
       />
+
+      {/* Tab switcher */}
+      <div className="inline-flex p-1 rounded-xl bg-[var(--color-card-bg)] border border-[var(--color-card-border)] gap-1 self-start">
+        {[
+          { key: 'members', label: 'Team Members' },
+          { key: 'attendance', label: 'Team Attendance' },
+          { key: 'activity', label: 'Activity log' },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+              tab === t.key
+                ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowAdd(false)}>
@@ -374,69 +496,195 @@ export default function TeamAttendancePage() {
         </div>
       )}
 
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeEdit}>
+          <form onSubmit={submitEdit} onClick={(e) => e.stopPropagation()} className="card glossy w-full max-w-lg flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Edit member</h2>
+              <button type="button" onClick={closeEdit} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)] -mt-2">Update {editTarget.name || 'this member'}&apos;s profile. Email and team aren&apos;t changed here.</p>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Full name</label>
+              <input type="text" maxLength={120} value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className={addInputCls} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
+              <input type="text" maxLength={50} value={editForm.employeeId} onChange={(e) => setEditForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={addInputCls} />
+            </div>
+            {editErr && <p className="text-sm text-[var(--color-red)]">{editErr}</p>}
+            <div className="flex gap-2 justify-end pt-1">
+              <button type="button" onClick={closeEdit} className="btn-outline py-2 px-4 text-sm">Cancel</button>
+              <button type="submit" disabled={editBusy} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">{editBusy ? 'Saving…' : 'Save changes'}</button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}
 
       {!loading && !isLeader ? (
         <div className="card text-sm text-[var(--color-text-muted)]">
           You don&apos;t lead a team yet. When an admin makes you a team leader, your team&apos;s attendance appears here.
         </div>
-      ) : (
-        <>
-          <div className="card overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-[var(--color-text-muted)] text-xs border-b border-[var(--color-card-border)]">
-                    <th className="py-3 px-4 font-medium">Member</th>
-                    <th className="py-3 px-4 font-medium">Team</th>
-                    <th className="py-3 px-4 font-medium">Present</th>
-                    <th className="py-3 px-4 font-medium">Late</th>
-                    <th className="py-3 px-4 font-medium">On time</th>
-                    <th className="py-3 px-4 font-medium">Last check-in</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading && !rows.length && (
-                    <tr><td colSpan={6} className="py-8 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
-                  )}
-                  {!loading && rows.length === 0 && (
-                    <tr><td colSpan={6} className="py-8 text-center text-[var(--color-text-muted)]">No members in your team yet.</td></tr>
-                  )}
-                  {rows.map((m) => (
-                    <tr
-                      key={m.id}
-                      onClick={() => setSelectedUid(m.id)}
-                      className={`border-t border-[var(--color-card-border)] cursor-pointer hover:bg-white/[0.02] ${
-                        m.id === effectiveUid ? 'bg-[rgba(150,150,150,0.08)]' : ''
-                      }`}
-                    >
-                      <td className="py-2.5 px-4">
-                        <div className="text-[var(--color-text-main)]">{m.name || '—'}</div>
-                        <div className="text-xs text-[var(--color-text-muted)]">{m.email}</div>
-                      </td>
-                      <td className="py-2.5 px-4 text-xs text-[var(--color-text-muted)]">{m.teamName || '—'}</td>
-                      <td className="py-2.5 px-4 text-[var(--color-green)]">{m.presentDays}</td>
-                      <td className="py-2.5 px-4 text-[var(--color-yellow)]">{m.lateDays}</td>
-                      <td className="py-2.5 px-4 text-[var(--color-text-main)]">{m.onTimeDays}</td>
-                      <td className="py-2.5 px-4 whitespace-nowrap text-xs text-[var(--color-text-muted)]">
-                        {m.lastCheckIn ? fmtTime(m.lastCheckIn) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      ) : tab === 'members' ? (
+        <div className="flex flex-col gap-4">
+          {loading && !rows.length && (
+            <div className="card text-sm text-[var(--color-text-muted)]">Loading…</div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {rows.map((m) => (
+              <div key={m.id} className="card relative flex flex-col items-center text-center !p-0 overflow-hidden">
+                {/* ⋮ menu — edit this member's profile */}
+                <button
+                  type="button"
+                  onClick={() => openEdit(m)}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)] transition-colors"
+                  title="Edit profile"
+                  aria-label={`Edit ${m.name || 'member'}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+                </button>
+
+                {/* Avatar + name + role */}
+                <div className="flex flex-col items-center pt-7 pb-4 px-4">
+                  <Avatar image={m.photoUrl} initials={initials(m.name)} alt={m.name} className="w-16 h-16 text-base font-bold ring-4 ring-[var(--color-card-border)]" />
+                  <h3 className="mt-3 text-sm font-semibold text-[var(--color-text-main)]">{m.name || '—'}</h3>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{m.teamName || 'Team member'}</p>
+                </div>
+
+                {/* Contact */}
+                <div className="w-full px-5 py-3 flex flex-col gap-2 text-xs border-t border-[var(--color-card-border)]">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+                    <span className="truncate text-[var(--color-text-main)]">{m.email || '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="4" /><path d="M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8" /></svg>
+                    <span className="truncate text-[var(--color-text-main)]">{fmtDate(m.birthDate)}</span>
+                  </div>
+                </div>
+
+                {/* Employee ID / joining — tinted footer (team shown above) */}
+                <div className="w-full px-5 py-4 flex flex-col gap-2 text-xs" style={{ background: 'var(--color-accent-soft)' }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[var(--color-text-muted)]">Employee ID</span>
+                    <span className="font-semibold text-[var(--color-text-main)] font-mono truncate">{m.employeeId || '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[var(--color-text-muted)]">Date of Joining</span>
+                    <span className="font-semibold text-[var(--color-text-main)]">{fmtDate(m.joiningDate)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {!loading && rows.length === 0 && (
+            <p className="text-sm text-[var(--color-text-muted)]">No members in your team yet — add your first one above.</p>
+          )}
+        </div>
+      ) : tab === 'attendance' ? (
+        <div className="flex flex-col gap-6">
+          {/* Month roll-up — quick visual read before the matrix. */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard label="Team members" value={rows.length} color="purple" />
+            <KpiCard
+              label="Present days"
+              value={totals.present}
+              color="green"
+              icon={<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+            />
+            <KpiCard
+              label="On-time days"
+              value={totals.onTime}
+              color="blue"
+              icon={<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth="2" /><path strokeWidth="2" strokeLinecap="round" d="M12 7v5l3 2" /></svg>}
+            />
+            <KpiCard
+              label="Late days"
+              value={totals.late}
+              color="yellow"
+              icon={<svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.3 3.86l-8.1 14A1 1 0 003 19.5h18a1 1 0 00.87-1.5l-8.1-14a1 1 0 00-1.74 0z" /></svg>}
+            />
           </div>
 
-          {selectedCal && (
-            <div>
-              <h2 className="text-base font-semibold text-[var(--color-text-main)] mb-2">
-                {selected?.name || 'Member'} · attendance calendar
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-[var(--color-text-main)]">
+                Attendance calendar · {new Date(ym.y, ym.m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
               </h2>
-              <MonthCalendar cal={selectedCal} loading={loading} />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                {MATRIX_LEGEND.map((l) => (
+                  <span key={l.key} className="flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-3 h-3 rounded-[3px]"
+                      style={{ background: MATRIX_STYLE[l.key].bg, border: `1px solid ${MATRIX_STYLE[l.key].border}` }}
+                    />
+                    <span className="text-[var(--color-text-muted)]">{l.label}</span>
+                  </span>
+                ))}
+              </div>
             </div>
-          )}
-
+            <div className="card p-0 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--color-card-border)]">
+                      <th className="sticky left-0 z-10 bg-[var(--color-card-bg)] text-left px-3 py-2 font-medium text-[var(--color-text-muted)] border-r border-[var(--color-card-border)] min-w-[170px]">
+                        Member
+                      </th>
+                      {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+                        const dow = new Date(ym.y, ym.m, d).getDay();
+                        const off = dow === 5 || dow === 6; // Fri & Sat weekly off
+                        return (
+                          <th key={d} className="px-1 py-1.5 text-center font-medium" style={{ minWidth: 42 }}>
+                            <div className={off ? 'text-[var(--color-blue)]' : 'text-[var(--color-text-main)]'}>{d}</div>
+                            <div className="text-[9px] text-[var(--color-text-muted)]">{WEEKDAY_INITIAL[dow]}</div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.length === 0 && (
+                      <tr>
+                        <td colSpan={daysInMonth + 1} className="py-8 text-center text-[var(--color-text-muted)]">
+                          {loading ? 'Loading…' : 'No members in your team yet.'}
+                        </td>
+                      </tr>
+                    )}
+                    {matrix.map(({ member, cells }) => (
+                      <tr key={member.id} className="border-t border-[var(--color-card-border)]">
+                        <td className="sticky left-0 z-10 bg-[var(--color-card-bg)] px-3 py-1.5 border-r border-[var(--color-card-border)]">
+                          <div className="flex items-center gap-2">
+                            <Avatar image={member.photoUrl} initials={initials(member.name)} alt={member.name} className="w-7 h-7 text-[10px] font-semibold shrink-0" />
+                            <span className="text-[var(--color-text-main)] font-medium truncate max-w-[120px]">{member.name || '—'}</span>
+                          </div>
+                        </td>
+                        {cells.map((c) => {
+                          const st = MATRIX_STYLE[c.status] || MATRIX_STYLE.future;
+                          return (
+                            <td key={c.d} title={c.tip} className="p-0.5 align-middle">
+                              <div
+                                className="rounded-[5px] h-9 flex items-center justify-center text-[9px] font-semibold leading-none text-[var(--color-text-main)] px-0.5 text-center"
+                                style={{ background: st.bg, border: `1px solid ${st.border}` }}
+                              >
+                                {c.time || ''}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          <h2 className="text-base font-semibold text-[var(--color-text-main)]">Activity log · {new Date(ym.y, ym.m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
           <div className="card flex flex-wrap items-center gap-3">
             <input
               type="text"
@@ -510,7 +758,7 @@ export default function TeamAttendancePage() {
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
