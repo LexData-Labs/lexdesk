@@ -236,7 +236,19 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
     });
   }
 
-  const requiredFailed = results.filter((r) => r.required && !r.passed);
+  let requiredFailed = results.filter((r) => r.required && !r.passed);
+  // Web "GPS or office-IP": geo and ip are alternative location proofs. When
+  // both checks are present (web) and at least one is required, EITHER passing
+  // satisfies the location requirement — only block when BOTH fail. Mobile has
+  // no ip result, so it keeps the standard AND behavior.
+  const geoR = results.find((r) => r.name === 'geo');
+  const ipR = results.find((r) => r.name === 'ip');
+  if (geoR && ipR && (geoR.required || ipR.required)) {
+    requiredFailed = requiredFailed.filter((r) => r.name !== 'geo' && r.name !== 'ip');
+    if (!(geoR.passed || ipR.passed)) {
+      requiredFailed.push({ name: 'location', required: true, passed: false });
+    }
+  }
   const allChecksPassed = requiredFailed.length === 0;
 
   const nowHhmm = bdHhmm();
