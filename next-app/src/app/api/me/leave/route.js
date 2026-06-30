@@ -37,7 +37,7 @@ export async function POST(request) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  const { fromDay, toDay, subject, details } = body || {};
+  const { fromDay, toDay, subject, details, leaveType, halfDayPeriod, approvedBy } = body || {};
   if (!fromDay || !toDay || !subject) {
     return NextResponse.json({ error: 'fromDay, toDay and subject are required' }, { status: 400 });
   }
@@ -50,6 +50,9 @@ export async function POST(request) {
       toDay,
       subject,
       details: details || '',
+      leaveType,
+      halfDayPeriod,
+      approvedBy,
     }, user.orgId);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {

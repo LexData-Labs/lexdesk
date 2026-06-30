@@ -22,6 +22,11 @@ export const Paths = {
   holiday: (orgId, id) => `organizations/${orgId}/holidays/${id}`,
   teams: (orgId) => `organizations/${orgId}/teams`,
   team: (orgId, id) => `organizations/${orgId}/teams/${id}`,
+  // IT Team — accessories inventory (counts) and tracking (IP/assignment).
+  accessoryItems: (orgId) => `organizations/${orgId}/accessoryItems`,
+  accessoryItem: (orgId, id) => `organizations/${orgId}/accessoryItems/${id}`,
+  trackingItems: (orgId) => `organizations/${orgId}/trackingItems`,
+  trackingItem: (orgId, id) => `organizations/${orgId}/trackingItems/${id}`,
   assetRequests: (orgId) => `organizations/${orgId}/assetRequests`,
   assetRequest: (orgId, id) => `organizations/${orgId}/assetRequests/${id}`,
   // Coming-soon modules (request→approval + announcements + break events).

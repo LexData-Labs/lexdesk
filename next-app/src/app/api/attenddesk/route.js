@@ -26,8 +26,8 @@ const RESOURCES = {
 export async function GET(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  // Org-wide data is admin-only; employees use the self-scoped /api/me/* routes.
-  if (user.role !== 'admin' && user.role !== 'superadmin') {
+  // Org-wide reads: admins and the IT Team role; employees use /api/me/* routes.
+  if (user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'it_team') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
