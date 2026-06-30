@@ -59,3 +59,18 @@ Override per-build if needed (e.g. emulator against local dev):
 ```sh
 ./gradlew :app:assembleDebug -PattendDeskApiBase=http://10.0.2.2:3000/api/v1 -PadminWebUrl=http://10.0.2.2:3000
 ```
+
+## Distribute the APK
+
+The web landing/register page's "download app" button reads
+`NEXT_PUBLIC_APP_DOWNLOAD_URL`.
+
+1. Attach the APK to a GitHub Release on `LexData-Labs/lexdesk-app` — name the
+   asset **`TeamOS.apk`** and tick **Set as the latest release**.
+2. Use the version-proof permalink (survives future releases as long as the
+   asset stays named `TeamOS.apk` and the release is marked latest):
+   `https://github.com/LexData-Labs/lexdesk-app/releases/latest/download/TeamOS.apk`
+3. Set `NEXT_PUBLIC_APP_DOWNLOAD_URL` to that link in Vercel → **redeploy**
+   (it's a `NEXT_PUBLIC_*`, inlined at build time, so it only updates on a new build).
+4. The repo (or its releases) must be **public** for anonymous downloads.
+
