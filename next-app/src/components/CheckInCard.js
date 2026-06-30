@@ -23,13 +23,16 @@ const REASON_TEXT = {
   liveness_failed: 'Face liveness check failed — try again',
   similarity_below_threshold: "Face didn't match — try again with better lighting",
   bad_embedding_dim: 'Face data mismatch — re-enroll required',
+  ip_not_in_allowlist: 'Not on the office network — check in from the office',
+  office_ip_not_configured: 'Office IP allowlist is empty — ask your admin to set it',
+  missing_ip: 'Could not determine your network IP',
 };
 
 // Captured face embeddings are valid this long before re-verification
 // (mirrors the Android app's 60 s freshness window).
 const FACE_TTL_MS = 60_000;
 
-const CHECK_LABEL = { wifi: 'Wi-Fi', geo: 'Location', qr: 'QR code', face: 'Face' };
+const CHECK_LABEL = { wifi: 'Wi-Fi', geo: 'Location', qr: 'QR code', face: 'Face', ip: 'Office network' };
 
 const GEO_ERROR = {
   1: 'Location permission denied — allow location for this site in your browser settings, then retry.',

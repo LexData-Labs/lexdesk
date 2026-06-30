@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { checkIn } from '@/lib/backend';
+import { clientIpFromHeaders } from '@/lib/ip';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,9 @@ export async function POST(request) {
   }
 
   const payload = { userId: String(user.id), type, lat, lng, accuracyMeters };
+  // Server-derived office-IP signal for the web 'ip' check (mobile never sends
+  // this, so the IP check is web-only). Whitelisted here, never read from body.
+  payload.clientIp = clientIpFromHeaders(request.headers) || '';
   const face = body?.faceEmbeddingB64;
   if (face != null) {
     const validFace =
