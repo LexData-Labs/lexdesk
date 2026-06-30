@@ -14,7 +14,7 @@ function fmtRange(from, to) {
   return from === to ? from : `${from} → ${to}`;
 }
 
-export default function AssetApprovalsPanel() {
+export default function AssetApprovalsPanel({ readOnly = false } = {}) {
   const [requests, setRequests] = useState(null);
   const [status, setStatus] = useState('pending');
   const [error, setError] = useState('');
@@ -114,7 +114,7 @@ export default function AssetApprovalsPanel() {
                   <td className={`py-3 px-4 capitalize ${SUB[r.adminStatus] || ''}`}>{r.adminStatus}</td>
                   <td className={`py-3 px-4 font-semibold capitalize ${SUB[r.status] || ''}`}>{r.status}</td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">
-                    {r.status === 'pending' && r.adminStatus === 'pending' ? (
+                    {!readOnly && r.status === 'pending' && r.adminStatus === 'pending' ? (
                       <div className="flex gap-2 justify-end">
                         <button disabled={busyId === r.id} onClick={() => decide(r.id, 'approved')} className="px-3 py-1 rounded text-xs font-semibold bg-[rgba(34,197,94,0.15)] text-[var(--color-green)] border border-[var(--color-green)] disabled:opacity-50">Approve</button>
                         <button disabled={busyId === r.id} onClick={() => decide(r.id, 'rejected')} className="px-3 py-1 rounded text-xs font-semibold bg-[rgba(239,68,68,0.12)] text-[var(--color-red)] border border-[rgba(239,68,68,0.4)] disabled:opacity-50">Reject</button>

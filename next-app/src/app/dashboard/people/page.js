@@ -4,21 +4,32 @@ import { useState } from 'react';
 import EmployeesPanel from '@/components/people/EmployeesPanel';
 import TeamsPanel from '@/components/people/TeamsPanel';
 
-// Employees and Teams now live in one "People" section as two tabs.
-const TABS = [
+// Employees and Teams now live in one "People" section as two tabs. Management
+// (role assignment) is admin/superadmin only — the IT Team role sees Employees.
+const ALL_TABS = [
   { key: 'employees', label: 'Employees', Panel: EmployeesPanel },
-  { key: 'teams', label: 'Management', Panel: TeamsPanel },
+  { key: 'teams', label: 'Management', Panel: TeamsPanel, adminOnly: true },
 ];
 
+function tabsForRole() {
+  let role = null;
+  if (typeof window !== 'undefined') {
+    try { role = JSON.parse(localStorage.getItem('user') || 'null')?.role ?? null; } catch { role = null; }
+  }
+  const isAdmin = role === 'admin' || role === 'superadmin';
+  return ALL_TABS.filter((t) => !t.adminOnly || isAdmin);
+}
+
 // Read the initial tab from ?tab= so the old per-page routes can deep-link here.
-function initialTab() {
+function initialTab(tabs) {
   if (typeof window === 'undefined') return 'employees';
   const t = new URLSearchParams(window.location.search).get('tab');
-  return TABS.some((x) => x.key === t) ? t : 'employees';
+  return tabs.some((x) => x.key === t) ? t : 'employees';
 }
 
 export default function PeoplePage() {
-  const [tab, setTab] = useState(initialTab);
+  const [TABS] = useState(tabsForRole);
+  const [tab, setTab] = useState(() => initialTab(TABS));
   const active = TABS.find((t) => t.key === tab) || TABS[0];
   const Panel = active.Panel;
 

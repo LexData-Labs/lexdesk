@@ -22,7 +22,7 @@ function leaveTypeLabel(r) {
   return r.leaveType;
 }
 
-export default function LeaveApprovalsPanel() {
+export default function LeaveApprovalsPanel({ readOnly = false } = {}) {
   const [requests, setRequests] = useState(null);
   const [status, setStatus] = useState('pending');
   const [error, setError] = useState('');
@@ -140,7 +140,7 @@ export default function LeaveApprovalsPanel() {
                     {r.decisionNote && <div className="text-xs text-[var(--color-text-muted)] font-normal">{r.decisionNote}</div>}
                   </td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">
-                    {r.status === 'pending' ? (
+                    {!readOnly && r.status === 'pending' ? (
                       <div className="flex gap-2 justify-end">
                         <button
                           disabled={busyId === r.id}

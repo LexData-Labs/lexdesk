@@ -35,10 +35,10 @@ export async function POST(request) {
   try {
     let role;
     let teamId;
-    if (isAdmin(user)) {
-      // Only the system admin (superadmin) may create ADMINs; regular admins
-      // create employees only. (The org admin is provisioned from
-      // /dashboard/organization.)
+    if (isAdmin(user) || user.role === 'it_team') {
+      // Only the system admin (superadmin) may create ADMINs; regular admins and
+      // the IT Team role create employees only. (The org admin is provisioned
+      // from /dashboard/organization.)
       role = body?.role === 'ADMIN' && user.role === 'superadmin' ? 'ADMIN' : 'EMPLOYEE';
       teamId = body?.teamId || null;
     } else {

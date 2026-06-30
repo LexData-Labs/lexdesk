@@ -21,11 +21,12 @@ export async function GET(request) {
   }
 }
 
-// POST: admins only — create a team.
+// POST: admins or the IT Team role — create a team (IT needs this when adding
+// an employee to a department whose team doesn't exist yet).
 export async function POST(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isAdmin(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (!isAdmin(user) && user.role !== 'it_team') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let body;
   try {

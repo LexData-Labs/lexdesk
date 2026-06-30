@@ -8,28 +8,46 @@ import RemoteApprovalsPanel from '@/components/approvals/RemoteApprovalsPanel';
 import ReconApprovalsPanel from '@/components/approvals/ReconApprovalsPanel';
 
 // Each approval type lives in its own tab under the single "Approvals" section.
-const TABS = [
+// Remote/Reconciliation are admin-only; the IT Team role sees Leave + Assets
+// (read-only — see readOnly below).
+const ALL_TABS = [
   { key: 'leave', label: 'Leave Approval', Panel: LeaveApprovalsPanel },
   { key: 'asset', label: 'Assets Approval', Panel: AssetApprovalsPanel },
-  { key: 'remote', label: 'Remote Approval', Panel: RemoteApprovalsPanel },
-  { key: 'recon', label: 'Reconciliation Approval', Panel: ReconApprovalsPanel },
+  { key: 'remote', label: 'Remote Approval', Panel: RemoteApprovalsPanel, adminOnly: true },
+  { key: 'recon', label: 'Reconciliation Approval', Panel: ReconApprovalsPanel, adminOnly: true },
 ];
 
+function viewerRole() {
+  if (typeof window === 'undefined') return null;
+  try { return JSON.parse(localStorage.getItem('user') || 'null')?.role ?? null; } catch { return null; }
+}
+
+function tabsFor(role) {
+  const admin = role === 'admin' || role === 'superadmin';
+  return ALL_TABS.filter((t) => !t.adminOnly || admin);
+}
+
 // Read the initial tab from ?tab= so old per-type routes can deep-link here.
-function initialTab() {
+function initialTab(tabs) {
   if (typeof window === 'undefined') return 'leave';
   const t = new URLSearchParams(window.location.search).get('tab');
-  return TABS.some((x) => x.key === t) ? t : 'leave';
+  return tabs.some((x) => x.key === t) ? t : 'leave';
 }
 
 export default function ApprovalsPage() {
-  const [tab, setTab] = useState(initialTab);
+  const [role] = useState(viewerRole);
+  const readOnly = role === 'it_team'; // IT can see status but not decide.
+  const [TABS] = useState(() => tabsFor(role));
+  const [tab, setTab] = useState(() => initialTab(TABS));
   const active = TABS.find((t) => t.key === tab) || TABS[0];
   const Panel = active.Panel;
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Approvals" subtitle="Review and decide all employee requests in one place" />
+      <PageHeader
+        title="Approvals"
+        subtitle={readOnly ? 'Track leave and asset requests and their status' : 'Review and decide all employee requests in one place'}
+      />
 
       <div className="card flex flex-wrap items-center gap-2">
         {TABS.map((t) => (
@@ -47,7 +65,7 @@ export default function ApprovalsPage() {
         ))}
       </div>
 
-      <Panel />
+      <Panel readOnly={readOnly} />
     </div>
   );
 }

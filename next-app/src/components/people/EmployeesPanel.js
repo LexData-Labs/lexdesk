@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import EmployeeAvatar from '@/components/EmployeeAvatar';
@@ -9,6 +9,9 @@ import { useAttendData } from '@/lib/useAttendData';
 import { perEmployeeStats, fmtTime, onlyEmployees, inBdMonth } from '@/lib/attend';
 
 const PAGE_SIZES = [10, 25, 50];
+// Canonical departments — always offered even before their team doc exists.
+// (IT is a role, not a department, so it's intentionally not listed here.)
+const DEPARTMENTS = ['Engineering', 'Marketing', 'Project'];
 
 const inputCls =
   'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
@@ -30,22 +33,40 @@ export default function EmployeesPanel() {
 
   // Add-employee modal state.
   const [showAdd, setShowAdd] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', email: '', employeeId: '', teamId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
+  const [addForm, setAddForm] = useState({ name: '', email: '', employeeId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const [created, setCreated] = useState(null); // { email, temporaryPassword }
 
   const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
-  useEffect(() => {
+  const loadTeams = useCallback(() => {
     fetch('/api/teams', { headers: authHeader(), cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : { teams: [] }))
       .then((j) => setTeams(j.teams || []))
       .catch(() => setTeams([]));
   }, []);
 
+  useEffect(() => { loadTeams(); }, [loadTeams]);
+
   const leaderUids = useMemo(() => new Set((teams || []).map((t) => String(t.leaderUid)).filter(Boolean)), [teams]);
   const teamNameOf = (e) => e.teamName || (teams.find((t) => t.id === e.teamId)?.name) || null;
+
+  // Department options: the canonical list plus any existing team names, deduped
+  // (case-insensitive) so every department is selectable even before its team
+  // doc has been created.
+  const deptOptions = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const d of [...DEPARTMENTS, ...teams.map((t) => t.name)]) {
+      const name = (d || '').trim();
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) continue;
+      seen.add(key);
+      out.push(name);
+    }
+    return out;
+  }, [teams]);
 
   const monthEvents = useMemo(() => (events || []).filter((e) => inBdMonth(e.timestamp, ym.y, ym.m)), [events, ym]);
   const stats = useMemo(() => perEmployeeStats(monthEvents), [monthEvents]);
@@ -95,6 +116,23 @@ export default function EmployeesPanel() {
     }
     setAdding(true);
     try {
+      // The chosen department maps to a team. Reuse an existing team of that
+      // name, otherwise create it on the fly so the employee is grouped under it.
+      const deptName = addForm.department.trim();
+      let teamId = null;
+      if (deptName) {
+        teamId = teams.find((t) => t.name.toLowerCase() === deptName.toLowerCase())?.id || null;
+        if (!teamId) {
+          const tRes = await fetch('/api/teams', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: JSON.stringify({ name: deptName }),
+          });
+          const tJson = await tRes.json().catch(() => ({}));
+          if (!tRes.ok) throw new Error(tJson.error || 'Could not create the department.');
+          teamId = tJson.id;
+        }
+      }
       const res = await fetch('/api/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -102,9 +140,9 @@ export default function EmployeesPanel() {
           name: addForm.name.trim(),
           email: addForm.email.trim(),
           employeeId: addForm.employeeId.trim() || null,
-          teamId: addForm.teamId || null,
+          teamId: teamId || null,
           designation: addForm.designation.trim() || null,
-          department: addForm.department.trim() || null,
+          department: deptName || null,
           contactNumber: addForm.contactNumber.trim() || null,
           birthDate: addForm.birthDate || null,
           joiningDate: addForm.joiningDate || null,
@@ -114,7 +152,8 @@ export default function EmployeesPanel() {
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       const emp = json.employee || {};
       setCreated({ email: emp.email || addForm.email.trim(), temporaryPassword: emp.temporaryPassword || '' });
-      setAddForm({ name: '', email: '', employeeId: '', teamId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
+      setAddForm({ name: '', email: '', employeeId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
+      loadTeams();
       refresh();
     } catch (err) {
       setAddError(err.message);
@@ -204,7 +243,10 @@ export default function EmployeesPanel() {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
-                    <input type="text" maxLength={80} value={addForm.department} onChange={(e) => setAddForm((f) => ({ ...f, department: e.target.value }))} placeholder="e.g. Engineering" className={inputCls} />
+                    <select value={addForm.department} onChange={(e) => setAddForm((f) => ({ ...f, department: e.target.value }))} className={inputCls}>
+                      <option value="">— select department —</option>
+                      {deptOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-medium text-[var(--color-text-muted)]">Contact number</label>
@@ -218,13 +260,6 @@ export default function EmployeesPanel() {
                     <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of birth</label>
                     <input type="date" value={addForm.birthDate} onChange={(e) => setAddForm((f) => ({ ...f, birthDate: e.target.value }))} className={inputCls} />
                   </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Team</label>
-                  <select value={addForm.teamId} onChange={(e) => setAddForm((f) => ({ ...f, teamId: e.target.value }))} className={inputCls}>
-                    <option value="">— no team —</option>
-                    {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
                 </div>
                 {addError && <p className="text-sm text-[var(--color-red)]">{addError}</p>}
                 <div className="flex gap-2 justify-end pt-1">

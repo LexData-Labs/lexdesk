@@ -3,13 +3,14 @@ import { Paths } from '../paths';
 import { getTeams } from './teams';
 import { setEmployeeRole } from './users';
 
-// Management-role assignment. A "department" is one of a fixed set and is
-// represented as a team (created on demand) so existing team-leader plumbing
-// (approvals, scoping) keeps working. Two assignable roles:
-//   - team_leader: the employee leads the department's team (team.leaderUid)
-//                  and is placed on it. Their account role stays EMPLOYEE.
-//   - it:          the employee is granted the IT_TEAM account role.
-export const DEPARTMENTS = ['Engineering', 'Marketing', 'Project', 'IT'];
+// Management-role assignment. Two assignable roles:
+//   - team_leader: tied to a department. A department is represented as a team
+//                  (created on demand) so existing team-leader plumbing
+//                  (approvals, scoping) keeps working. The employee is placed on
+//                  the department's team and set as its leader; their account
+//                  role stays EMPLOYEE.
+//   - it:          a standalone account role (IT_TEAM), not tied to a department.
+export const DEPARTMENTS = ['Engineering', 'Marketing', 'Project'];
 const ROLES = ['team_leader', 'it'];
 
 async function findOrCreateDeptTeam(db, orgId, department) {
@@ -28,7 +29,6 @@ async function findOrCreateDeptTeam(db, orgId, department) {
 
 export async function assignManagementRole(orgId, { uid, department, role }) {
   if (!uid) throw Object.assign(new Error('Select an employee'), { status: 400 });
-  if (!DEPARTMENTS.includes(department)) throw Object.assign(new Error('Pick a valid department'), { status: 400 });
   if (!ROLES.includes(role)) throw Object.assign(new Error('Pick a valid role'), { status: 400 });
 
   const { db } = firebaseAdmin();
@@ -41,14 +41,12 @@ export async function assignManagementRole(orgId, { uid, department, role }) {
     throw Object.assign(new Error('cannot_change_admin_role'), { status: 403 });
   }
 
-  const teamId = await findOrCreateDeptTeam(db, orgId, department);
-  const teamSnap = await db.doc(Paths.team(orgId, teamId)).get();
-  const teamName = teamSnap.data()?.name ?? department;
-
-  // Both roles place the employee on the chosen department for grouping.
-  await userRef.update({ department, teamId, teamName });
-
   if (role === 'team_leader') {
+    if (!DEPARTMENTS.includes(department)) throw Object.assign(new Error('Pick a valid department'), { status: 400 });
+    const teamId = await findOrCreateDeptTeam(db, orgId, department);
+    const teamSnap = await db.doc(Paths.team(orgId, teamId)).get();
+    const teamName = teamSnap.data()?.name ?? department;
+    await userRef.update({ department, teamId, teamName });
     await db.doc(Paths.team(orgId, teamId)).set(
       { leaderUid: uid, leaderName: data.name ?? null },
       { merge: true },
@@ -56,7 +54,7 @@ export async function assignManagementRole(orgId, { uid, department, role }) {
     return { ok: true, role: 'team_leader', department };
   }
 
-  // IT role — grant the IT_TEAM account role (also syncs claims + index).
+  // IT — a standalone role, not tied to a department.
   await setEmployeeRole(uid, 'IT_TEAM', orgId);
-  return { ok: true, role: 'it', department };
+  return { ok: true, role: 'it' };
 }

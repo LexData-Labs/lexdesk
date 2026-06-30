@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader';
 const inputCls =
   'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
 
-const DEPARTMENTS = ['Engineering', 'Marketing', 'Project', 'IT'];
+const DEPARTMENTS = ['Engineering', 'Marketing', 'Project'];
 const ROLE_OPTIONS = [
   { key: 'team_leader', label: 'Team Leader' },
   { key: 'it', label: 'IT' },
@@ -23,6 +23,7 @@ export default function TeamsPanel() {
   // "Add Management Role" modal.
   const [showAdd, setShowAdd] = useState(false);
   const [empQuery, setEmpQuery] = useState('');
+  const [empFocused, setEmpFocused] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [department, setDepartment] = useState('');
   const [role, setRole] = useState('team_leader');
@@ -57,19 +58,19 @@ export default function TeamsPanel() {
 
   const roleOf = (e) => String(e.role || '').toUpperCase();
 
-  // Only regular employees can be given a management role (not admins, and not
-  // people who already hold one).
-  const ledUids = useMemo(() => new Set(teams.filter((t) => t.leaderUid).map((t) => String(t.leaderUid))), [teams]);
+  // Every employee can be picked for a management role except org admins
+  // (the backend also refuses to change admin/superadmin accounts).
   const assignable = useMemo(
-    () => employees.filter((e) => roleOf(e) === 'EMPLOYEE' && !ledUids.has(String(e.id))),
-    [employees, ledUids],
+    () => employees.filter((e) => { const r = roleOf(e); return r !== 'ADMIN' && r !== 'SUPER_ADMIN'; }),
+    [employees],
   );
+  // Empty query → suggest the whole list; typing filters it.
   const suggestions = useMemo(() => {
     const q = empQuery.trim().toLowerCase();
-    if (!q) return [];
-    return assignable
-      .filter((e) => (e.name || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q))
-      .slice(0, 8);
+    const base = q
+      ? assignable.filter((e) => (e.name || '').toLowerCase().includes(q) || (e.email || '').toLowerCase().includes(q))
+      : assignable;
+    return base.slice(0, 50);
   }, [assignable, empQuery]);
 
   // Unified view of who currently holds a management role.
@@ -86,6 +87,7 @@ export default function TeamsPanel() {
   const closeModal = () => {
     setShowAdd(false);
     setEmpQuery('');
+    setEmpFocused(false);
     setSelectedEmp(null);
     setDepartment('');
     setRole('team_leader');
@@ -96,7 +98,7 @@ export default function TeamsPanel() {
     e.preventDefault();
     setFormError('');
     if (!selectedEmp) { setFormError('Select an employee.'); return; }
-    if (!department) { setFormError('Select a department.'); return; }
+    if (role === 'team_leader' && !department) { setFormError('Select a department.'); return; }
     setSaving(true);
     try {
       const res = await fetch('/api/management/role', {
@@ -188,39 +190,33 @@ export default function TeamsPanel() {
                       type="text"
                       value={empQuery}
                       onChange={(e) => setEmpQuery(e.target.value)}
-                      placeholder="Type a name to search…"
+                      onFocus={() => setEmpFocused(true)}
+                      onBlur={() => setTimeout(() => setEmpFocused(false), 150)}
+                      placeholder="Search or select an employee…"
                       className={`${inputCls} w-full`}
                       autoFocus
                     />
-                    {suggestions.length > 0 && (
+                    {empFocused && (
                       <div className="absolute z-10 mt-1 w-full card p-1 max-h-56 overflow-y-auto">
                         {suggestions.map((e) => (
                           <button
                             type="button"
                             key={e.id}
-                            onClick={() => { setSelectedEmp(e); setEmpQuery(''); }}
+                            onMouseDown={(ev) => ev.preventDefault()}
+                            onClick={() => { setSelectedEmp(e); setEmpQuery(''); setEmpFocused(false); }}
                             className="w-full text-left px-3 py-2 rounded hover:bg-white/[0.05]"
                           >
                             <div className="text-sm text-[var(--color-text-main)]">{e.name || '—'}</div>
                             <div className="text-xs text-[var(--color-text-muted)]">{e.email}</div>
                           </button>
                         ))}
+                        {suggestions.length === 0 && (
+                          <div className="px-3 py-2 text-xs text-[var(--color-text-muted)]">No matching employees.</div>
+                        )}
                       </div>
-                    )}
-                    {empQuery.trim() && suggestions.length === 0 && (
-                      <div className="absolute z-10 mt-1 w-full card p-3 text-xs text-[var(--color-text-muted)]">No matching employees.</div>
                     )}
                   </div>
                 )}
-              </div>
-
-              {/* Department */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
-                <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls} required>
-                  <option value="">— select department —</option>
-                  {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
               </div>
 
               {/* Role */}
@@ -230,6 +226,17 @@ export default function TeamsPanel() {
                   {ROLE_OPTIONS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
                 </select>
               </div>
+
+              {/* Department — only a team leader is tied to a department. */}
+              {role === 'team_leader' && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
+                  <select value={department} onChange={(e) => setDepartment(e.target.value)} className={inputCls}>
+                    <option value="">— select department —</option>
+                    {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              )}
 
               {formError && <p className="text-sm text-[var(--color-red)]">{formError}</p>}
 

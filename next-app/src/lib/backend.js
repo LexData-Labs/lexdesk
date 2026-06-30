@@ -31,6 +31,8 @@ export { getLeaveRequests, submitLeave, decideLeave } from './services/leave';
 export { getAssetRequests, createAssetRequest, decideAssetRequest } from './services/assets';
 export { getTeams, createTeam, updateTeam, deleteTeam, listLedTeamMemberUids, isManager, canManageUser, getLineManager } from './services/teams';
 export { assignManagementRole, DEPARTMENTS } from './services/management';
+export { getAccessories, createAccessory, deleteAccessory } from './services/accessories';
+export { getTracking, createTracking, deleteTracking } from './services/tracking';
 export { getReconRequests, submitRecon, decideRecon, getRecon } from './services/recon';
 export { getRemoteRequests, submitRemote, decideRemote, getRemote } from './services/remote';
 export { listNotices, createNotice, deleteNotice } from './services/notices';
