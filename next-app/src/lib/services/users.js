@@ -38,6 +38,15 @@ function userRow(id, data, photoUrl) {
     faceEnrolledAt: data.faceEnrolledAt?.toDate?.()?.toISOString() ?? null,
     createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
     photoUrl: photoUrl ?? null,
+    // Login device cap + per-employee IP allowlist (see services/loginGuard.js).
+    loginDevices: (data.loginDevices || []).map((d) => ({
+      deviceId: d.deviceId,
+      name: d.name ?? null,
+      platform: d.platform ?? null,
+      firstSeenAt: d.firstSeenAt ?? null,
+      lastSeenAt: d.lastSeenAt ?? null,
+    })),
+    loginIpAllowlist: data.loginIpAllowlist || [],
   };
 }
 
