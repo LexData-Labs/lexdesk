@@ -185,7 +185,7 @@ export async function updateEmployee(
 // Firebase custom claims, and the cross-org user index so all three agree. The
 // LexDesk session JWT carries the role from login, so the change takes effect
 // when the user next signs in.
-const ASSIGNABLE_ROLES = new Set(['EMPLOYEE', 'IT_TEAM']);
+const ASSIGNABLE_ROLES = new Set(['EMPLOYEE', 'IT_TEAM', 'DEV']);
 
 export async function setEmployeeRole(uid, role, orgId) {
   const next = String(role || '').toUpperCase();

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'it_team') {
+  if (user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'dev' && user.role !== 'it_team') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const sp = new URL(request.url).searchParams;

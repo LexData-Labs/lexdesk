@@ -4,7 +4,7 @@ import { getEmployee, resetUserDevices, writeAuditLog } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 
-const isAdmin = (user) => user.role === 'admin' || user.role === 'superadmin';
+const isAdmin = (user) => user.role === 'admin' || user.role === 'superadmin' || user.role === 'dev';
 
 // POST: admins only — clear an employee's registered login devices so they can
 // sign in on a new one (the login device cap is 2). Employee / IT-team targets

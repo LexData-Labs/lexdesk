@@ -245,13 +245,13 @@ export default function EmployeeProfilePage() {
             <Link href="/dashboard/people?tab=employees" className="btn-outline py-1.5 px-3 text-sm">Back</Link>
             <button onClick={refresh} className="btn-outline py-1.5 px-3 text-sm">Refresh</button>
             {employee && String(employeeId) !== String(currentUserId) &&
-              (String(employee.role || '').toUpperCase() === 'EMPLOYEE' ||
+              (['EMPLOYEE', 'DEV'].includes(String(employee.role || '').toUpperCase()) ||
                 (String(employee.role || '').toUpperCase() === 'ADMIN' && currentUserRole === 'superadmin')) && (
               <button onClick={() => { setResetResult(null); setResetError(''); setResetOpen(true); }} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-purple)] border-[rgba(150,150,150,0.3)] hover:bg-[rgba(150,150,150,0.05)]">
                 Reset password
               </button>
             )}
-            {employee && String(employee.role || '').toUpperCase() === 'EMPLOYEE' && employee.faceEnrolledAt && (
+            {employee && ['EMPLOYEE', 'DEV'].includes(String(employee.role || '').toUpperCase()) && employee.faceEnrolledAt && (
               <button onClick={handleResetFace} disabled={faceResetting} className="btn-outline py-1.5 px-3 text-sm text-[var(--color-yellow)] border-[rgba(234,179,8,0.3)] hover:bg-[rgba(234,179,8,0.05)] disabled:opacity-50">
                 {faceResetting ? 'Resetting…' : 'Reset face'}
               </button>

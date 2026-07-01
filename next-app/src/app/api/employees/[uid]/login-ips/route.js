@@ -4,7 +4,7 @@ import { getEmployee, setUserLoginIps, writeAuditLog } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 
-const isAdmin = (user) => user.role === 'admin' || user.role === 'superadmin';
+const isAdmin = (user) => user.role === 'admin' || user.role === 'superadmin' || user.role === 'dev';
 
 // PUT: admins only — set an employee's login IP allowlist (exact IPv4/IPv6 or
 // IPv4 CIDR). Empty list ⇒ unrestricted. Employee / IT-team targets only.
