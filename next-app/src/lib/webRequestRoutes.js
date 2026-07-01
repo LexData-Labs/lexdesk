@@ -10,7 +10,7 @@ import { listLedTeamMemberUids, canManageUser } from './services/teams';
 const unauth = () => NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 const noUser = () => NextResponse.json({ error: 'no_linked_attenddesk_user' }, { status: 400 });
 const fail = (e) => NextResponse.json({ error: e.message, upstream: e.body ?? null }, { status: e.status || 502 });
-const isAdmin = (role) => role === 'admin' || role === 'superadmin' || role === 'dev';
+const isAdmin = (role) => role === 'admin' || role === 'superadmin';
 
 export function makeMineGet(listMineFn) {
   return async (request) => {

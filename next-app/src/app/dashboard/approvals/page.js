@@ -23,7 +23,7 @@ function viewerRole() {
 }
 
 function tabsFor(role) {
-  const admin = role === 'admin' || role === 'superadmin' || role === 'dev';
+  const admin = role === 'admin' || role === 'superadmin';
   return ALL_TABS.filter((t) => !t.adminOnly || admin);
 }
 

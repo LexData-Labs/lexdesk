@@ -80,7 +80,7 @@ fun MainScreen(
     val timeFormat by container.themePrefs.timeFormatFlow.collectAsState(initial = TimeFormat.H12)
 
     val roleUpper = (role ?: me?.role ?: "").uppercase()
-    val isManager = roleUpper == "ADMIN" || roleUpper == "SUPER_ADMIN" || roleUpper == "SUPERADMIN" || roleUpper == "DEV" || isLeader
+    val isManager = roleUpper == "ADMIN" || roleUpper == "SUPER_ADMIN" || roleUpper == "SUPERADMIN" || isLeader
 
     LaunchedEffect(Unit) {
         scope.launch {

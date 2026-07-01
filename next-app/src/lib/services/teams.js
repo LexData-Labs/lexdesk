@@ -106,7 +106,7 @@ export async function listLedTeamMemberUids(orgId, uid) {
 // role casing) or the leader of ≥1 team.
 export async function isManager(orgId, uid, role) {
   const r = String(role ?? '').toUpperCase();
-  if (r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN' || r === 'DEV') return true;
+  if (r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN') return true;
   const { isLeader } = await listLedTeamMemberUids(orgId, uid);
   return isLeader;
 }
@@ -115,7 +115,7 @@ export async function isManager(orgId, uid, role) {
 // lead → only their team members).
 export async function canManageUser(orgId, uid, role, targetUid) {
   const r = String(role ?? '').toUpperCase();
-  if (r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN' || r === 'DEV') return true;
+  if (r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN') return true;
   const { memberUids } = await listLedTeamMemberUids(orgId, uid);
   return memberUids.has(String(targetUid));
 }
