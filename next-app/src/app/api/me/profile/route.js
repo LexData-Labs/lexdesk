@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
-import { getEmployee, updateName } from '@/lib/backend';
+import { getEmployee, updateEmployee, getLineManager } from '@/lib/backend';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +21,7 @@ export async function GET(request) {
       if (e.status !== 404) throw e; // 404 → treat as "no linked record"
     }
     if (!me) return NextResponse.json({ profile: null });
+    const lineManager = await getLineManager(user.orgId, me.teamId);
     return NextResponse.json({
       profile: {
         id: me.id,
@@ -29,7 +30,12 @@ export async function GET(request) {
         role: me.role || '',
         employeeId: me.employeeId || null,
         teamName: me.teamName || null,
-        joiningDate: me.createdAt || null,
+        designation: me.designation || null,
+        department: me.department || null,
+        lineManager: lineManager || null,
+        contactNumber: me.contactNumber || null,
+        birthDate: me.birthDate || null,
+        joiningDate: me.joiningDate || me.createdAt || null,
         photoUrl: me.photoUrl || null,
         faceEnrolledAt: me.faceEnrolledAt || null,
       },
@@ -39,11 +45,14 @@ export async function GET(request) {
   }
 }
 
-// Update the signed-in user's own display name (email comes from the token).
+// Update the signed-in user's OWN profile: name plus the self-service fields
+// (designation, department, date of birth, contact number). The uid is forced
+// to the token's user, so a caller can only ever edit their own record.
+// Employee ID, team/branch, joining date and email are NOT editable here.
 export async function POST(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!user.email) return NextResponse.json({ error: 'no_email_on_account' }, { status: 400 });
+  if (!user.id) return NextResponse.json({ error: 'no_linked_attenddesk_user' }, { status: 400 });
 
   let body;
   try {
@@ -56,8 +65,18 @@ export async function POST(request) {
   if (name.length > 80) return NextResponse.json({ error: 'Name is too long (max 80)' }, { status: 400 });
 
   try {
-    const data = await updateName(user.email, name, user.orgId);
-    return NextResponse.json(data);
+    const result = await updateEmployee(
+      String(user.id),
+      {
+        name,
+        designation: body?.designation,
+        department: body?.department,
+        contactNumber: body?.contactNumber,
+        birthDate: body?.birthDate,
+      },
+      user.orgId,
+    );
+    return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: err.message, upstream: err.body ?? null }, { status: err.status || 502 });
   }

@@ -1,10 +1,16 @@
 import { firebaseAdmin, FieldValue } from '../firebase';
 import { Paths } from '../paths';
+import { getLineManager } from './teams';
 
 // Leave requests — ported from AttendDesk's leaveRequests.ts (single-org, no
 // feature gate). Wrapper shapes match the old HTTP responses.
 
 const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Leave categories. "Half Day" is special: a single day worth 0.5, with a
+// halfDayPeriod ('first' | 'second') saying which half of the day is taken.
+const VALID_LEAVE_TYPES = new Set(['Casual', 'Sick', 'Emergency', 'Half Day']);
+const VALID_HALF_PERIODS = new Set(['first', 'second']);
 
 function inclusiveDayCount(fromDay, toDay) {
   if (!ISO_DAY_RE.test(fromDay) || !ISO_DAY_RE.test(toDay)) throw Object.assign(new Error('invalid_range'), { status: 400 });
@@ -31,6 +37,11 @@ function rowFromDoc(doc) {
     fromDay: d.fromDay ?? '',
     toDay: d.toDay ?? '',
     totalDays: typeof d.totalDays === 'number' ? d.totalDays : 0,
+    leaveType: d.leaveType ?? null,
+    halfDayPeriod: d.halfDayPeriod ?? null,
+    department: d.department ?? null,
+    lineManager: d.lineManager ?? null,
+    approvedBy: d.approvedBy ?? null,
     subject: d.subject ?? (legacyReason ? 'Leave request' : ''),
     details: d.details ?? legacyReason,
     status: d.status ?? 'pending',
@@ -55,13 +66,34 @@ export async function getLeaveRequests(query = {}, orgId) {
   return { requests };
 }
 
-// body: { userId, fromDay, toDay, subject, details? }
+// body: { userId, fromDay, toDay, subject, details?, leaveType?, halfDayPeriod?, approvedBy? }
+// Department and lineManager are derived server-side from the user's own record
+// and team (not trusted from the client); approvedBy is the employee's stated
+// approver, entered on the form.
 export async function submitLeave(body, orgId) {
-  const totalDays = inclusiveDayCount(body.fromDay, body.toDay);
+  const leaveType = VALID_LEAVE_TYPES.has(body.leaveType) ? body.leaveType : null;
+  const isHalfDay = leaveType === 'Half Day';
+
+  let totalDays;
+  let halfDayPeriod = null;
+  if (isHalfDay) {
+    // A half day is a single calendar day worth 0.5. fromDay must equal toDay.
+    if (!ISO_DAY_RE.test(body.fromDay) || body.fromDay !== body.toDay) {
+      throw Object.assign(new Error('half_day_single_day'), { status: 400 });
+    }
+    halfDayPeriod = VALID_HALF_PERIODS.has(body.halfDayPeriod) ? body.halfDayPeriod : 'first';
+    totalDays = 0.5;
+  } else {
+    totalDays = inclusiveDayCount(body.fromDay, body.toDay);
+  }
+
   const { db } = firebaseAdmin();
   const userSnap = await db.doc(Paths.user(orgId, body.userId)).get();
   if (!userSnap.exists) throw Object.assign(new Error('user_not_found'), { status: 404 });
   const u = userSnap.data();
+  const department = u.department || u.teamName || null;
+  const lineManager = await getLineManager(orgId, u.teamId ?? null);
+  const approvedBy = String(body.approvedBy || '').trim() || null;
   const ref = await db.collection(Paths.leaveRequests(orgId)).add({
     uid: body.userId,
     userEmail: u.email ?? '',
@@ -69,6 +101,11 @@ export async function submitLeave(body, orgId) {
     fromDay: body.fromDay,
     toDay: body.toDay,
     totalDays,
+    leaveType,
+    halfDayPeriod,
+    department,
+    lineManager,
+    approvedBy,
     subject: body.subject,
     details: body.details ?? '',
     status: 'pending',

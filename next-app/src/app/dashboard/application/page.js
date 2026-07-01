@@ -35,6 +35,18 @@ function fmtRange(from, to) {
 const inputCls =
   'bg-[var(--color-bg)] border border-[var(--color-card-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-text-main)] focus:outline-none focus:border-[var(--color-purple)]';
 
+const LEAVE_TYPES = ['Casual', 'Sick', 'Emergency', 'Half Day'];
+const HALF_LABEL = { first: 'First half', second: 'Second half' };
+
+// Short human label for a request's category, e.g. "Half Day (First half)".
+function leaveTypeLabel(r) {
+  if (!r?.leaveType) return '—';
+  if (r.leaveType === 'Half Day' && r.halfDayPeriod) {
+    return `Half Day (${HALF_LABEL[r.halfDayPeriod] || r.halfDayPeriod})`;
+  }
+  return r.leaveType;
+}
+
 const ICONS = {
   total: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></svg>
@@ -57,10 +69,15 @@ function LeavePanel() {
   const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
 
   const [showForm, setShowForm] = useState(false);
+  const [leaveType, setLeaveType] = useState('Casual');
+  const [halfDayPeriod, setHalfDayPeriod] = useState('first');
   const [fromDay, setFromDay] = useState('');
   const [toDay, setToDay] = useState('');
-  const [subject, setSubject] = useState('');
+  const [approvedBy, setApprovedBy] = useState('');
   const [details, setDetails] = useState('');
+  // Resolved leave metadata: Department, Line Manager and the list of approver
+  // names (team leader + super admin) for the "Approved by" picker.
+  const [leaveMeta, setLeaveMeta] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -88,6 +105,24 @@ function LeavePanel() {
     load();
   }, [load]);
 
+  // Load the leave metadata once: Department, Line Manager and approver names,
+  // resolved server-side from the org hierarchy. Default "Approved by" to the
+  // first approver (the line manager) unless the user already picked one.
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    fetch('/api/me/leave-meta', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((j) => {
+        setLeaveMeta(j || null);
+        if (j?.approvers?.length) setApprovedBy((cur) => cur || j.approvers[0]);
+      })
+      .catch(() => setLeaveMeta(null));
+  }, []);
+
+  const myDepartment = leaveMeta?.department || '';
+  const myLineManager = leaveMeta?.lineManager || '';
+  const approverOptions = leaveMeta?.approvers || [];
+
   // Close the modal on Escape.
   useEffect(() => {
     if (!showForm) return;
@@ -96,14 +131,18 @@ function LeavePanel() {
     return () => window.removeEventListener('keydown', onKey);
   }, [showForm]);
 
+  const isHalf = leaveType === 'Half Day';
+
   const submit = async (e) => {
     e.preventDefault();
     setFormError('');
-    if (!fromDay || !toDay || !subject.trim()) {
-      setFormError('From, To and Subject are required.');
+    // A half day is a single date worth 0.5; otherwise it's a From→To range.
+    const effectiveTo = isHalf ? fromDay : toDay;
+    if (!fromDay || (!isHalf && !toDay)) {
+      setFormError(isHalf ? 'Please pick the date for your half day.' : 'From and To dates are required.');
       return;
     }
-    if (fromDay > toDay) {
+    if (!isHalf && fromDay > toDay) {
       setFormError('“From” date must be on or before “To” date.');
       return;
     }
@@ -113,14 +152,24 @@ function LeavePanel() {
       const res = await fetch('/api/me/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fromDay, toDay, subject: subject.trim(), details: details.trim() }),
+        body: JSON.stringify({
+          fromDay,
+          toDay: effectiveTo,
+          subject: leaveType,
+          details: details.trim(),
+          leaveType,
+          halfDayPeriod: isHalf ? halfDayPeriod : null,
+          approvedBy: approvedBy.trim() || null,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
       setShowForm(false);
+      setLeaveType('Casual');
+      setHalfDayPeriod('first');
       setFromDay('');
       setToDay('');
-      setSubject('');
+      setApprovedBy('');
       setDetails('');
       setFeedback('Leave request submitted.');
       setTimeout(() => setFeedback(''), 4000);
@@ -173,19 +222,84 @@ function LeavePanel() {
                 ✕
               </button>
             </div>
+            {/* Leave category — picking "Half Day" reveals the first/second-half choice below. */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Leave type</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {LEAVE_TYPES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setLeaveType(t)}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold border transition-colors ${
+                      leaveType === t
+                        ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border-[var(--color-purple)]'
+                        : 'bg-[var(--color-bg)] text-[var(--color-text-muted)] border-[var(--color-card-border)] hover:text-[var(--color-text-main)]'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {isHalf ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Date</label>
+                  <input type="date" value={fromDay} onChange={(e) => setFromDay(e.target.value)} className={inputCls} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Which half?</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['first', 'second'].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setHalfDayPeriod(p)}
+                        className={`rounded-lg px-3 py-2 text-sm font-semibold border transition-colors ${
+                          halfDayPeriod === p
+                            ? 'bg-[rgba(150,150,150,0.15)] text-[var(--color-purple)] border-[var(--color-purple)]'
+                            : 'bg-[var(--color-bg)] text-[var(--color-text-muted)] border-[var(--color-card-border)] hover:text-[var(--color-text-main)]'
+                        }`}
+                      >
+                        {HALF_LABEL[p]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">From</label>
+                  <input type="date" value={fromDay} onChange={(e) => setFromDay(e.target.value)} className={inputCls} required />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-[var(--color-text-muted)]">To</label>
+                  <input type="date" value={toDay} onChange={(e) => setToDay(e.target.value)} className={inputCls} required />
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[var(--color-text-muted)]">From</label>
-                <input type="date" value={fromDay} onChange={(e) => setFromDay(e.target.value)} className={inputCls} required />
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
+                <input type="text" value={myDepartment || '—'} readOnly disabled className={`${inputCls} opacity-60 cursor-not-allowed`} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[var(--color-text-muted)]">To</label>
-                <input type="date" value={toDay} onChange={(e) => setToDay(e.target.value)} className={inputCls} required />
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Line Manager</label>
+                <input type="text" value={myLineManager || '—'} readOnly disabled className={`${inputCls} opacity-60 cursor-not-allowed`} />
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[var(--color-text-muted)]">Subject</label>
-              <input type="text" maxLength={120} value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Sick leave" className={inputCls} required />
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Approved by</label>
+              {approverOptions.length > 0 ? (
+                <select value={approvedBy} onChange={(e) => setApprovedBy(e.target.value)} className={inputCls}>
+                  {approverOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              ) : (
+                <input type="text" maxLength={120} value={approvedBy} onChange={(e) => setApprovedBy(e.target.value)} placeholder="Who should approve this request?" className={inputCls} />
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-[var(--color-text-muted)]">Details (optional)</label>
@@ -214,8 +328,9 @@ function LeavePanel() {
             <thead>
               <tr className="text-left text-[var(--color-text-muted)] text-[11px] uppercase tracking-wider border-b border-[var(--color-card-border)] bg-white/[0.02]">
                 <th className="py-3 px-5 font-medium">Dates</th>
+                <th className="py-3 px-5 font-medium">Type</th>
                 <th className="py-3 px-5 font-medium text-center">Days</th>
-                <th className="py-3 px-5 font-medium">Subject</th>
+                <th className="py-3 px-5 font-medium">Approved by</th>
                 <th className="py-3 px-5 font-medium">Details</th>
                 <th className="py-3 px-5 font-medium">Status</th>
                 <th className="py-3 px-5 font-medium">Decision note</th>
@@ -225,20 +340,25 @@ function LeavePanel() {
               {list.map((r) => (
                 <tr key={r.id} className="border-t border-[var(--color-card-border)] hover:bg-white/[0.03] transition-colors align-top">
                   <td className="py-3.5 px-5 text-[var(--color-text-main)] font-medium whitespace-nowrap">{fmtRange(r.fromDay, r.toDay)}</td>
+                  <td className="py-3.5 px-5 whitespace-nowrap">
+                    {r.leaveType ? (
+                      <span className="inline-block px-2 py-0.5 rounded-md bg-[rgba(150,150,150,0.12)] text-[var(--color-text-main)] text-xs">{leaveTypeLabel(r)}</span>
+                    ) : <span className="text-[var(--color-text-muted)]">—</span>}
+                  </td>
                   <td className="py-3.5 px-5 text-center">
                     <span className="inline-block min-w-[2rem] px-2 py-0.5 rounded-md bg-white/[0.05] text-[var(--color-text-main)] text-xs">{r.totalDays ?? '—'}</span>
                   </td>
-                  <td className="py-3.5 px-5 text-[var(--color-text-main)]">{r.subject || '—'}</td>
+                  <td className="py-3.5 px-5 text-[var(--color-text-main)]">{r.approvedBy || '—'}</td>
                   <td className="py-3.5 px-5 text-[var(--color-text-muted)] max-w-[280px] truncate" title={r.details || ''}>{r.details || '—'}</td>
                   <td className="py-3.5 px-5"><StatusPill status={r.status} /></td>
                   <td className="py-3.5 px-5 text-[var(--color-text-muted)] text-xs max-w-[220px]">{r.decisionNote || '—'}</td>
                 </tr>
               ))}
               {!loading && list.length === 0 && (
-                <tr><td colSpan={6} className="py-12 text-center text-[var(--color-text-muted)]">No leave requests for this month.</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-[var(--color-text-muted)]">No leave requests for this month.</td></tr>
               )}
               {loading && (
-                <tr><td colSpan={6} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center text-[var(--color-text-muted)]">Loading…</td></tr>
               )}
             </tbody>
           </table>

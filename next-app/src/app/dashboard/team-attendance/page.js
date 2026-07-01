@@ -33,6 +33,74 @@ const fmtDate = (iso) => {
   return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
+// Normalize a stored date (plain 'YYYY-MM-DD' or a full ISO timestamp like the
+// account createdAt) to the 'YYYY-MM-DD' value an <input type="date"> expects.
+const toDateInput = (v) => {
+  if (!v) return '';
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+};
+
+// One member's profile card — shared by the Team Members and Department tabs.
+// onEdit opens the edit modal for this member.
+function MemberCard({ m, onEdit }) {
+  return (
+    <div className="card relative flex flex-col items-center text-center !p-0 overflow-hidden">
+      {/* ⋮ menu — edit this member's profile */}
+      <button
+        type="button"
+        onClick={() => onEdit(m)}
+        className="absolute top-2 right-2 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)] transition-colors"
+        title="Edit profile"
+        aria-label={`Edit ${m.name || 'member'}`}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+      </button>
+
+      {/* Avatar + name + designation */}
+      <div className="flex flex-col items-center pt-7 pb-4 px-4">
+        <Avatar image={m.photoUrl} initials={initials(m.name)} alt={m.name} className="w-16 h-16 text-base font-bold ring-4 ring-[var(--color-card-border)]" />
+        <h3 className="mt-3 text-sm font-semibold text-[var(--color-text-main)]">{m.name || '—'}</h3>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{m.designation || m.teamName || 'Team member'}</p>
+      </div>
+
+      {/* Contact */}
+      <div className="w-full px-5 py-3 flex flex-col gap-2 text-xs border-t border-[var(--color-card-border)]">
+        <div className="flex items-center gap-2 min-w-0">
+          <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
+          <span className="truncate text-[var(--color-text-main)]">{m.email || '—'}</span>
+        </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+          <span className="truncate text-[var(--color-text-main)]">{m.contactNumber || '—'}</span>
+        </div>
+        <div className="flex items-center gap-2 min-w-0">
+          <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="4" /><path d="M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8" /></svg>
+          <span className="truncate text-[var(--color-text-main)]">{fmtDate(m.birthDate)}</span>
+        </div>
+      </div>
+
+      {/* Employee ID / department / joining — tinted footer */}
+      <div className="w-full px-5 py-4 flex flex-col gap-2 text-xs" style={{ background: 'var(--color-accent-soft)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[var(--color-text-muted)]">Employee ID</span>
+          <span className="font-semibold text-[var(--color-text-main)] font-mono truncate">{m.employeeId || '—'}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[var(--color-text-muted)]">Department</span>
+          <span className="font-semibold text-[var(--color-text-main)] truncate">{m.department || m.teamName || '—'}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[var(--color-text-muted)]">Date of Joining</span>
+          <span className="font-semibold text-[var(--color-text-main)]">{fmtDate(m.joiningDate)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Calendar-matrix colors, aligned with MonthCalendar / the app palette.
 const MATRIX_STYLE = {
   ontime: { bg: 'rgba(34,197,94,0.32)', border: 'rgba(34,197,94,0.55)' },
@@ -84,13 +152,14 @@ export default function TeamAttendancePage() {
   const [addErr, setAddErr] = useState('');
   // Add team member (a lead creates an EMPLOYEE auto-joined to their team).
   const [showAddMember, setShowAddMember] = useState(false);
-  const [memberForm, setMemberForm] = useState({ name: '', email: '', employeeId: '', teamId: '' });
+  const [memberForm, setMemberForm] = useState({ name: '', email: '', employeeId: '', teamId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
   const [memberBusy, setMemberBusy] = useState(false);
   const [memberErr, setMemberErr] = useState('');
   const [memberCreated, setMemberCreated] = useState(null); // { email, temporaryPassword }
-  // Edit member profile (name, employeeId) via the card's ⋮ menu.
+  // Edit member profile (name, employeeId, designation, contact, dates) via the
+  // card's ⋮ menu. Email/team are managed separately and shown read-only.
   const [editTarget, setEditTarget] = useState(null); // the member being edited
-  const [editForm, setEditForm] = useState({ name: '', employeeId: '' });
+  const [editForm, setEditForm] = useState({ name: '', employeeId: '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
   const [editBusy, setEditBusy] = useState(false);
   const [editErr, setEditErr] = useState('');
 
@@ -282,7 +351,7 @@ export default function TeamAttendancePage() {
   const openAddMember = () => {
     setMemberErr('');
     setMemberCreated(null);
-    setMemberForm({ name: '', email: '', employeeId: '', teamId: teams[0]?.id || '' });
+    setMemberForm({ name: '', email: '', employeeId: '', teamId: teams[0]?.id || '', designation: '', department: '', contactNumber: '', birthDate: '', joiningDate: '' });
     setShowAddMember(true);
   };
 
@@ -306,6 +375,11 @@ export default function TeamAttendancePage() {
           email: memberForm.email.trim(),
           employeeId: memberForm.employeeId.trim() || null,
           teamId: memberForm.teamId || null,
+          designation: memberForm.designation.trim() || null,
+          department: memberForm.department.trim() || null,
+          contactNumber: memberForm.contactNumber.trim() || null,
+          birthDate: memberForm.birthDate || null,
+          joiningDate: memberForm.joiningDate || null,
         }),
       });
       const json = await res.json();
@@ -328,7 +402,15 @@ export default function TeamAttendancePage() {
 
   const openEdit = (m) => {
     setEditErr('');
-    setEditForm({ name: m.name || '', employeeId: m.employeeId || '' });
+    setEditForm({
+      name: m.name || '',
+      employeeId: m.employeeId || '',
+      designation: m.designation || '',
+      department: m.department || '',
+      contactNumber: m.contactNumber || '',
+      birthDate: toDateInput(m.birthDate),
+      joiningDate: toDateInput(m.joiningDate),
+    });
     setEditTarget(m);
   };
   const closeEdit = () => { setEditTarget(null); setEditErr(''); };
@@ -343,7 +425,15 @@ export default function TeamAttendancePage() {
       const res = await fetch(`/api/team/member/${editTarget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: editForm.name.trim(), employeeId: editForm.employeeId.trim() || null }),
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          employeeId: editForm.employeeId.trim() || null,
+          designation: editForm.designation.trim() || null,
+          department: editForm.department.trim() || null,
+          contactNumber: editForm.contactNumber.trim() || null,
+          birthDate: editForm.birthDate || null,
+          joiningDate: editForm.joiningDate || null,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
@@ -473,9 +563,31 @@ export default function TeamAttendancePage() {
                   <label className="text-xs font-medium text-[var(--color-text-muted)]">Email</label>
                   <input type="email" value={memberForm.email} onChange={(e) => setMemberForm((f) => ({ ...f, email: e.target.value }))} className={addInputCls} required />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
-                  <input type="text" maxLength={50} value={memberForm.employeeId} onChange={(e) => setMemberForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={addInputCls} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
+                    <input type="text" maxLength={50} value={memberForm.employeeId} onChange={(e) => setMemberForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={addInputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Designation</label>
+                    <input type="text" maxLength={80} value={memberForm.designation} onChange={(e) => setMemberForm((f) => ({ ...f, designation: e.target.value }))} placeholder="e.g. Software Engineer" className={addInputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
+                    <input type="text" maxLength={80} value={memberForm.department} onChange={(e) => setMemberForm((f) => ({ ...f, department: e.target.value }))} placeholder="e.g. Engineering" className={addInputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Contact number</label>
+                    <input type="tel" maxLength={30} value={memberForm.contactNumber} onChange={(e) => setMemberForm((f) => ({ ...f, contactNumber: e.target.value }))} placeholder="e.g. +880 1XXX-XXXXXX" className={addInputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of joining</label>
+                    <input type="date" value={memberForm.joiningDate} onChange={(e) => setMemberForm((f) => ({ ...f, joiningDate: e.target.value }))} className={addInputCls} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of birth</label>
+                    <input type="date" value={memberForm.birthDate} onChange={(e) => setMemberForm((f) => ({ ...f, birthDate: e.target.value }))} className={addInputCls} />
+                  </div>
                 </div>
                 {teams.length > 1 && (
                   <div className="flex flex-col gap-1.5">
@@ -503,14 +615,40 @@ export default function TeamAttendancePage() {
               <h2 className="text-lg font-semibold text-[var(--color-text-main)]">Edit member</h2>
               <button type="button" onClick={closeEdit} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] text-lg leading-none" aria-label="Close">✕</button>
             </div>
-            <p className="text-xs text-[var(--color-text-muted)] -mt-2">Update {editTarget.name || 'this member'}&apos;s profile. Email and team aren&apos;t changed here.</p>
+            <p className="text-xs text-[var(--color-text-muted)] -mt-2">Update {editTarget.name || 'this member'}&apos;s profile. Email and team are managed separately.</p>
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-[var(--color-text-muted)]">Full name</label>
               <input type="text" maxLength={120} value={editForm.name} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} className={addInputCls} required />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
-              <input type="text" maxLength={50} value={editForm.employeeId} onChange={(e) => setEditForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036 (optional)" className={addInputCls} />
+              <label className="text-xs font-medium text-[var(--color-text-muted)]">Email address</label>
+              <input type="email" value={editTarget.email || ''} readOnly disabled className={`${addInputCls} opacity-60 cursor-not-allowed`} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Employee ID</label>
+                <input type="text" maxLength={50} value={editForm.employeeId} onChange={(e) => setEditForm((f) => ({ ...f, employeeId: e.target.value }))} placeholder="e.g. 700036" className={addInputCls} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Designation</label>
+                <input type="text" maxLength={80} value={editForm.designation} onChange={(e) => setEditForm((f) => ({ ...f, designation: e.target.value }))} placeholder="e.g. Software Engineer" className={addInputCls} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Department</label>
+                <input type="text" maxLength={80} value={editForm.department} onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))} placeholder="e.g. Engineering" className={addInputCls} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Contact number</label>
+                <input type="tel" maxLength={30} value={editForm.contactNumber} onChange={(e) => setEditForm((f) => ({ ...f, contactNumber: e.target.value }))} placeholder="e.g. +880 1XXX-XXXXXX" className={addInputCls} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of joining</label>
+                <input type="date" value={editForm.joiningDate} onChange={(e) => setEditForm((f) => ({ ...f, joiningDate: e.target.value }))} className={addInputCls} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-muted)]">Date of birth</label>
+                <input type="date" value={editForm.birthDate} onChange={(e) => setEditForm((f) => ({ ...f, birthDate: e.target.value }))} className={addInputCls} />
+              </div>
             </div>
             {editErr && <p className="text-sm text-[var(--color-red)]">{editErr}</p>}
             <div className="flex gap-2 justify-end pt-1">
@@ -534,49 +672,7 @@ export default function TeamAttendancePage() {
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {rows.map((m) => (
-              <div key={m.id} className="card relative flex flex-col items-center text-center !p-0 overflow-hidden">
-                {/* ⋮ menu — edit this member's profile */}
-                <button
-                  type="button"
-                  onClick={() => openEdit(m)}
-                  className="absolute top-2 right-2 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-accent-soft)] transition-colors"
-                  title="Edit profile"
-                  aria-label={`Edit ${m.name || 'member'}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
-                </button>
-
-                {/* Avatar + name + role */}
-                <div className="flex flex-col items-center pt-7 pb-4 px-4">
-                  <Avatar image={m.photoUrl} initials={initials(m.name)} alt={m.name} className="w-16 h-16 text-base font-bold ring-4 ring-[var(--color-card-border)]" />
-                  <h3 className="mt-3 text-sm font-semibold text-[var(--color-text-main)]">{m.name || '—'}</h3>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{m.teamName || 'Team member'}</p>
-                </div>
-
-                {/* Contact */}
-                <div className="w-full px-5 py-3 flex flex-col gap-2 text-xs border-t border-[var(--color-card-border)]">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></svg>
-                    <span className="truncate text-[var(--color-text-main)]">{m.email || '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <svg className="text-[var(--color-text-muted)] shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="4" /><path d="M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 0 0 0-5C13 3 12 8 12 8" /></svg>
-                    <span className="truncate text-[var(--color-text-main)]">{fmtDate(m.birthDate)}</span>
-                  </div>
-                </div>
-
-                {/* Employee ID / joining — tinted footer (team shown above) */}
-                <div className="w-full px-5 py-4 flex flex-col gap-2 text-xs" style={{ background: 'var(--color-accent-soft)' }}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--color-text-muted)]">Employee ID</span>
-                    <span className="font-semibold text-[var(--color-text-main)] font-mono truncate">{m.employeeId || '—'}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--color-text-muted)]">Date of Joining</span>
-                    <span className="font-semibold text-[var(--color-text-main)]">{fmtDate(m.joiningDate)}</span>
-                  </div>
-                </div>
-              </div>
+              <MemberCard key={m.id} m={m} onEdit={openEdit} />
             ))}
           </div>
           {!loading && rows.length === 0 && (

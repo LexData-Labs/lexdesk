@@ -92,7 +92,10 @@ export async function GET(request) {
       teamId: e.teamId,
       teamName: teamNameById.get(e.teamId) || '',
       employeeId: e.employeeId || null,
-      joiningDate: e.createdAt || null,
+      designation: e.designation || null,
+      department: e.department || null,
+      contactNumber: e.contactNumber || null,
+      joiningDate: e.joiningDate || e.createdAt || null,
       birthDate: e.birthDate || null,
       photoUrl: photoUrls[i] || null,
     }));

@@ -23,6 +23,11 @@ export async function POST(request) {
   const email = (body?.email || '').trim();
   const name = (body?.name || '').trim();
   const employeeId = (body?.employeeId || '').trim() || null;
+  const designation = (body?.designation || '').trim() || null;
+  const department = (body?.department || '').trim() || null;
+  const contactNumber = (body?.contactNumber || '').trim() || null;
+  const birthDate = (body?.birthDate || '').trim() || null;
+  const joiningDate = (body?.joiningDate || '').trim() || null;
   if (!email || !name) {
     return NextResponse.json({ error: 'name and email are required' }, { status: 400 });
   }
@@ -30,10 +35,10 @@ export async function POST(request) {
   try {
     let role;
     let teamId;
-    if (isAdmin(user)) {
-      // Only the system admin (superadmin) may create ADMINs; regular admins
-      // create employees only. (The org admin is provisioned from
-      // /dashboard/organization.)
+    if (isAdmin(user) || user.role === 'it_team') {
+      // Only the system admin (superadmin) may create ADMINs; regular admins and
+      // the IT Team role create employees only. (The org admin is provisioned
+      // from /dashboard/organization.)
       role = body?.role === 'ADMIN' && user.role === 'superadmin' ? 'ADMIN' : 'EMPLOYEE';
       teamId = body?.teamId || null;
     } else {
@@ -56,7 +61,10 @@ export async function POST(request) {
       else return NextResponse.json({ error: 'Pick one of the teams you lead' }, { status: 400 });
     }
 
-    const result = await createEmployee({ email, name, role, teamId, employeeId }, user.orgId);
+    const result = await createEmployee(
+      { email, name, role, teamId, employeeId, designation, department, contactNumber, birthDate, joiningDate },
+      user.orgId,
+    );
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     return NextResponse.json(

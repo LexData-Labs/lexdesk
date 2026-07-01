@@ -33,6 +33,14 @@ export default function DashboardLayout({ children }) {
           router.replace('/dashboard/my-dashboard');
         }
       }
+      // IT Team role — its own allowed sections (Accessories/Tracking added later).
+      if (parsed.role === 'it_team') {
+        const path = window.location.pathname;
+        const allowed = ['/dashboard/my-dashboard', '/dashboard/people', '/dashboard/attendance', '/dashboard/approvals', '/dashboard/accessories', '/dashboard/tracking', '/dashboard/profile'];
+        if (!allowed.some((p) => path === p || path.startsWith(p + '/'))) {
+          router.replace('/dashboard/my-dashboard');
+        }
+      }
     } catch {
       router.push('/register');
     }

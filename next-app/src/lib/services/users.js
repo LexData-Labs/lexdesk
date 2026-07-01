@@ -29,6 +29,11 @@ function userRow(id, data, photoUrl) {
     teamId: data.teamId ?? null,
     teamName: data.teamName ?? null,
     employeeId: data.employeeId ?? null,
+    designation: data.designation ?? null,
+    department: data.department ?? null,
+    contactNumber: data.contactNumber ?? null,
+    birthDate: data.birthDate ?? null,
+    joiningDate: data.joiningDate ?? null,
     mustChangePassword: data.mustChangePassword ?? false,
     faceEnrolledAt: data.faceEnrolledAt?.toDate?.()?.toISOString() ?? null,
     createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
@@ -64,7 +69,8 @@ export async function getEmployee(uid, orgId) {
   return { employee: userRow(snap.id, data, photoUrl) };
 }
 
-// body: { email, name, role: 'ADMIN'|'EMPLOYEE', teamId?, employeeId? }
+// body: { email, name, role: 'ADMIN'|'EMPLOYEE', teamId?, employeeId?,
+//         designation?, department?, contactNumber?, birthDate?, joiningDate? }
 export async function createEmployee(body, orgId) {
   const { auth, db } = firebaseAdmin();
   const email = String(body.email).toLowerCase();
@@ -96,6 +102,11 @@ export async function createEmployee(body, orgId) {
     teamId,
     teamName,
     employeeId: body.employeeId ?? null,
+    designation: body.designation ?? null,
+    department: body.department ?? null,
+    contactNumber: body.contactNumber ?? null,
+    birthDate: body.birthDate ?? null,
+    joiningDate: body.joiningDate ?? null,
     mustChangePassword: true,
     faceEmbeddingB64: null,
     faceEmbeddingModel: null,
@@ -128,10 +139,15 @@ export async function setEmployeeTeam(uid, teamId, orgId) {
   return { ok: true, teamId: resolvedTeamId, teamName };
 }
 
-// Edit a member's basic profile fields (name, employeeId). Email/role/team are
+// Edit a member's basic profile fields (name, employeeId, designation,
+// department, contactNumber, birthDate, joiningDate). Email/role/team are
 // intentionally excluded here — those are identity/structure changes handled by
 // dedicated flows. Keeps the Firebase Auth displayName in sync when name changes.
-export async function updateEmployee(uid, { name, employeeId } = {}, orgId) {
+export async function updateEmployee(
+  uid,
+  { name, employeeId, designation, department, contactNumber, birthDate, joiningDate } = {},
+  orgId,
+) {
   const { auth, db } = firebaseAdmin();
   const ref = db.doc(Paths.user(orgId, uid));
   const snap = await ref.get();
@@ -140,6 +156,11 @@ export async function updateEmployee(uid, { name, employeeId } = {}, orgId) {
   const updates = {};
   if (typeof name === 'string' && name.trim()) updates.name = name.trim();
   if (employeeId !== undefined) updates.employeeId = String(employeeId || '').trim() || null;
+  if (designation !== undefined) updates.designation = String(designation || '').trim() || null;
+  if (department !== undefined) updates.department = String(department || '').trim() || null;
+  if (contactNumber !== undefined) updates.contactNumber = String(contactNumber || '').trim() || null;
+  if (birthDate !== undefined) updates.birthDate = String(birthDate || '').trim() || null;
+  if (joiningDate !== undefined) updates.joiningDate = String(joiningDate || '').trim() || null;
   if (Object.keys(updates).length === 0) return { ok: true };
 
   await ref.update(updates);
@@ -147,6 +168,36 @@ export async function updateEmployee(uid, { name, employeeId } = {}, orgId) {
     try { await auth.updateUser(uid, { displayName: updates.name }); } catch { /* non-fatal */ }
   }
   return { ok: true, ...updates };
+}
+
+// Assign/clear the IT Team role. Restricted to toggling between EMPLOYEE and
+// IT_TEAM — it never elevates to (or demotes) ADMIN/SUPER_ADMIN, which are
+// provisioned through their own dedicated flows. Updates the user doc, the
+// Firebase custom claims, and the cross-org user index so all three agree. The
+// LexDesk session JWT carries the role from login, so the change takes effect
+// when the user next signs in.
+const ASSIGNABLE_ROLES = new Set(['EMPLOYEE', 'IT_TEAM']);
+
+export async function setEmployeeRole(uid, role, orgId) {
+  const next = String(role || '').toUpperCase();
+  if (!ASSIGNABLE_ROLES.has(next)) throw Object.assign(new Error('invalid_role'), { status: 400 });
+  const { auth, db } = firebaseAdmin();
+  const ref = db.doc(Paths.user(orgId, uid));
+  const snap = await ref.get();
+  if (!snap.exists) throw Object.assign(new Error('not_found'), { status: 404 });
+  const data = snap.data() ?? {};
+  const current = String(data.role || '').toUpperCase();
+  if (current === 'ADMIN' || current === 'SUPER_ADMIN') {
+    throw Object.assign(new Error('cannot_change_admin_role'), { status: 403 });
+  }
+  const email = data.email ?? '';
+  await ref.update({ role: next });
+  try {
+    await auth.setCustomUserClaims(uid, { role: next, orgId, email });
+    await auth.revokeRefreshTokens(uid);
+  } catch { /* claims are best-effort; the Firestore role is the source of truth at login */ }
+  await db.doc(Paths.userIndex(uid)).set({ orgId, role: next, email }, { merge: true });
+  return { ok: true, role: next };
 }
 
 export async function deleteEmployee(uid, orgId) {

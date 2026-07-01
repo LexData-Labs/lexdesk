@@ -5,6 +5,7 @@ import { getFeatures } from './features';
 import { isWithinGeofence, haversineMeters } from './geofence';
 import { validateQrToken } from './qrToken';
 import { FACE_EMBEDDING_DIM, cosineSimilarity, decodeEmbedding } from './face';
+import { ipInAllowlist } from '../ip';
 
 // Ported from AttendDesk's processCheckIn, trimmed to the web client: no
 // kiosk/external/device-binding branches (LexDesk web is always a 'mobile'
@@ -59,6 +60,35 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
       reason: ssidMatch || bssidMatch ? undefined : 'ssid_and_bssid_not_in_allowlist',
       details: { ssid: ssidNorm || null, bssid: bssidNorm || null, ssidMatch, bssidMatch },
     });
+  }
+
+  // --- Office IP (web only — the mobile app never sends payload.clientIp) ---
+  if (payload.clientIp !== undefined) {
+    const allowedIps = office.allowedIps || [];
+    const requireIp = !!policy.requireIp;
+    // Only surface a pass/fail when IP is actually in use (enforced, or an
+    // allowlist is configured); otherwise just record the IP on the event.
+    if (requireIp || allowedIps.length > 0) {
+      let ipPassed;
+      let ipReason;
+      if (!payload.clientIp) {
+        ipPassed = false; ipReason = 'missing_ip';
+      } else if (allowedIps.length === 0) {
+        // Fail-closed: enforcing with no allowlist configured would silently pass.
+        ipPassed = false; ipReason = 'office_ip_not_configured';
+      } else if (ipInAllowlist(payload.clientIp, allowedIps)) {
+        ipPassed = true;
+      } else {
+        ipPassed = false; ipReason = 'ip_not_in_allowlist';
+      }
+      results.push({
+        name: 'ip',
+        required: requireIp,
+        passed: ipPassed,
+        reason: ipPassed ? undefined : ipReason,
+        details: { ip: payload.clientIp || null },
+      });
+    }
   }
 
   // --- Geofence ---
@@ -206,7 +236,19 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
     });
   }
 
-  const requiredFailed = results.filter((r) => r.required && !r.passed);
+  let requiredFailed = results.filter((r) => r.required && !r.passed);
+  // Web "GPS or office-IP": geo and ip are alternative location proofs. When
+  // both checks are present (web) and at least one is required, EITHER passing
+  // satisfies the location requirement — only block when BOTH fail. Mobile has
+  // no ip result, so it keeps the standard AND behavior.
+  const geoR = results.find((r) => r.name === 'geo');
+  const ipR = results.find((r) => r.name === 'ip');
+  if (geoR && ipR && (geoR.required || ipR.required)) {
+    requiredFailed = requiredFailed.filter((r) => r.name !== 'geo' && r.name !== 'ip');
+    if (!(geoR.passed || ipR.passed)) {
+      requiredFailed.push({ name: 'location', required: true, passed: false });
+    }
+  }
   const allChecksPassed = requiredFailed.length === 0;
 
   const nowHhmm = bdHhmm();
@@ -228,6 +270,7 @@ export async function processCheckIn(uid, organizationId, userEmail, payload) {
     accuracyMeters: payload.accuracyMeters ?? null,
     ssid: ssidNorm || null,
     bssid: bssidNorm || null,
+    clientIp: payload.clientIp ?? null,
     faceMatchScore: faceScore ?? null,
     allChecksPassed,
     rawCheckResults: results,
