@@ -4,7 +4,7 @@ import { getEmployee, getEmployees, getTeams, getLineManager } from '@/lib/backe
 
 export const dynamic = 'force-dynamic';
 
-const isAdminRole = (r) => ['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN'].includes(String(r || '').toUpperCase());
+const isAdminRole = (r) => ['ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'DEV'].includes(String(r || '').toUpperCase());
 
 // Leave-form metadata for the signed-in employee, resolved through the org
 // hierarchy (employee → team leader → super admin):

@@ -207,9 +207,11 @@ fun ProfileScreen(
                             Text(displayEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(6.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // Role is shown in the Work tab; only badge Admin here (not Employee).
-                                if ((role ?: me?.role) == "ADMIN") {
-                                    StatusChip(text = "Admin", tone = ChipTone.Info)
+                                // Role is shown in the Work tab; badge Admin/Dev here (not Employee).
+                                when (role ?: me?.role) {
+                                    "ADMIN" -> StatusChip(text = "Admin", tone = ChipTone.Info)
+                                    "DEV" -> StatusChip(text = "Dev", tone = ChipTone.Info)
+                                    else -> {}
                                 }
                                 if (features.verify.face && enrolledAt != null) {
                                     StatusChip(text = "Face enrolled", tone = ChipTone.Success)

@@ -178,7 +178,7 @@ export const onlyEmployees = (employees) =>
 export const onlyStaff = (employees) =>
   (employees || []).filter((e) => {
     const r = String(e.role || '').toUpperCase();
-    return r === 'EMPLOYEE' || r === 'IT_TEAM';
+    return r === 'EMPLOYEE' || r === 'IT_TEAM' || r === 'DEV';
   });
 
 // Weekly day(s) off (0=Sun … 6=Sat). Friday (5) and Saturday (6) are the weekend.
