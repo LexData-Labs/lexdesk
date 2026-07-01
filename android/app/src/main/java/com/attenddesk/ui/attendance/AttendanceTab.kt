@@ -17,7 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EditCalendar
-import androidx.compose.material.icons.outlined.ListAlt
+import androidx.compose.material.icons.automirrored.outlined.ListAlt
 import androidx.compose.material.icons.outlined.PhonelinkRing
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.RuleFolder
@@ -77,7 +77,7 @@ fun AttendanceTab(
 
     val actions = buildList {
         add(ModuleItem("My Attendance", Icons.Outlined.CalendarMonth, onClick = { onNavigate(Routes.MY_ATTENDANCE) }))
-        add(ModuleItem("View Attendance", Icons.Outlined.ListAlt, onClick = { onNavigate(Routes.TEAM) }))
+        add(ModuleItem("View Attendance", Icons.AutoMirrored.Outlined.ListAlt, onClick = { onNavigate(Routes.TEAM) }))
         add(ModuleItem("QR / Face Att.", Icons.Outlined.QrCodeScanner, onClick = { onNavigate(Routes.CHECK_IN) }))
         add(ModuleItem("Recon. Application", Icons.Outlined.EditCalendar, onClick = { onNavigate(Routes.RECON) }))
         add(ModuleItem("Remote Attendance", Icons.Outlined.PhonelinkRing, onClick = { onNavigate(Routes.REMOTE) }))
