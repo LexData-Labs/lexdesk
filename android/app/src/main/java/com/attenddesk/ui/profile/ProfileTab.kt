@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
@@ -245,7 +246,11 @@ fun ProfileScreen(
                     }
                 } else {
                     SectionCard(title = "Work") {
+                        InfoRow(Icons.Outlined.Badge, "Designation", me?.designation?.takeIf { it.isNotBlank() } ?: "—")
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         InfoRow(Icons.Outlined.WorkOutline, "Role", (role ?: me?.role ?: "—").lowercase().replaceFirstChar { it.titlecase() })
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        InfoRow(Icons.Outlined.Business, "Department", me?.department?.takeIf { it.isNotBlank() } ?: "—")
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         InfoRow(
                             icon = Icons.Outlined.Face,

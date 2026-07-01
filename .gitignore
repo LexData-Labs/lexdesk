@@ -22,3 +22,8 @@ yarn-error.log*
 
 # Vercel
 .vercel
+
+# Build artifacts — never commit APKs (distribute via GitHub Releases).
+# Files >100 MB are rejected by GitHub; the release APK lives in dist/.
+*.apk
+/dist/
