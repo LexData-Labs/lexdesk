@@ -8,7 +8,7 @@ import { listLedTeamMemberUids, canManageUser } from './services/teams';
 
 function isAdminRole(role) {
   const r = String(role ?? '').toUpperCase();
-  return r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN' || r === 'DEV';
+  return r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'SUPERADMIN';
 }
 
 // GET /api/v1/me/{module} — the caller's own requests.

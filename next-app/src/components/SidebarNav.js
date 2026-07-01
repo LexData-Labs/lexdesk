@@ -77,8 +77,8 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
       {(emp || dev) && <NavLink href="/dashboard/my-dashboard" label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
       {(emp || dev) && <NavLink href="/dashboard/application" label="Application" icon={Icons.application} onNavigate={onNavigate} />}
       {(emp || dev) && <NavLink href="/dashboard/my-recon" label="Reconciliation" icon={Icons.recon} onNavigate={onNavigate} />}
-      {emp && isTeamLeader && <NavLink href="/dashboard/team-approvals" label="Team Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
-      {emp && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.employees} onNavigate={onNavigate} />}
+      {(emp || dev) && isTeamLeader && <NavLink href="/dashboard/team-approvals" label="Team Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
+      {(emp || dev) && isTeamLeader && <NavLink href="/dashboard/team-attendance" label="Team Attendance" icon={Icons.employees} onNavigate={onNavigate} />}
       {/* IT Team role — its own set of sections. */}
       {it && <NavLink href="/dashboard/my-dashboard" label="Dashboard" icon={Icons.dashboard} onNavigate={onNavigate} />}
       {it && <NavLink href="/dashboard/people" label="People" icon={Icons.employees} onNavigate={onNavigate} />}
@@ -87,7 +87,7 @@ export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
       {it && <NavLink href="/dashboard/accessories" label="Accessories" icon={Icons.assets} onNavigate={onNavigate} />}
       {it && <NavLink href="/dashboard/tracking" label="Tracking" icon={Icons.recon} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attendance" label="Attendance" icon={Icons.attendance} onNavigate={onNavigate} />}
-      {admin && <NavLink href="/dashboard/approvals" label="Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
+      {(role === 'admin' || role === 'superadmin') && <NavLink href="/dashboard/approvals" label="Approvals" icon={Icons.approvals} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/noticeboard" label="Notices & Holidays" icon={Icons.notices} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/attenddesk" label="Settings" icon={Icons.attenddesk} onNavigate={onNavigate} />}
       {admin && <NavLink href="/dashboard/organization" label="Organization" icon={Icons.organization} onNavigate={onNavigate} />}
