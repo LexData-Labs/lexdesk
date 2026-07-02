@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
+import MonthNav from '@/components/MonthNav';
 import { useAttendData } from '@/lib/useAttendData';
 import { fmtTime, isLateCheckIn } from '@/lib/attend';
 
@@ -14,7 +15,10 @@ const FILTERS = [
 const PAGE_SIZE = 25;
 
 export default function AttendancePage() {
-  const { events, loading, error, refresh } = useAttendData(['attendance']);
+  // Scope the fetch to one month (bounded reads) instead of pulling the org-wide
+  // latest 1000 events on every visit. Admins page through months with MonthNav.
+  const [ym, setYm] = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; });
+  const { events, loading, error, refresh } = useAttendData(['attendance'], { month: ym });
   const [tab, setTab] = useState('events');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('');
@@ -77,7 +81,12 @@ export default function AttendancePage() {
       <PageHeader
         title="Attendance"
         subtitle={tab === 'events' ? `${filtered.length} events` : 'Latest check-in / check-out activity'}
-        actions={<button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <MonthNav value={ym} onChange={setYm} />
+            <button onClick={refresh} className="btn-outline py-2 px-4 text-sm">Refresh</button>
+          </div>
+        }
       />
 
       {error && <div className="card text-[var(--color-red)] text-sm">{error}</div>}

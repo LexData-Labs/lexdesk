@@ -370,21 +370,14 @@ export async function listAttendance(organizationId, { from, to, userId, limit =
   const col = db.collection(Paths.events(organizationId));
 
   if (userId) {
-    const snap = await col.where('uid', '==', userId).get();
-    const fromMs = from ? new Date(from).getTime() : null;
-    const toMs = to ? new Date(to).getTime() : null;
-    const events = snap.docs
-      .map(mapEventDoc)
-      .filter((e) => {
-        if (!e.timestamp) return false;
-        const t = new Date(e.timestamp).getTime();
-        if (fromMs != null && t < fromMs) return false;
-        if (toMs != null && t > toMs) return false;
-        return true;
-      })
-      .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
-      .slice(0, cap);
-    return { events };
+    // Bounded server-side (needs composite index: uid ASC, timestamp DESC) so we read
+    // at most `cap` docs instead of the user's entire lifetime of events.
+    let q = col.where('uid', '==', userId);
+    if (from) q = q.where('timestamp', '>=', new Date(from));
+    if (to) q = q.where('timestamp', '<=', new Date(to));
+    q = q.orderBy('timestamp', 'desc').limit(cap);
+    const snap = await q.get();
+    return { events: snap.docs.map(mapEventDoc) };
   }
 
   let query = col;
@@ -395,32 +388,34 @@ export async function listAttendance(organizationId, { from, to, userId, limit =
   return { events: snap.docs.map(mapEventDoc) };
 }
 
-// Mobile history for one uid → the app's HistoryEvent shape. Uses an
-// equality-only query (no Firestore composite index needed) then sorts +
-// slices client-side.
+// Mobile history for one uid → the app's HistoryEvent shape. Bounded server-side
+// with orderBy('timestamp','desc').limit(n) so it reads at most n docs (needs the
+// composite index uid ASC, timestamp DESC) instead of the user's whole history.
 export async function listMyHistory(organizationId, uid, limit = 30) {
   const { db } = firebaseAdmin();
-  const snap = await db.collection(Paths.events(organizationId)).where('uid', '==', uid).get();
   const n = Math.min(Math.max(Number(limit) || 30, 1), 200);
-  const events = snap.docs
-    .map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        type: data.type,
-        timestamp: data.timestamp?.toDate?.()?.toISOString() ?? null,
-        allChecksPassed: data.allChecksPassed,
-        lat: data.lat ?? null,
-        lng: data.lng ?? null,
-        ssid: data.ssid ?? null,
-        faceMatchScore: data.faceMatchScore ?? null,
-        isLate: data.isLate ?? false,
-        isEarly: data.isEarly ?? false,
-        scheduledStart: data.scheduledStart ?? null,
-        scheduledEnd: data.scheduledEnd ?? null,
-      };
-    })
-    .sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')))
-    .slice(0, n);
+  const snap = await db
+    .collection(Paths.events(organizationId))
+    .where('uid', '==', uid)
+    .orderBy('timestamp', 'desc')
+    .limit(n)
+    .get();
+  const events = snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      type: data.type,
+      timestamp: data.timestamp?.toDate?.()?.toISOString() ?? null,
+      allChecksPassed: data.allChecksPassed,
+      lat: data.lat ?? null,
+      lng: data.lng ?? null,
+      ssid: data.ssid ?? null,
+      faceMatchScore: data.faceMatchScore ?? null,
+      isLate: data.isLate ?? false,
+      isEarly: data.isEarly ?? false,
+      scheduledStart: data.scheduledStart ?? null,
+      scheduledEnd: data.scheduledEnd ?? null,
+    };
+  });
   return { events };
 }

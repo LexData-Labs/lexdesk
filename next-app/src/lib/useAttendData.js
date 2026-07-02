@@ -26,6 +26,12 @@ function attendanceQuery(monthKey) {
   return `resource=attendance&limit=1000&from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
 }
 
+// Module-level cache shared across page mounts, so navigating the dashboard reuses
+// recently-fetched data instead of re-reading Firestore on every mount (Spark quota).
+// Keyed by resource-list + month; the explicit Refresh button forces a fresh read.
+const _cache = new Map(); // key -> { at, data: { employees, events, leave } }
+const CACHE_TTL_MS = 60_000;
+
 export function useAttendData(resources = ['employees', 'attendance'], opts = {}) {
   const month = opts.month || null;
   const monthKey = month ? `${month.y}-${month.m}` : '';
@@ -39,7 +45,12 @@ export function useAttendData(resources = ['employees', 'attendance'], opts = {}
     error: '',
   });
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
+    const hit = _cache.get(key);
+    if (!force && hit && Date.now() - hit.at < CACHE_TTL_MS) {
+      setState({ ...hit.data, loading: false, error: '' });
+      return;
+    }
     setState((s) => ({ ...s, loading: true, error: '' }));
     try {
       const token = localStorage.getItem('token');
@@ -57,21 +68,25 @@ export function useAttendData(resources = ['employees', 'attendance'], opts = {}
           return [r, json];
         }),
       );
-      const next = { employees: [], events: [], leave: [], loading: false, error: '' };
+      const data = { employees: [], events: [], leave: [] };
       for (const [r, json] of results) {
-        if (r === 'employees') next.employees = json.employees || [];
-        else if (r === 'attendance') next.events = json.events || [];
-        else if (r === 'leaveRequests') next.leave = json.requests || [];
+        if (r === 'employees') data.employees = json.employees || [];
+        else if (r === 'attendance') data.events = json.events || [];
+        else if (r === 'leaveRequests') data.leave = json.requests || [];
       }
-      setState(next);
+      _cache.set(key, { at: Date.now(), data });
+      setState({ ...data, loading: false, error: '' });
     } catch (e) {
       setState((s) => ({ ...s, loading: false, error: e.message }));
     }
   }, [key]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    load();
+  }, [load]);
+
+  // Explicit Refresh / post-mutation always bypasses the cache.
+  const refresh = useCallback(() => load(true), [load]);
 
   return { ...state, refresh };
 }

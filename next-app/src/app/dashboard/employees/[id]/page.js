@@ -18,7 +18,12 @@ export default function EmployeeProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const employeeId = decodeURIComponent(id);
-  const { employees, events, loading, error, refresh } = useAttendData(['employees', 'attendance']);
+  // Scope attendance to the current month so opening a profile doesn't pull the
+  // org-wide latest 1000 events just to filter to one person (Spark read budget).
+  const { employees, events, loading, error, refresh } = useAttendData(
+    ['employees', 'attendance'],
+    { month: { y: new Date().getFullYear(), m: new Date().getMonth() } },
+  );
   const [avatar, setAvatar] = useState(null);
   const [teams, setTeams] = useState([]);
   const [savingTeam, setSavingTeam] = useState(false);
