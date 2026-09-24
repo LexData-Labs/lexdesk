@@ -31,6 +31,16 @@ export function isLateCheckIn(event) {
   return !!event.isLate;
 }
 
+// "HH:mm" that ends the late-allowance window: the event's scheduled start plus
+// `graceMinutes` (e.g. 08:00 + 15 → "08:15"). A check-in at or before it is
+// "late allowance"; after it is plain "late". null when there is no start.
+export function lateAllowanceUntil(scheduledStart, graceMinutes) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(scheduledStart || '').trim());
+  if (!m) return null;
+  const total = (Number(m[1]) * 60 + Number(m[2]) + Number(graceMinutes || 0)) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
 // Calendar date (YYYY-MM-DD) of a timestamp in the office timezone — the unit
 // the Android app groups attendance by.
 export function bdDateKey(ts) {
@@ -69,7 +79,9 @@ export function canonicalDays(events) {
     const slot = (byDay[day] ||= { firstCheckIn: null, lastCheckOut: null });
     if (e.type === 'CHECK_IN') {
       if (!slot.firstCheckIn || ts < slot.firstCheckIn.ts) {
-        slot.firstCheckIn = { ts, isLate: isLateCheckIn(e) };
+        // scheduledStart is the office start snapshotted on the event, so a
+        // later change of office hours never re-scores past days.
+        slot.firstCheckIn = { ts, isLate: isLateCheckIn(e), scheduledStart: e.scheduledStart || null };
       }
     } else if (e.type === 'CHECK_OUT') {
       if (!slot.lastCheckOut || ts > slot.lastCheckOut.ts) {
