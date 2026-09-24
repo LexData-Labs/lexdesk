@@ -7,6 +7,7 @@ import {
   employeeCalendarMonth,
   canonicalDays,
   hhmmInOfficeTz,
+  lateAllowanceUntil,
 } from '@/lib/attend';
 
 // Calendar-matrix colors, aligned with MonthCalendar / the app palette.
@@ -23,10 +24,13 @@ const MATRIX_STYLE = {
 };
 const WEEKDAY_INITIAL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-// Grace window (office time, inclusive): a late check-in up to this time is shown
-// as "Late allowance" rather than "Late". Purely a display distinction here —
-// day-based late counts (KPIs) still follow the canonical Android rule.
-const LATE_ALLOWANCE_UNTIL = '09:15';
+// Grace window (minutes after the office start, inclusive): a late check-in up
+// to start + LATE_ALLOWANCE_MINUTES is shown as "Late allowance" rather than
+// "Late" — e.g. start 08:00 → 08:01–08:15 allowance, 08:16 onward late. The
+// start comes from each event's own scheduledStart snapshot, so it follows the
+// office hours in force that day. Purely a display distinction here — day-based
+// late counts (KPIs) still follow the canonical Android rule.
+const LATE_ALLOWANCE_MINUTES = 15;
 
 // Short in-cell label per approved leave type (long names would overflow the box).
 const LEAVE_LABEL = { Sick: 'Sick', Casual: 'Casual', Emergency: 'Emrg', 'Half Day': 'Half' };
@@ -70,8 +74,10 @@ export default function AttendanceCalendarMatrix({ members, events, leave, holid
         const ci = canon[key]?.firstCheckIn;
         const ciHhmm = ci ? hhmmInOfficeTz(ci.ts) : null;
         // A late check-in within the grace window renders as "Late allowance".
+        // No scheduledStart on the event → no window → stays "late" (fail-closed).
+        const allowUntil = lateAllowanceUntil(ci?.scheduledStart, LATE_ALLOWANCE_MINUTES);
         let status = day.status;
-        if (status === 'late' && ciHhmm && ciHhmm <= LATE_ALLOWANCE_UNTIL) status = 'allowance';
+        if (status === 'late' && ciHhmm && allowUntil && ciHhmm <= allowUntil) status = 'allowance';
         // A half-day leave gets its own lighter shade + early/late label.
         else if (status === 'leave' && day.leaveType === 'Half Day') status = 'halfleave';
         const showTime = status === 'late' || status === 'allowance';
