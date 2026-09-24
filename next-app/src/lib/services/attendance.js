@@ -362,8 +362,21 @@ function mapEventRow(r) {
 
 // History list. Server-side timestamp ORDER BY + optional same-field range and
 // optional per-user scope, capped by LIMIT.
-export async function listAttendance(organizationId, { from, to, userId, limit = 200 } = {}) {
-  const cap = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+//
+// Newest-first, so a cap always drops the OLDEST rows. An OPEN-ENDED query (no
+// `from`) is capped at LIST_CAP_OPEN so it can never page the whole table. A
+// query bounded by `from` is a finite window — a month view, a 7-day summary —
+// and returns the whole window by default (up to LIST_CAP_RANGE): clipping it
+// silently turned the first days of a busy month into "missed" on the calendar
+// and undercounted the KPIs (Sept 2026: 1490 events, 1000 returned). ~350 B per
+// event keeps LIST_CAP_RANGE well under Vercel's 4.5 MB response limit.
+const LIST_CAP_OPEN = 1000;
+const LIST_CAP_RANGE = 10000;
+
+export async function listAttendance(organizationId, { from, to, userId, limit } = {}) {
+  const ceiling = from ? LIST_CAP_RANGE : LIST_CAP_OPEN;
+  const wanted = Number(limit) || (from ? LIST_CAP_RANGE : 200);
+  const cap = Math.min(Math.max(wanted, 1), ceiling);
   const conds = ['org_id = $1'];
   const params = [organizationId];
   let i = 2;

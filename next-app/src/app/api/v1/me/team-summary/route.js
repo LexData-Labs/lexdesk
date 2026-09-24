@@ -15,10 +15,10 @@ export async function GET(request) {
     const { isLeader, members } = await listLedTeamMemberUids(user.orgId, user.uid);
     if (!isLeader) return NextResponse.json({ isLeader: false, members: [] });
 
-    // Bound to the trailing window so the 1000-event cap reflects the 7-day
-    // window instead of silently truncating older days for a busy org.
+    // Bound to the trailing window; a from-bounded query returns the whole
+    // window, so a busy org's older days are never silently truncated.
     const from = new Date(Date.now() - 8 * 86_400_000).toISOString();
-    const { events } = await listAttendance(user.orgId, { from, limit: 1000 });
+    const { events } = await listAttendance(user.orgId, { from });
     const today = dhakaDay(new Date().toISOString());
     const last7 = lastSevenDays(Date.now());
     const byUid = indexEventsByUid(events);

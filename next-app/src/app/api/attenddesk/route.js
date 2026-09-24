@@ -13,7 +13,9 @@ const RESOURCES = {
   attendance: (sp, orgId) =>
     backend.getAttendance(
       {
-        limit: sp.get('limit') ?? 50,
+        // Forwarded only when given: the service defaults an open-ended query to
+        // a short page and a from-bounded window to the whole window.
+        limit: sp.get('limit') ?? undefined,
         from: sp.get('from'),
         to: sp.get('to'),
         userId: sp.get('userId'),

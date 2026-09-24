@@ -9,7 +9,7 @@ import { onlyStaff } from '@/lib/attend';
 // Org-wide attendance source for the yearly leave summary, via the admin-gated
 // proxy. Matches TeamLeaveSummary's (fromISO, toISO) → { events } contract.
 const orgAttendanceUrl = (fromISO, toISO) =>
-  `/api/attenddesk?resource=attendance&limit=1000&from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`;
+  `/api/attenddesk?resource=attendance&from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`;
 
 // Self-contained org-wide Team Leave summary (yearly, per-employee) for the
 // admin/superadmin dashboard — mirrors OrgAttendanceCalendar's wiring. Employees

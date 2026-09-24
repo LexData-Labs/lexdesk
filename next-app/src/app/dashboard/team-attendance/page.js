@@ -92,7 +92,7 @@ export default function TeamAttendancePage() {
       const to = new Date(Date.UTC(ym.y, ym.m + 1, 1));
       to.setUTCDate(to.getUTCDate() + 1);
       const res = await apiFetch(
-        `/api/team/attendance?limit=1000&from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
+        `/api/team/attendance?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
         { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' },
       );
       const json = await res.json();
