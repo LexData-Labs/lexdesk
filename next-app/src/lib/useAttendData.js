@@ -6,7 +6,7 @@ import { apiFetch } from './apiFetch';
 // Fetches org-wide AttendDesk data through the (admin-gated) /api/attenddesk
 // proxy. Pass the resources a page needs, e.g. useAttendData(['employees','attendance']).
 // Pass { month: { y, m } } (m 0-11) to scope the attendance fetch to one month
-// instead of pulling the latest 1000 events org-wide.
+// (the whole month, no page cap) instead of pulling the latest 1000 events org-wide.
 const RESOURCE_QUERY = {
   employees: 'resource=employees',
   attendance: 'resource=attendance&limit=1000',
@@ -24,7 +24,8 @@ function attendanceQuery(monthKey) {
   from.setUTCDate(from.getUTCDate() - 1);
   const to = new Date(Date.UTC(y, m + 1, 1));
   to.setUTCDate(to.getUTCDate() + 1);
-  return `resource=attendance&limit=1000&from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
+  // No `limit`: a from/to-bounded query returns the whole window server-side.
+  return `resource=attendance&from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`;
 }
 
 export function useAttendData(resources = ['employees', 'attendance'], opts = {}) {

@@ -21,11 +21,11 @@ export async function GET(request) {
       return r !== 'ADMIN' && r !== 'SUPER_ADMIN' && r !== 'SUPERADMIN';
     });
 
-    // Bound the fetch to the trailing window so the 1000-event cap reflects the
-    // 7-day window instead of silently truncating older days for a busy org
+    // Bound the fetch to the trailing window; a from-bounded query returns the
+    // whole window, so a busy org's older days are never silently truncated
     // (over-fetch by a day to safely cover the earliest Dhaka day-start).
     const from = new Date(Date.now() - 8 * 86_400_000).toISOString();
-    const { events } = await listAttendance(user.orgId, { from, limit: 1000 });
+    const { events } = await listAttendance(user.orgId, { from });
 
     const today = dhakaDay(new Date().toISOString());
     const last7 = lastSevenDays(Date.now());

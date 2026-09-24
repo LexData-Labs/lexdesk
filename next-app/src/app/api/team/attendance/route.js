@@ -45,10 +45,10 @@ export async function POST(request) {
 // the member roster so the page needs no second call. Leadership is resolved
 // server-side from the verified token (same pattern as /api/team/leave).
 //
-// Known limits, both shared with the rest of the app: the upstream fetch is an
-// org-wide window capped at 1000 events (a very busy org could clip a heavy
-// month), and membership is current-state (someone who left the team
-// mid-month disappears along with their early-month events).
+// Known limit, shared with the rest of the app: membership is current-state
+// (someone who left the team mid-month disappears along with their early-month
+// events). The upstream fetch is org-wide; with `from` set it returns the whole
+// window (see listAttendance's range cap), so a busy month is no longer clipped.
 export async function GET(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,7 +63,9 @@ export async function GET(request) {
   if (to && Number.isNaN(Date.parse(to))) {
     return NextResponse.json({ error: 'invalid_to' }, { status: 400 });
   }
-  const limit = Math.min(Math.max(parseInt(sp.get('limit'), 10) || 1000, 1), 1000);
+  // Optional page size. Omitted ⇒ the service returns the whole from/to window.
+  const limitRaw = parseInt(sp.get('limit'), 10);
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined;
 
   try {
     // These three reads are independent — run them concurrently instead of

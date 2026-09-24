@@ -36,12 +36,13 @@ const byEmployeeId = (a, b) => {
 // Default attendance source: the team-lead endpoint. Admin/superadmin surfaces
 // pass an org-wide builder instead. Both take (fromISO, toISO) and return { events }.
 const teamAttendanceUrl = (fromISO, toISO) =>
-  `/api/team/attendance?limit=1000&from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`;
+  `/api/team/attendance?from=${encodeURIComponent(fromISO)}&to=${encodeURIComponent(toISO)}`;
 
 // Yearly per-employee leave / early-leave / late summary, broken down by month.
 // Leave counts come from approved requests; early/late come from attendance.
-// Attendance is fetched here month-by-month to stay under the API's 1000-event
-// window cap (a single yearly window would clip a busy team).
+// Attendance is fetched here month-by-month: each bounded window comes back whole,
+// and twelve month-sized responses stay far under the 4.5 MB response limit a
+// single yearly window would blow through.
 export default function TeamLeaveSummary({ members, leave, holidays, year, onYearChange, buildAttendanceUrl = teamAttendanceUrl }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
