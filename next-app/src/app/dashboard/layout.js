@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }) {
       // IT Team role — its own allowed sections (Accessories/Tracking added later).
       if (parsed.role === 'it_team') {
         const path = window.location.pathname;
-        const allowed = ['/dashboard/my-dashboard', '/dashboard/people', '/dashboard/attendance', '/dashboard/approvals', '/dashboard/accessories', '/dashboard/tracking', '/dashboard/my-recon', '/dashboard/noticeboard', '/dashboard/profile'];
+        const allowed = ['/dashboard/my-dashboard', '/dashboard/people', '/dashboard/attendance', '/dashboard/approvals', '/dashboard/accessories', '/dashboard/application', '/dashboard/tracking', '/dashboard/my-recon', '/dashboard/noticeboard', '/dashboard/profile'];
         if (!allowed.some((p) => path === p || path.startsWith(p + '/'))) {
           router.replace('/dashboard/my-dashboard');
         }
