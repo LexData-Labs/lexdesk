@@ -82,7 +82,7 @@ export async function POST(request) {
   // failure returns JSON (not an unhandled HTML 500 the client can't parse).
   try {
     const rows = await sql`
-      SELECT role, name, employee_id
+      SELECT role, name, employee_id, must_change_password
       FROM users
       WHERE firebase_uid = ${verified.uid} AND org_id = ${ORG_ID}
     `;
@@ -102,6 +102,11 @@ export async function POST(request) {
       avatar: initialsFromName(name),
       employeeId: data.employee_id ?? null,
       orgId: ORG_ID,
+      // Set by every admin password reset. The dashboard traps the user on the
+      // profile page until they change it, so a temporary password handed over
+      // in chat stops being a usable long-term credential. Carried on the user
+      // object, not the JWT, so clearing it does not need a new token.
+      mustChangePassword: data.must_change_password === true,
     };
 
     // Device cap + per-employee IP allowlist (employees / IT team only; admins

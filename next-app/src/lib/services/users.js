@@ -353,7 +353,7 @@ export async function uploadPhoto(uid, dataUrl, orgId) {
 // verifyFirebasePassword returns { uid, email } from Identity Toolkit, and that
 // uid is authoritative — the caller just proved they own that account. No second
 // lookup needed.
-export async function changePassword(email, currentPassword, newPassword) {
+export async function changePassword(email, currentPassword, newPassword, orgId) {
   const verified = await verifyFirebasePassword(email, currentPassword);
   if (!verified) throw Object.assign(new Error('Current password is incorrect'), { status: 400 });
   const { auth } = firebaseAdmin();
@@ -363,7 +363,12 @@ export async function changePassword(email, currentPassword, newPassword) {
   } catch (err) {
     throw firebaseAuthError(err);
   }
-  return { ok: true };
+  // Clearing the flag is what ends the forced-change state at web login. Scoped
+  // by org when the caller passes one; the uid is already proven by the sign-in
+  // above, so this can only ever clear the caller's own flag.
+  if (orgId) await sql`UPDATE users SET must_change_password=false WHERE firebase_uid=${verified.uid} AND org_id=${orgId}`;
+  else await sql`UPDATE users SET must_change_password=false WHERE firebase_uid=${verified.uid}`;
+  return { ok: true, mustChangePassword: false };
 }
 
 // Change a user's login email. This is an IDENTITY change, not a profile edit:
