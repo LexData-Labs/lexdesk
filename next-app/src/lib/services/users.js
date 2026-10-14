@@ -283,8 +283,36 @@ export async function resetUserPassword(uid, orgId) {
   } catch (err) {
     throw firebaseAuthError(err);
   }
+  const email = String(existing[0].email || '').toLowerCase();
+
+  // Prove the new password actually works for signing in before handing it over.
+  //
+  // The write above goes through FIREBASE_SERVICE_ACCOUNT (Admin SDK) while
+  // login goes through NEXT_PUBLIC_FIREBASE_API_KEY (Identity Toolkit). If those
+  // two are configured for DIFFERENT Firebase projects, the reset lands in one
+  // project and the sign-in checks the other — the write "succeeds", the admin
+  // is shown a password, and the employee can never log in. That exact
+  // misconfiguration shipped to production and cost real time to find, because
+  // nothing surfaced it. One round trip through the real sign-in path turns a
+  // silent no-op into a loud, accurate failure.
+  if (email) {
+    const works = await verifyFirebasePassword(email, tempPassword).catch(() => null);
+    if (!works) {
+      throw Object.assign(
+        new Error(
+          'The password was changed but sign-in still rejects it. This deployment’s '
+          + 'Firebase admin credentials and sign-in API key look like they belong to different '
+          + 'projects, so resets are written where logins are not checked. Ask an admin to verify '
+          + 'FIREBASE_SERVICE_ACCOUNT and NEXT_PUBLIC_FIREBASE_API_KEY. (If the account is '
+          + 'disabled instead, re-enable it and retry.)',
+        ),
+        { status: 503, code: 'auth_project_mismatch' },
+      );
+    }
+  }
+
   await sql`UPDATE users SET must_change_password=true WHERE firebase_uid=${uid} AND org_id=${orgId}`;
-  return { email: String(existing[0].email || '').toLowerCase(), temporaryPassword: tempPassword };
+  return { email, temporaryPassword: tempPassword };
 }
 
 // One-time enroll: 409 if the user already has an embedding (admin reset clears it).
@@ -473,9 +501,31 @@ export async function auditAuthLinks(orgId) {
     if (state !== 'OK') findings.push({ uid: r.firebase_uid, email: r.email, name: r.name, role: r.role, state, detail });
   }
 
+  // Name BOTH sides of the auth split. The Admin SDK project comes from
+  // FIREBASE_SERVICE_ACCOUNT (where resets are written); the sign-in project
+  // comes from NEXT_PUBLIC_FIREBASE_API_KEY (where logins are checked). When
+  // these disagree, password resets silently land in the wrong project.
+  // authorizedDomains carries "<project>.firebaseapp.com", which is directly
+  // comparable to the Admin project id — unlike the bare numeric projectId.
+  const adminProjectId = app.options?.projectId ?? null;
+  let signIn = { projectNumber: null, domains: null, error: null };
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects?key=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}`, { cache: 'no-store' });
+    const j = await res.json();
+    if (res.ok) signIn = { projectNumber: j.projectId ?? null, domains: j.authorizedDomains ?? null, error: null };
+    else signIn.error = j?.error?.message || `HTTP ${res.status}`;
+  } catch (e) {
+    signIn.error = e.message;
+  }
+  const signInProject = (signIn.domains || []).map((d) => /^(.+)\.firebaseapp\.com$/.exec(d)?.[1]).find(Boolean) ?? null;
+
   return {
     // The whole point of running this in-environment: name the project.
-    firebaseProjectId: app.options?.projectId ?? null,
+    firebaseProjectId: adminProjectId,
+    signInProjectId: signInProject,
+    // null when either side could not be determined — not a confirmed match.
+    authProjectsAligned: adminProjectId && signInProject ? adminProjectId === signInProject : null,
+    signInLookup: signIn.error ? { error: signIn.error } : { projectNumber: signIn.projectNumber },
     orgId,
     total: rows.length,
     counts: Object.fromEntries(counts),
