@@ -86,5 +86,6 @@ export function publicUser(user) {
     avatar: user.avatar,
     employeeId: user.employeeId ?? null,
     orgId: user.orgId ?? null,
+    mustChangePassword: user.mustChangePassword === true,
   };
 }

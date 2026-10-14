@@ -26,8 +26,15 @@ export default function DashboardLayout({ children }) {
     try {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
+      // A temporary password from an admin reset must not stay usable. Trap the
+      // session on the profile page (where Change Password lives) until the flag
+      // clears, and skip the role routing below so it cannot pull them off it.
+      const mustChange = parsed.mustChangePassword === true;
+      if (mustChange && window.location.pathname !== '/dashboard/profile') {
+        router.replace('/dashboard/profile?changePassword=1');
+      }
       // Redirect employee to their allowed landing page
-      if (parsed.role === 'employee') {
+      if (!mustChange && parsed.role === 'employee') {
         const path = window.location.pathname;
         // Exact-match list. Every path the employee sidebar links to must appear
         // here or a refresh on that page bounces them back to my-dashboard.
@@ -37,7 +44,7 @@ export default function DashboardLayout({ children }) {
         }
       }
       // IT Team role — its own allowed sections (Accessories/Tracking added later).
-      if (parsed.role === 'it_team') {
+      if (!mustChange && parsed.role === 'it_team') {
         const path = window.location.pathname;
         const allowed = ['/dashboard/my-dashboard', '/dashboard/people', '/dashboard/attendance', '/dashboard/approvals', '/dashboard/accessories', '/dashboard/application', '/dashboard/tracking', '/dashboard/my-recon', '/dashboard/noticeboard', '/dashboard/profile'];
         if (!allowed.some((p) => path === p || path.startsWith(p + '/'))) {

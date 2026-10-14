@@ -221,6 +221,16 @@ export default function MyProfilePage() {
       setPw({ current: '', next: '', confirm: '' });
       setPwSuccess('Password changed.');
       setTimeout(() => setPwSuccess(''), 4000);
+      // Lift the forced-change lock the dashboard layout applies. The server
+      // already cleared must_change_password; mirror it locally so navigation
+      // frees up now instead of at the next sign-in.
+      try {
+        const stored = JSON.parse(localStorage.getItem('user') || 'null');
+        if (stored?.mustChangePassword) {
+          localStorage.setItem('user', JSON.stringify({ ...stored, mustChangePassword: false }));
+          window.dispatchEvent(new Event('user-updated'));
+        }
+      } catch { /* non-fatal — the flag clears at next sign-in anyway */ }
     } catch (err) {
       setPwError(err.message);
     } finally {
