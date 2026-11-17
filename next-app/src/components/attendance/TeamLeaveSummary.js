@@ -10,12 +10,24 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 // One sub-row per employee, in image order (Work from Home intentionally omitted).
 // `source` picks where each row's numbers come from: approved leave requests of a
 // given type, or attendance-derived early/late day counts.
+// Every leave type that exists must be listed here or it silently disappears
+// from the summary: Half Day and Emergency were missing, and mobile submissions
+// store no type at all (leaveDaysByMonth buckets those as 'Other'), so 68 of 116
+// requests were invisible. The trailing 'leaveOther' row is the safety net — it
+// sums every type NOT named above, so a new or absent type shows up as Other
+// rather than vanishing.
 const TYPE_ROWS = [
   { key: 'Casual', label: 'Casual', source: 'leave', type: 'Casual' },
   { key: 'Sick', label: 'Sick', source: 'leave', type: 'Sick' },
+  { key: 'Half Day', label: 'Half Day', source: 'leave', type: 'Half Day' },
+  { key: 'Emergency', label: 'Emergency', source: 'leave', type: 'Emergency' },
+  { key: 'Other', label: 'Other', source: 'leaveOther' },
   { key: 'Early Leave', label: 'Early Leave', source: 'early' },
   { key: 'Late', label: 'Late', source: 'late' },
 ];
+
+// Types with their own row above; anything else falls into Other.
+const NAMED_LEAVE_TYPES = new Set(TYPE_ROWS.filter((r) => r.source === 'leave').map((r) => r.type));
 
 const initials = (name) =>
   (name || '').trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || '?';
@@ -91,6 +103,11 @@ export default function TeamLeaveSummary({ members, leave, holidays, year, onYea
         const { late, early } = lateEarlyDaysByMonth(eventsForUser(events, m.id), year);
         const seriesFor = (row) => {
           if (row.source === 'leave') return byType[row.type] || new Array(12).fill(0);
+          if (row.source === 'leaveOther') {
+            return Object.entries(byType)
+              .filter(([type]) => !NAMED_LEAVE_TYPES.has(type))
+              .reduce((acc, [, months]) => acc.map((v, i) => v + months[i]), new Array(12).fill(0));
+          }
           if (row.source === 'early') return early;
           return late;
         };

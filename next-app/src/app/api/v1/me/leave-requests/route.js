@@ -41,8 +41,20 @@ export async function POST(request) {
   }
 
   try {
+    // leaveType/halfDayPeriod were never forwarded, so every mobile request
+    // stored leave_type NULL and dropped out of the team leave summary, which
+    // matches on type. Pass them through; submitLeave still validates against
+    // VALID_LEAVE_TYPES, so an older app that sends nothing behaves as before.
     const result = await submitLeave(
-      { userId: user.uid, fromDay, toDay, subject, details: body.details || '' },
+      {
+        userId: user.uid,
+        fromDay,
+        toDay,
+        subject,
+        details: body.details || '',
+        leaveType: body.leaveType,
+        halfDayPeriod: body.halfDayPeriod,
+      },
       user.orgId,
     );
     return NextResponse.json(result, { status: 201 });
