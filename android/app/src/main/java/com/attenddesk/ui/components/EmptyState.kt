@@ -44,6 +44,9 @@ fun EmptyState(
             RoboMascot(
                 size = 76.dp,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                // Visor matches the surface behind it so it reads as cut out,
+                // which keeps contrast in both light and dark themes.
+                visor = MaterialTheme.colorScheme.surface,
             )
         } else {
             Box(

@@ -53,6 +53,7 @@ import com.attenddesk.data.api.CheckInRequest
 import com.attenddesk.data.api.CheckInResponse
 import com.attenddesk.data.api.PolicyResponse
 import com.attenddesk.ui.components.CheckInCelebration
+import com.attenddesk.ui.components.RoboMascot
 import com.attenddesk.ui.components.rememberPopScale
 import androidx.compose.ui.graphics.graphicsLayer
 import com.attenddesk.ui.components.ChipTone
@@ -95,6 +96,22 @@ fun VerificationTab(
     val scope = rememberCoroutineScope()
     var policy by remember { mutableStateOf<PolicyResponse?>(null) }
     var bundle by remember { mutableStateOf<CheckBundle?>(null) }
+
+    // Hoisted so both the environment panel and the failure message can name it
+    // — "1.8 km from the office" is the one number that makes a refusal
+    // actionable, and the server's result payload doesn't carry it.
+    val distanceToOffice: Float? = run {
+        val gLat = bundle?.gps?.lat
+        val gLng = bundle?.gps?.lng
+        val oLat = policy?.office?.lat
+        val oLng = policy?.office?.lng
+        if (gLat == null || gLng == null || oLat == null || oLng == null) null
+        else {
+            val out = FloatArray(1)
+            android.location.Location.distanceBetween(gLat, gLng, oLat, oLng, out)
+            out[0]
+        }
+    }
     var outcome by remember { mutableStateOf<CheckOutcome?>(null) }
     var errorText by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -194,18 +211,6 @@ fun VerificationTab(
                     }
                     if (features.verify.gps) {
                         if (addedAny) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                        val distanceToOffice: Float? = run {
-                            val gLat = bundle?.gps?.lat
-                            val gLng = bundle?.gps?.lng
-                            val oLat = policy?.office?.lat
-                            val oLng = policy?.office?.lng
-                            if (gLat == null || gLng == null || oLat == null || oLng == null) null
-                            else {
-                                val results = FloatArray(1)
-                                android.location.Location.distanceBetween(gLat, gLng, oLat, oLng, results)
-                                results[0]
-                            }
-                        }
                         val radiusMeters = policy?.office?.radiusMeters ?: 0
                         val withinGeofence = distanceToOffice != null && distanceToOffice <= radiusMeters
                         val gpsOk = bundle?.gps?.lat != null && bundle?.gps?.isMock != true && withinGeofence
@@ -344,7 +349,7 @@ fun VerificationTab(
                 }
             }
 
-            outcome?.let { ResultBlock(it) }
+            outcome?.let { ResultBlock(it, distanceToOffice, policy?.office?.radiusMeters) }
             errorText?.let { ErrorBlock(it) }
         }
     }
@@ -404,7 +409,7 @@ private fun ActionTile(
 }
 
 @Composable
-private fun ResultBlock(o: CheckOutcome) {
+private fun ResultBlock(o: CheckOutcome, distanceMeters: Float?, radiusMeters: Int?) {
     val isOk = o.ok
     val tone = toneColors(if (isOk) ChipTone.Success else ChipTone.Danger)
     val bg = tone.bg
@@ -442,11 +447,17 @@ private fun ResultBlock(o: CheckOutcome) {
                         val verb = if (o.type == "CHECK_IN") "You're in" else "Checked out"
                         "$verb · ${nowTimeLabel()}"
                     } else {
-                        "Check-in failed"
+                        "Not yet"
                     },
                     style = MaterialTheme.typography.titleSmall,
                     color = fg,
+                    modifier = Modifier.weight(1f),
                 )
+                if (!isOk) {
+                    // A small, sympathetic mascot — this screen is where people
+                    // land when something is already not working.
+                    RoboMascot(size = 34.dp, tint = fg.copy(alpha = 0.65f), visor = bg, blink = false)
+                }
             }
             if (isOk && !o.isLate && !o.isEarly) {
                 Text(
@@ -472,14 +483,41 @@ private fun ResultBlock(o: CheckOutcome) {
                     else "Marked as early leave",
                 )
             }
+            // On failure, lead with the checks that actually blocked it. Listing
+            // every unpassed check made four lines look like four problems when
+            // only one was required — the optional ones are not reasons.
+            if (!isOk) {
+                val blockers = o.results.filter { it.required && !it.passed }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = when (blockers.size) {
+                        0 -> "Something went wrong on our side. Try again in a moment."
+                        1 -> "Just one thing: ${blockerSummary(blockers.first(), o.faceMatchScore, distanceMeters, radiusMeters)}"
+                        else -> "A couple of things need sorting first."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = fg,
+                )
+                val skipped = o.results.filter { !it.required && !it.passed }
+                if (skipped.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Not needed today: " + skipped.joinToString { checkLabel(it.name) },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = fg.copy(alpha = 0.6f),
+                    )
+                }
+            }
             Spacer(Modifier.height(6.dp))
-            o.results.forEach { r ->
+            // Required checks first, so the reason is at the top of the list.
+            val ordered = if (isOk) o.results else o.results.sortedByDescending { it.required && !it.passed }
+            ordered.forEach { r ->
                 val dotColor = when {
                     r.passed -> toneColors(ChipTone.Success).fg
                     r.required -> toneColors(ChipTone.Danger).fg
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
-                val textColor = if (!r.required && !r.passed) fg.copy(alpha = 0.65f) else fg
+                val textColor = if (!r.required && !r.passed) fg.copy(alpha = 0.55f) else fg
                 val score = if (r.name == "face") o.faceMatchScore else null
                 val detail = if (r.passed) "ok" else humanizeReason(r.name, r.reason, score)
                 Row(
@@ -660,3 +698,43 @@ private fun humanizeReason(checkName: String, reason: String?, score: Double?): 
 
 private fun nowTimeLabel(): String =
     SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+
+/**
+ * One plain sentence naming why a check-in was refused, written as the next
+ * thing to do rather than a status code. Used for the single-blocker case,
+ * which is the overwhelmingly common one.
+ */
+private fun blockerSummary(
+    r: com.attenddesk.data.api.CheckResultDto,
+    faceScore: Double?,
+    distanceMeters: Float? = null,
+    radiusMeters: Int? = null,
+): String =
+    when (r.name) {
+        "geo" -> when (r.reason) {
+            "mock_location" -> "turn off the mock-location app and try again."
+            "missing_location" -> "we can't get a GPS fix. Step outside or near a window."
+            "low_accuracy" -> "the GPS fix is too rough. Give it a few seconds outdoors."
+            else -> if (distanceMeters != null) "you're ${formatDistance(distanceMeters)} from the office" + (radiusMeters?.let { " (you need to be within $it m)" } ?: "") + "." else "you're too far from the office to check in."
+        }
+        "wifi" -> "connect to the office Wi-Fi."
+        "qr" -> when (r.reason) {
+            "qr_token_already_used" -> "that QR code has been used. Scan the current one."
+            else -> "scan the office QR code."
+        }
+        "face" -> when (r.reason) {
+            "face_not_enrolled" -> "enroll your face first, from the card above."
+            "similarity_below_threshold" ->
+                if (faceScore != null) "we couldn't match your face (${"%.0f".format(faceScore * 100)}%). Try again in better light."
+                else "we couldn't match your face. Try again in better light."
+            "liveness_failed" -> "hold still and look at the camera, then try again."
+            else -> "capture your face again."
+        }
+        "device" -> "this device is registered to someone else. Ask an admin to reset it."
+        "location" -> "you're not at the office, or not on the office network."
+        else -> "${checkLabel(r.name)} didn't pass."
+    }
+
+/** Metres under a kilometre, otherwise one decimal of a kilometre. */
+private fun formatDistance(meters: Float): String =
+    if (meters < 1000f) "${meters.toInt()} m" else "%.1f km".format(meters / 1000f)
