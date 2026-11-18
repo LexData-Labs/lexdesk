@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -75,10 +76,12 @@ class GeofenceReceiver : BroadcastReceiver() {
         val app = context.applicationContext as? App ?: return
         val container = app.container
         val snapshot = LocationPrefs.load(context)
-        // We may have been triggered after the user disabled the feature
-        // mid-session — bail.
-        if (snapshot.mode == "manual") {
-            Log.i(TAG, "Org is in manual mode; ignoring geofence event")
+        // Auto check-in is a per-user choice, so it works even when the org-wide
+        // location mode is "manual" — that env var is not something most admins
+        // can change. Either signal being on is enough to keep going.
+        val autoCheckIn = runCatching { container.autoCheckInPrefs.flow.first() }.getOrDefault(false)
+        if (snapshot.mode == "manual" && !autoCheckIn) {
+            Log.i(TAG, "Manual mode and auto check-in off; ignoring geofence event")
             return
         }
 
@@ -106,21 +109,27 @@ class GeofenceReceiver : BroadcastReceiver() {
             }.onFailure { Log.w(TAG, "ping failed: ${it.message}") }
         }
 
-        // 2) Hybrid: if face is NOT required, attempt an auto-checkin/out.
-        //    If it IS required, post a reminder notification.
-        if (!snapshot.faceRequired && location != null) {
-            val type = if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) "CHECK_IN" else "CHECK_OUT"
+        // 2) Auto check-IN only. Exiting the geofence never checks anyone out:
+        //    a lunch run past the 40 m radius would otherwise end their day.
+        //    Face enrollment can't happen in the background, so if face is
+        //    required we only notify.
+        val isEnter = transition == Geofence.GEOFENCE_TRANSITION_ENTER
+        val wifi = runCatching { container.wifiCheck.snapshot() }.getOrNull()
+        val onOfficeWifi = matchesOfficeWifi(wifi, snapshot.office)
+
+        if (isEnter && !snapshot.faceRequired && location != null && onOfficeWifi) {
             val attempted = runCatching {
                 container.api.checkIn(
                     CheckInRequest(
-                        type = type,
+                        type = "CHECK_IN",
                         lat = location.latitude,
                         lng = location.longitude,
                         accuracyMeters = location.accuracy.toDouble(),
                         isMockLocation = isMockLocation(location),
-                        // No SSID/QR/face — server will reject if any of those
-                        // are required. That's fine; the notification fallback
-                        // covers it.
+                        // Send the WiFi we matched on so the server records the
+                        // same evidence it would for a manual check-in.
+                        ssid = wifi?.ssid,
+                        bssid = wifi?.bssid,
                     ),
                 )
             }
@@ -137,6 +146,26 @@ class GeofenceReceiver : BroadcastReceiver() {
         } else {
             postNotification(context, transition, autoCheckedIn = false)
         }
+    }
+
+    /**
+     * True when the phone is on the office network. Matches SSID or BSSID
+     * against the cached office allowlist, the same either/or rule the server
+     * applies. Returns false when WiFi can't be read (Android 13+ hides the
+     * SSID without location permission) or when no allowlist is configured —
+     * auto check-in should stay silent rather than fire on a guess.
+     */
+    private fun matchesOfficeWifi(
+        wifi: com.attenddesk.checks.WifiSnapshot?,
+        office: LocationPrefs.CachedOffice?,
+    ): Boolean {
+        if (office == null) return false
+        if (office.allowedSsids.isEmpty() && office.allowedBssids.isEmpty()) return false
+        val ssid = wifi?.ssid?.trim()?.removeSurrounding("\"")
+        val bssid = wifi?.bssid?.trim()?.lowercase()
+        val ssidOk = !ssid.isNullOrEmpty() && office.allowedSsids.any { it.equals(ssid, ignoreCase = true) }
+        val bssidOk = !bssid.isNullOrEmpty() && office.allowedBssids.contains(bssid)
+        return ssidOk || bssidOk
     }
 
     private fun postNotification(context: Context, transition: Int, autoCheckedIn: Boolean) {

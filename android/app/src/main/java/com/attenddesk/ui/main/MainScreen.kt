@@ -126,7 +126,7 @@ fun MainScreen(
             val idx = visibleTabs.indexOf(Tab.Home); if (idx >= 0) selected = idx
             scope.launch { drawerState.close() }
         })
-        add(DrawerItem("Attendance Reminder", Icons.Outlined.NotificationsActive) { closeThen(Routes.ATT_REMINDER) })
+        add(DrawerItem("Settings", Icons.Outlined.NotificationsActive) { closeThen(Routes.ATT_REMINDER) })
         if (isManager) add(DrawerItem("Approvals", Icons.Outlined.RuleFolder) { closeThen(Routes.approvals(0)) })
         add(DrawerItem("My QR Code", Icons.Outlined.QrCode2) { closeThen(Routes.MY_QR) })
         add(DrawerItem("My Profile", Icons.Outlined.Person) { closeThen(Routes.PROFILE) })

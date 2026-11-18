@@ -9,6 +9,7 @@ import com.attenddesk.data.AuthRepository
 import com.attenddesk.data.DeviceId
 import com.attenddesk.data.PolicyRepository
 import com.attenddesk.data.ProfileStore
+import com.attenddesk.data.AutoCheckInPreferences
 import com.attenddesk.data.ReminderPreferences
 import com.attenddesk.data.ThemePreferences
 import com.attenddesk.data.api.AttendApi
@@ -27,6 +28,7 @@ class AppContainer(private val app: App) {
     val profileStore: ProfileStore = ProfileStore(app.dataStore)
     val themePrefs: ThemePreferences = ThemePreferences(app.dataStore)
     val reminderPrefs: ReminderPreferences = ReminderPreferences(app.dataStore)
+    val autoCheckInPrefs: AutoCheckInPreferences = AutoCheckInPreferences(app.dataStore)
     val api: AttendApi = ApiClient.build(BuildConfig.API_BASE, DeviceId.get(app))
     val authRepo: AuthRepository = AuthRepository(api, profileStore)
     val policyRepo: PolicyRepository = PolicyRepository(api)

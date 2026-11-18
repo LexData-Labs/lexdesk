@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import android.content.Context
 import com.attenddesk.data.api.PolicyResponse
@@ -30,6 +31,10 @@ object LocationPrefs {
     private val K_OFFICE_LNG = doublePreferencesKey("officeLng")
     private val K_OFFICE_RADIUS = intPreferencesKey("officeRadiusMeters")
     private val K_OFFICE_ID = stringPreferencesKey("officeId")
+    // Cached so a geofence trigger can match the office WiFi without a
+    // network round trip. BSSIDs are stored lowercase, as the server does.
+    private val K_ALLOWED_SSIDS = stringSetPreferencesKey("allowedSsids")
+    private val K_ALLOWED_BSSIDS = stringSetPreferencesKey("allowedBssids")
 
     suspend fun save(context: Context, policy: PolicyResponse) {
         val office = policy.office
@@ -44,11 +49,15 @@ object LocationPrefs {
                 p[K_OFFICE_LAT] = office.lat
                 p[K_OFFICE_LNG] = office.lng
                 p[K_OFFICE_RADIUS] = office.radiusMeters
+                p[K_ALLOWED_SSIDS] = office.allowedSsids.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                p[K_ALLOWED_BSSIDS] = office.allowedBssids.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
             } else {
                 p.remove(K_OFFICE_ID)
                 p.remove(K_OFFICE_LAT)
                 p.remove(K_OFFICE_LNG)
                 p.remove(K_OFFICE_RADIUS)
+                p.remove(K_ALLOWED_SSIDS)
+                p.remove(K_ALLOWED_BSSIDS)
             }
         }
     }
@@ -61,6 +70,8 @@ object LocationPrefs {
             p.remove(K_OFFICE_LAT)
             p.remove(K_OFFICE_LNG)
             p.remove(K_OFFICE_RADIUS)
+            p.remove(K_ALLOWED_SSIDS)
+            p.remove(K_ALLOWED_BSSIDS)
         }
     }
 
@@ -75,7 +86,7 @@ object LocationPrefs {
         val officeLng = p[K_OFFICE_LNG]
         val officeRadius = p[K_OFFICE_RADIUS]
         val office = if (officeId != null && officeLat != null && officeLng != null && officeRadius != null) {
-            CachedOffice(officeId, officeLat, officeLng, officeRadius)
+            CachedOffice(officeId, officeLat, officeLng, officeRadius, p[K_ALLOWED_SSIDS] ?: emptySet(), p[K_ALLOWED_BSSIDS] ?: emptySet())
         } else null
         return Snapshot(mode, periodic, continuous, faceRequired, office)
     }
@@ -93,5 +104,7 @@ object LocationPrefs {
         val lat: Double,
         val lng: Double,
         val radiusMeters: Int,
+        val allowedSsids: Set<String> = emptySet(),
+        val allowedBssids: Set<String> = emptySet(),
     )
 }

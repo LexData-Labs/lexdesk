@@ -57,9 +57,36 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val is24h = LocalIs24Hour.current
     val cfg by container.reminderPrefs.flow.collectAsState(initial = ReminderConfig(false, 9, 0))
+    val autoCheckIn by container.autoCheckInPrefs.flow.collectAsState(initial = false)
     var showTime by remember { mutableStateOf(false) }
+    var autoWarning by remember { mutableStateOf<String?>(null) }
 
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    // Registering geofences needs background location; without it the switch
+    // would look on and silently never fire, so say so instead.
+    fun applyAutoCheckIn(enabled: Boolean) {
+        scope.launch {
+            container.autoCheckInPrefs.set(enabled)
+            val app = ctx.applicationContext as com.attenddesk.App
+            if (!enabled) {
+                com.attenddesk.location.GeofenceController(app).unregister()
+                autoWarning = null
+                return@launch
+            }
+            val office = com.attenddesk.location.LocationPrefs.load(ctx).office
+            autoWarning = when {
+                office == null ->
+                    "No office location is configured yet. Open Check-in once to load it, then turn this on again."
+                office.allowedSsids.isEmpty() && office.allowedBssids.isEmpty() ->
+                    "Your office has no Wi-Fi networks configured, so auto check-in can't confirm you're on it. Ask an admin to add the office Wi-Fi."
+                !com.attenddesk.location.GeofenceController(app).register(office) ->
+                    "Couldn't start auto check-in. Grant location access \"Allow all the time\" in Settings, then try again."
+                else -> null
+            }
+            if (autoWarning != null) container.autoCheckInPrefs.set(false)
+        }
+    }
 
     fun apply(enabled: Boolean, hour: Int, minute: Int) {
         scope.launch { container.reminderPrefs.set(enabled, hour, minute) }
@@ -76,7 +103,7 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
     }
 
     Scaffold(
-        topBar = { GradientHeader(title = "Attendance Reminder", onBack = onBack) },
+        topBar = { GradientHeader(title = "Settings", onBack = onBack) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
@@ -108,6 +135,27 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 "Reminders are delivered on this device only and don't affect your check-in record.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            SectionCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Auto check-in", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Check in automatically when you reach the office on the office Wi-Fi",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = autoCheckIn, onCheckedChange = { applyAutoCheckIn(it) })
+                }
+            }
+            Text(
+                if (autoWarning != null) autoWarning!!
+                else "Both are required: inside the office area AND connected to the office Wi-Fi. " +
+                    "You'll get a notification whenever it checks you in. Leaving never checks you out — do that yourself.",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (autoWarning != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(4.dp))
         }
