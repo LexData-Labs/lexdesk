@@ -28,6 +28,9 @@ fun EmptyState(
     description: String,
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Outlined.Inbox,
+    /** Show the TeamOS robot instead of the icon — warmer, for the screens
+     *  people are most likely to land on with nothing to see yet. */
+    mascot: Boolean = false,
     action: @Composable (() -> Unit)? = null,
 ) {
     Column(
@@ -37,17 +40,24 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        if (mascot) {
+            RoboMascot(
+                size = 76.dp,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            }
         }
         Text(
             text = title,

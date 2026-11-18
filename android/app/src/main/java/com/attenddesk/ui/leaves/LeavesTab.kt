@@ -55,6 +55,7 @@ import com.attenddesk.ui.components.ChipTone
 import com.attenddesk.ui.components.GradientHeader
 import com.attenddesk.ui.components.IconChip
 import com.attenddesk.ui.components.LoadingDots
+import com.attenddesk.ui.components.EmptyState
 import com.attenddesk.ui.components.SectionCard
 import com.attenddesk.ui.components.StatusChip
 import com.attenddesk.ui.dashboard.DayStatus
@@ -161,10 +162,10 @@ fun LeaveTab(
                         Text("Loading your requests…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     requests!!.isEmpty() -> SectionCard {
-                        Text(
-                            "No leave requests yet. Tap Request leave to submit your first one.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        EmptyState(
+                            mascot = true,
+                            title = "No leave yet",
+                            description = "When you need a day off, tap Request leave above and it'll show up here.",
                         )
                     }
                     else -> {

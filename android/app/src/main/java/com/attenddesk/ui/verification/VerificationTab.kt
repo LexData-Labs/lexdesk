@@ -52,6 +52,9 @@ import com.attenddesk.checks.CheckBundle
 import com.attenddesk.data.api.CheckInRequest
 import com.attenddesk.data.api.CheckInResponse
 import com.attenddesk.data.api.PolicyResponse
+import com.attenddesk.ui.components.CheckInCelebration
+import com.attenddesk.ui.components.rememberPopScale
+import androidx.compose.ui.graphics.graphicsLayer
 import com.attenddesk.ui.components.ChipTone
 import com.attenddesk.ui.components.LoadingDots
 import com.attenddesk.ui.components.SectionCard
@@ -406,6 +409,11 @@ private fun ResultBlock(o: CheckOutcome) {
     val tone = toneColors(if (isOk) ChipTone.Success else ChipTone.Danger)
     val bg = tone.bg
     val fg = tone.fg
+    // Celebrate only a clean check-in: a failure or an early-leave warning
+    // should not get confetti.
+    val celebrateKey = if (isOk) o else null
+    val pop = rememberPopScale(celebrateKey)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -413,23 +421,39 @@ private fun ResultBlock(o: CheckOutcome) {
             .border(1.dp, tone.border, MaterialTheme.shapes.medium)
             .padding(14.dp),
     ) {
+        if (isOk) {
+            CheckInCelebration(
+                key = celebrateKey,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        }
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(
                     imageVector = if (isOk) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
                     contentDescription = null,
                     tint = fg,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer { scaleX = pop; scaleY = pop },
                 )
                 Text(
                     text = if (isOk) {
-                        val verb = if (o.type == "CHECK_IN") "Checked in" else "Checked out"
+                        val verb = if (o.type == "CHECK_IN") "You're in" else "Checked out"
                         "$verb · ${nowTimeLabel()}"
                     } else {
                         "Check-in failed"
                     },
                     style = MaterialTheme.typography.titleSmall,
                     color = fg,
+                )
+            }
+            if (isOk && !o.isLate && !o.isEarly) {
+                Text(
+                    text = if (o.type == "CHECK_IN") "Have a good one 👋" else "See you tomorrow 👋",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = fg.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(start = 28.dp, top = 2.dp),
                 )
             }
             if (isOk && o.isLate) {

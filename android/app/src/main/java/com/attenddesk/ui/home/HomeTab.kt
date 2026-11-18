@@ -49,6 +49,7 @@ import com.attenddesk.ui.attendance.computeMonthStats
 import com.attenddesk.ui.attendance.todayCanon
 import com.attenddesk.ui.components.ChipTone
 import com.attenddesk.ui.components.GradientHeader
+import com.attenddesk.ui.components.RoboMascot
 import com.attenddesk.ui.components.ModuleGrid
 import com.attenddesk.ui.components.ModuleItem
 import com.attenddesk.ui.components.SectionCard
@@ -106,20 +107,29 @@ fun HomeTab(
             onMenu = onMenu,
             onBell = onBell,
             bottomContent = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        displayName?.let { "Hi, $it" } ?: "Welcome",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = androidx.compose.ui.graphics.Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        "${formatWeekday(today)}, ${formatDay(today)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            greetingFor(displayName),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = androidx.compose.ui.graphics.Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            "${formatWeekday(today)}, ${formatDay(today)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.8f),
+                        )
+                    }
+                    RoboMascot(size = 54.dp, tint = androidx.compose.ui.graphics.Color.White)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TimePill(
@@ -221,4 +231,21 @@ private fun AdminBanner() {
             Text("Open admin web")
         }
     }
+}
+
+/**
+ * Time-aware greeting in the office timezone, so it matches the working day
+ * rather than the phone's locale clock. Falls back to a plain welcome before
+ * the profile has loaded.
+ */
+private fun greetingFor(name: String?): String {
+    val hour = java.time.LocalTime.now(DhakaZone).hour
+    val part = when (hour) {
+        in 0..4 -> "Still up"
+        in 5..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        in 17..20 -> "Good evening"
+        else -> "Good evening"
+    }
+    return if (name.isNullOrBlank()) part else "$part, $name"
 }
