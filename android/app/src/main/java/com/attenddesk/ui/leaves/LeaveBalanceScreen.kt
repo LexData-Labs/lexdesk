@@ -1,5 +1,7 @@
 package com.attenddesk.ui.leaves
 
+import com.attenddesk.ui.util.formatLeaveDays
+import com.attenddesk.ui.util.trimDays
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -95,7 +97,7 @@ fun LeaveBalanceScreen(container: AppContainer, onBack: () -> Unit) {
                             ringWidth = 20.dp,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$approvedDays", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                                Text(trimDays(approvedDays), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                                 Text("days taken", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -128,10 +130,10 @@ fun LeaveBalanceScreen(container: AppContainer, onBack: () -> Unit) {
 }
 
 @Composable
-private fun Legend(color: Color, label: String, count: Int) {
+private fun Legend(color: Color, label: String, count: Double) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.size(12.dp).clip(CircleShape).background(color))
-        Text("$label ($count)", style = MaterialTheme.typography.bodyMedium)
+        Text("$label (${trimDays(count)})", style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -141,7 +143,7 @@ private fun HistoryCard(req: LeaveRequestDto) {
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    "${req.totalDays} day application",
+                    "${formatLeaveDays(req.totalDays)} application",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )

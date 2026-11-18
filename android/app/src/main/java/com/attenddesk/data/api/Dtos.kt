@@ -161,7 +161,12 @@ data class LeaveRequestDto(
     val userName: String,
     val fromDay: String,
     val toDay: String,
-    val totalDays: Int,
+    // Double, not Int: a half day is 0.5, and the server sends it as a real
+    // number. Declaring this Int made kotlinx.serialization throw on any list
+    // containing a half-day request, so the whole Leave tab failed to load.
+    val totalDays: Double,
+    val leaveType: String? = null,
+    val halfDayPeriod: String? = null,
     val subject: String = "",
     val details: String = "",
     val status: String, // "pending" | "approved" | "rejected" | "cancelled"
@@ -180,7 +185,15 @@ data class LeaveRequestSubmitRequest(
     val toDay: String,
     val subject: String,
     val details: String,
+    // Without these the server stored leave_type NULL for every app submission,
+    // and those requests dropped out of the web team-leave summary, which groups
+    // by type. halfDayPeriod is only meaningful when leaveType is "Half Day".
+    val leaveType: String,
+    val halfDayPeriod: String? = null,
 )
+
+/** Leave types the server accepts (VALID_LEAVE_TYPES in services/leave.js). */
+val LEAVE_TYPES = listOf("Casual", "Sick", "Emergency", "Half Day")
 
 @Serializable
 data class LeaveRequestSubmitResponse(val id: String)
