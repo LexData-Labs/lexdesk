@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAppDownloadUrl } from '@/lib/useAppDownloadUrl';
 
-const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
+
 
 // Shared stroke-icon props so every glyph reads consistently in the rail.
 const ic = {
@@ -60,6 +61,7 @@ function NavLink({ href, label, icon, exact, onNavigate }) {
 }
 
 export default function SidebarNav({ role, isTeamLeader, onNavigate }) {
+  const APP_DOWNLOAD_URL = useAppDownloadUrl();
   const admin = role === 'admin' || role === 'superadmin' || role === 'dev';
   const it = role === 'it_team';
   const emp = role === 'employee';

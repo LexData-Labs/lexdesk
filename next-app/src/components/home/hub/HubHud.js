@@ -9,7 +9,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import RoboAssistant from '@/components/RoboAssistant';
 import { getOrCreateWebDeviceId, webDeviceName } from '@/lib/deviceId';
-import { FEATURES, APP_DOWNLOAD_URL } from '../content';
+import { FEATURES } from '../content';
+import { useAppDownloadUrl } from '@/lib/useAppDownloadUrl';
 import { STATIONS_BY_ID } from './stations';
 
 function EyeToggle({ shown, onToggle }) {
@@ -209,6 +210,7 @@ function FeaturesPanel({ station, onBack }) {
 }
 
 function AppPanel({ station, onBack }) {
+  const APP_DOWNLOAD_URL = useAppDownloadUrl();
   return (
     <HudCard station={station} onBack={onBack}>
       <div className="text-center">

@@ -41,4 +41,4 @@ export const STEPS = [
   { n: '03', title: 'Manage & report', body: 'Approve requests and track attendance from the dashboard.' },
 ];
 
-export const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
+// The download link now lives in Settings; read it with useAppDownloadUrl().

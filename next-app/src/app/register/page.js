@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { AuthDecor } from '@/components/authDecor';
 import RoboAssistant from '@/components/RoboAssistant';
 import { getOrCreateWebDeviceId, webDeviceName } from '@/lib/deviceId';
+import { useAppDownloadUrl } from '@/lib/useAppDownloadUrl';
 
-const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL;
+
 
 // Shape the RoboAssistant reads. The child forms patch this via `onState` so the
 // bot above the card reacts to focus, password reveal, submit, and success.
@@ -151,6 +152,7 @@ function SignInForm({ onState }) {
 
 export default function Register() {
   const [formState, setFormState] = useState(INITIAL_FORM_STATE);
+  const APP_DOWNLOAD_URL = useAppDownloadUrl();
 
   const updateFormState = useCallback((patch) => {
     setFormState((prev) => ({ ...prev, ...patch }));
