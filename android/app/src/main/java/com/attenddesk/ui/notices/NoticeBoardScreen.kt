@@ -57,7 +57,7 @@ fun NoticeBoardScreen(container: AppContainer, onBack: () -> Unit) {
             when {
                 notices == null -> Box(Modifier.fillMaxSize(), Alignment.Center) { LoadingDots() }
                 notices!!.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    EmptyState(icon = Icons.Outlined.Campaign, title = "No notices", description = "Announcements from your organization will appear here.")
+                    EmptyState(mascot = true, title = "Nothing to read", description = "Announcements from your team will land here.")
                 }
                 else -> LazyColumn(
                     contentPadding = PaddingValues(16.dp),

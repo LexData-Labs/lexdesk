@@ -27,6 +27,7 @@ object LocationPrefs {
     private val K_PERIODIC = intPreferencesKey("periodicIntervalMinutes")
     private val K_CONTINUOUS = intPreferencesKey("continuousIntervalSeconds")
     private val K_FACE_REQUIRED = booleanPreferencesKey("faceRequired")
+    private val K_WIFI_REQUIRED = booleanPreferencesKey("wifiRequired")
     private val K_OFFICE_LAT = doublePreferencesKey("officeLat")
     private val K_OFFICE_LNG = doublePreferencesKey("officeLng")
     private val K_OFFICE_RADIUS = intPreferencesKey("officeRadiusMeters")
@@ -44,6 +45,7 @@ object LocationPrefs {
             p[K_PERIODIC] = policy.features.location.periodicIntervalMinutes
             p[K_CONTINUOUS] = policy.features.location.continuousIntervalSeconds
             p[K_FACE_REQUIRED] = face
+            p[K_WIFI_REQUIRED] = policy.policy?.requireWifi == true
             if (office != null) {
                 p[K_OFFICE_ID] = office.id
                 p[K_OFFICE_LAT] = office.lat
@@ -81,6 +83,7 @@ object LocationPrefs {
         val periodic = p[K_PERIODIC] ?: 15
         val continuous = p[K_CONTINUOUS] ?: 60
         val faceRequired = p[K_FACE_REQUIRED] ?: true
+        val wifiRequired = p[K_WIFI_REQUIRED] ?: false
         val officeId = p[K_OFFICE_ID]
         val officeLat = p[K_OFFICE_LAT]
         val officeLng = p[K_OFFICE_LNG]
@@ -88,7 +91,7 @@ object LocationPrefs {
         val office = if (officeId != null && officeLat != null && officeLng != null && officeRadius != null) {
             CachedOffice(officeId, officeLat, officeLng, officeRadius, p[K_ALLOWED_SSIDS] ?: emptySet(), p[K_ALLOWED_BSSIDS] ?: emptySet())
         } else null
-        return Snapshot(mode, periodic, continuous, faceRequired, office)
+        return Snapshot(mode, periodic, continuous, faceRequired, wifiRequired, office)
     }
 
     data class Snapshot(
@@ -96,6 +99,10 @@ object LocationPrefs {
         val periodicIntervalMinutes: Int,
         val continuousIntervalSeconds: Int,
         val faceRequired: Boolean,
+        /** Mirrors the org policy's "Require Wi-Fi". Auto check-in only insists
+         *  on office Wi-Fi when this is on, so it is never stricter than a
+         *  manual check-in would be. */
+        val wifiRequired: Boolean,
         val office: CachedOffice?,
     )
 
