@@ -234,3 +234,9 @@ CREATE TABLE IF NOT EXISTS org (
   id text PRIMARY KEY, name text, source text,
   created_at timestamptz DEFAULT now(), updated_at timestamptz
 );
+
+-- App download link, editable from Settings instead of NEXT_PUBLIC_APP_DOWNLOAD_URL.
+-- That env var is inlined at build time and needs a Vercel redeploy to change,
+-- which puts it out of reach of the admins who actually cut app releases. The
+-- env var stays as the fallback when this is unset.
+ALTER TABLE org ADD COLUMN IF NOT EXISTS app_download_url text;

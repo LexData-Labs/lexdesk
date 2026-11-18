@@ -45,6 +45,7 @@ export { recordBreak, listMyBreaks } from './services/breaks';
 export { getHolidays, createHoliday, deleteHoliday } from './services/holidays';
 export { getOffice, updateOffice } from './services/office';
 export { getPolicy, updatePolicy } from './services/policy';
+export { getAppDownloadUrl, setAppDownloadUrl } from './services/appSettings';
 
 // Attendance read: { events } with nested user, same as the old wrapper.
 export function getAttendance(query = {}, orgId) {

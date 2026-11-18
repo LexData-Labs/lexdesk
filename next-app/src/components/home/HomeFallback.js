@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ProfileMenu from '@/components/ProfileMenu';
 import { AuthDecor, FeatureChip, SyncIcon, ChartIcon, ShieldIcon, UsersIcon } from '@/components/authDecor';
-import { FEATURES, STEPS, APP_DOWNLOAD_URL } from './content';
+import { FEATURES, STEPS } from './content';
+import { useAppDownloadUrl } from '@/lib/useAppDownloadUrl';
 
 // Reads the persisted session (localStorage) so the landing page can greet a
 // logged-in visitor with their profile menu instead of a "Sign in" button.
@@ -57,6 +58,7 @@ function Logo() {
 }
 
 export default function HomeFallback({ onEnterHub }) {
+  const APP_DOWNLOAD_URL = useAppDownloadUrl();
   const { user, photoUrl, logout } = useSession();
   // Where a logged-in visitor's primary CTA should point.
   const dashHref = user?.role === 'employee' ? '/dashboard/my-dashboard' : '/dashboard';

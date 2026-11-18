@@ -263,6 +263,100 @@ export default function AttendDeskPage() {
           </section>
         );
       })}
+
+      <section className="card">
+        <h2 className="text-lg font-semibold text-[var(--color-text-main)] mb-3">Mobile app</h2>
+        <AppDownloadEditor />
+      </section>
     </div>
+  );
+}
+
+// The download link used by the sign-in page, the landing page and the sidebar.
+// It lived in NEXT_PUBLIC_APP_DOWNLOAD_URL, which is baked in at build time and
+// needs a redeploy to change — so the people who actually cut app releases
+// could not update it. Stored in the org row now, with the env var as fallback.
+function AppDownloadEditor() {
+  const [url, setUrl] = useState('');
+  const [loaded, setLoaded] = useState(null); // { appDownloadUrl, source }
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null); // { ok, text }
+
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${localStorage.getItem('token')}`,
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/attenddesk/app-settings', { headers: authHeaders(), cache: 'no-store' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setLoaded(json);
+      setUrl(json.source === 'settings' ? (json.appDownloadUrl || '') : '');
+    } catch (err) {
+      setMsg({ ok: false, text: err.message });
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/attenddesk/app-settings', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ appDownloadUrl: url.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      setMsg({ ok: true, text: url.trim() ? 'Download link saved.' : 'Cleared — using the built-in default.' });
+      load();
+    } catch (err) {
+      setMsg({ ok: false, text: err.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const effective = loaded?.appDownloadUrl;
+
+  return (
+    <form onSubmit={save} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-medium text-[var(--color-text-muted)]">App download link</label>
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://github.com/LexData-Labs/lexdesk-app/releases/latest/download/TeamOS.apk"
+          className={inputCls}
+        />
+        <span className="text-[11px] text-[var(--color-text-muted)]">
+          Used by the &ldquo;Download the app&rdquo; links on the sign-in page, the home page and the sidebar.
+          A <code>/releases/latest/download/…</code> link always points at your newest release, so you never
+          have to change it again. Leave empty to use the built-in default.
+        </span>
+      </div>
+
+      {effective && (
+        <p className="text-[11px] text-[var(--color-text-muted)]">
+          Currently serving{' '}
+          <a href={effective} target="_blank" rel="noopener noreferrer" className="text-[var(--color-purple)] hover:underline break-all">{effective}</a>
+          {loaded?.source === 'env' && ' (built-in default)'}
+        </p>
+      )}
+
+      {msg && <p className={`text-sm ${msg.ok ? 'text-[var(--color-green)]' : 'text-[var(--color-red)]'}`}>{msg.text}</p>}
+
+      <div className="flex gap-2">
+        <button type="submit" disabled={saving} className="btn-primary py-2 px-5 text-sm disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save link'}
+        </button>
+      </div>
+    </form>
   );
 }
