@@ -310,7 +310,8 @@ fun VerificationTab(
                 val freshFaceB64 = if (faceEmbeddingFresh) faceEmbeddingState?.first else null
                 Button(
                     onClick = {
-                        submit(container, scope, "CHECK_IN", bundle, qrToken, freshFaceB64,
+                        submit(container, scope, "CHECK_IN", bundle, policy?.features?.verify, qrToken, freshFaceB64,
+                            onBundle = { bundle = it },
                             onResult = { o, err -> outcome = o; errorText = err },
                             onBusy = { busy = it })
                     },
@@ -332,7 +333,8 @@ fun VerificationTab(
                 }
                 OutlinedButton(
                     onClick = {
-                        submit(container, scope, "CHECK_OUT", bundle, qrToken, freshFaceB64,
+                        submit(container, scope, "CHECK_OUT", bundle, policy?.features?.verify, qrToken, freshFaceB64,
+                            onBundle = { bundle = it },
                             onResult = { o, err -> outcome = o; errorText = err },
                             onBusy = { busy = it })
                     },
@@ -586,8 +588,10 @@ private fun submit(
     scope: kotlinx.coroutines.CoroutineScope,
     type: String,
     bundle: CheckBundle?,
+    verify: com.attenddesk.data.api.VerifyFeaturesDto?,
     qrToken: String?,
     faceEmbeddingB64: String?,
+    onBundle: (CheckBundle) -> Unit,
     onResult: (CheckOutcome?, String?) -> Unit,
     onBusy: (Boolean) -> Unit,
 ) {
@@ -595,14 +599,21 @@ private fun submit(
     onResult(null, null)
     scope.launch {
         try {
+            // Re-read WiFi and GPS at submit time. The panel's bundle is from
+            // screen load and goes stale: a refused check-in would report "no
+            // GPS fix" while the panel above it showed coordinates, because the
+            // two were captured minutes apart. Push the fresh reading back up
+            // so what the panel shows is what was actually sent.
+            val sent = runCatching { container.antiCheatRunner.gatherAmbient(verify) }.getOrNull() ?: bundle
+            sent?.let(onBundle)
             val req = CheckInRequest(
                 type = type,
-                lat = bundle?.gps?.lat,
-                lng = bundle?.gps?.lng,
-                accuracyMeters = bundle?.gps?.accuracyMeters,
-                isMockLocation = bundle?.gps?.isMock,
-                ssid = bundle?.wifi?.ssid,
-                bssid = bundle?.wifi?.bssid,
+                lat = sent?.gps?.lat,
+                lng = sent?.gps?.lng,
+                accuracyMeters = sent?.gps?.accuracyMeters,
+                isMockLocation = sent?.gps?.isMock,
+                ssid = sent?.wifi?.ssid,
+                bssid = sent?.wifi?.bssid,
                 qrToken = qrToken,
                 faceEmbeddingB64 = faceEmbeddingB64,
                 faceLivenessOk = if (faceEmbeddingB64 != null) true else null,
