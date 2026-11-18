@@ -116,11 +116,14 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 return@launch
             }
 
-            val office = com.attenddesk.location.LocationPrefs.load(ctx).office
+            val snapshot = com.attenddesk.location.LocationPrefs.load(ctx)
+            val office = snapshot.office
+            val wifiRequired = snapshot.wifiRequired
             autoWarning = when {
                 office == null ->
                     "No office location is configured yet. Open Check-in once to load it, then turn this on again."
-                office.allowedSsids.isEmpty() && office.allowedBssids.isEmpty() ->
+                // Only a blocker when the policy actually requires Wi-Fi.
+                wifiRequired && office.allowedSsids.isEmpty() && office.allowedBssids.isEmpty() ->
                     "Your office has no Wi-Fi networks configured, so auto check-in can't confirm you're on it. Ask an admin to add the office Wi-Fi."
                 !com.attenddesk.location.GeofenceController(app).register(office) ->
                     "Couldn't start auto check-in. Open app settings and set Location to \"Allow all the time\", then try again."
@@ -191,7 +194,7 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Auto check-in", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Check in automatically when you reach the office on the office Wi-Fi",
+                            "Check in automatically when you reach the office",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -201,8 +204,9 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
             }
             Text(
                 if (autoWarning != null) autoWarning!!
-                else "Both are required: inside the office area AND connected to the office Wi-Fi. " +
-                    "You'll get a notification whenever it checks you in. Leaving never checks you out — do that yourself.",
+                else "Uses the same rules as checking in by hand — your admin decides whether office Wi-Fi " +
+                    "is needed as well as being at the office. You'll get a notification whenever it checks " +
+                    "you in. Leaving never checks you out — do that yourself.",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (autoWarning != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )

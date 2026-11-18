@@ -115,9 +115,14 @@ class GeofenceReceiver : BroadcastReceiver() {
         //    required we only notify.
         val isEnter = transition == Geofence.GEOFENCE_TRANSITION_ENTER
         val wifi = runCatching { container.wifiCheck.snapshot() }.getOrNull()
-        val onOfficeWifi = matchesOfficeWifi(wifi, snapshot.office)
+        // Follow the org policy rather than being stricter than it. When
+        // "Require Wi-Fi" is off, the geofence alone is enough — matching what a
+        // manual check-in would accept. Being stricter here failed silently:
+        // a phone that can't read its SSID would never auto check in even
+        // though tapping the button worked fine.
+        val wifiOk = !snapshot.wifiRequired || matchesOfficeWifi(wifi, snapshot.office)
 
-        if (isEnter && !snapshot.faceRequired && location != null && onOfficeWifi) {
+        if (isEnter && !snapshot.faceRequired && location != null && wifiOk) {
             val attempted = runCatching {
                 container.api.checkIn(
                     CheckInRequest(
