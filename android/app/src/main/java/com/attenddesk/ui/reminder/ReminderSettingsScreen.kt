@@ -1,6 +1,8 @@
 package com.attenddesk.ui.reminder
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,6 +30,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +66,30 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
 
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    // Set by a permission result to re-run the enable once the user has
+    // answered; a launcher can't call applyAutoCheckIn directly because it is
+    // declared below it.
+    var pendingAuto by remember { mutableStateOf(false) }
+
+    val fineLocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) pendingAuto = true
+        else autoWarning = "Auto check-in needs location access. Allow it, then turn this on again."
+    }
+    val bgLocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) pendingAuto = true
+        else autoWarning = "Auto check-in only works with Location set to \"Allow all the time\". " +
+            "Open app settings to change it, then turn this on again."
+    }
+
+    fun hasBackgroundLocation(): Boolean =
+        Build.VERSION.SDK_INT < 29 || ContextCompat.checkSelfPermission(
+            ctx, Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
+
+    fun hasFineLocation(): Boolean = ContextCompat.checkSelfPermission(
+        ctx, Manifest.permission.ACCESS_FINE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+
     // Registering geofences needs background location; without it the switch
     // would look on and silently never fire, so say so instead.
     fun applyAutoCheckIn(enabled: Boolean) {
@@ -74,6 +101,21 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 autoWarning = null
                 return@launch
             }
+            // Ask for the permissions rather than sending people to hunt for
+            // them. Background location must be requested on its own, and only
+            // once foreground location is already granted — Android denies it
+            // outright otherwise.
+            if (!hasFineLocation()) {
+                autoWarning = null
+                fineLocLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                return@launch
+            }
+            if (!hasBackgroundLocation()) {
+                autoWarning = null
+                bgLocLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                return@launch
+            }
+
             val office = com.attenddesk.location.LocationPrefs.load(ctx).office
             autoWarning = when {
                 office == null ->
@@ -81,10 +123,17 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 office.allowedSsids.isEmpty() && office.allowedBssids.isEmpty() ->
                     "Your office has no Wi-Fi networks configured, so auto check-in can't confirm you're on it. Ask an admin to add the office Wi-Fi."
                 !com.attenddesk.location.GeofenceController(app).register(office) ->
-                    "Couldn't start auto check-in. Grant location access \"Allow all the time\" in Settings, then try again."
+                    "Couldn't start auto check-in. Open app settings and set Location to \"Allow all the time\", then try again."
                 else -> null
             }
             if (autoWarning != null) container.autoCheckInPrefs.set(false)
+        }
+    }
+
+    LaunchedEffect(pendingAuto) {
+        if (pendingAuto) {
+            pendingAuto = false
+            applyAutoCheckIn(true)
         }
     }
 
@@ -157,6 +206,18 @@ fun ReminderSettingsScreen(container: AppContainer, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = if (autoWarning != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Android stops showing the permission dialog once it has been
+            // denied twice, so the only route left is the app's settings page.
+            if (autoWarning?.contains("app settings", ignoreCase = true) == true) {
+                TextButton(onClick = {
+                    ctx.startActivity(
+                        Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", ctx.packageName, null),
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }) { Text("Open app settings") }
+            }
             Spacer(Modifier.height(4.dp))
         }
     }
