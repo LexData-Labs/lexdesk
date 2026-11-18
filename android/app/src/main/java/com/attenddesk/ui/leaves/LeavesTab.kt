@@ -1,5 +1,6 @@
 package com.attenddesk.ui.leaves
 
+import com.attenddesk.ui.util.formatLeaveDays
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.attenddesk.AppContainer
 import com.attenddesk.data.api.LeaveRequestDto
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.FilterChip
+import com.attenddesk.data.api.LEAVE_TYPES
 import com.attenddesk.data.api.LeaveRequestSubmitRequest
 import com.attenddesk.data.parseFeatureDisabled
 import com.attenddesk.ui.Routes
@@ -181,11 +186,18 @@ fun LeaveTab(
     if (showSubmit) {
         SubmitLeaveDialog(
             onDismiss = { showSubmit = false },
-            onSubmit = { fromDay, toDay, subject, details ->
+            onSubmit = { fromDay, toDay, subject, details, leaveType, halfDayPeriod ->
                 scope.launch {
                     val ok = runCatching {
                         container.api.submitLeaveRequest(
-                            LeaveRequestSubmitRequest(fromDay = fromDay, toDay = toDay, subject = subject, details = details),
+                            LeaveRequestSubmitRequest(
+                                fromDay = fromDay,
+                                toDay = toDay,
+                                subject = subject,
+                                details = details,
+                                leaveType = leaveType,
+                                halfDayPeriod = halfDayPeriod,
+                            ),
                         )
                     }.onFailure { t ->
                         if (parseFeatureDisabled(t) == "service.leaveRequests") {
@@ -231,17 +243,23 @@ private fun buildLeaveCalendar(requests: List<LeaveRequestDto>, month: YearMonth
     return out
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SubmitLeaveDialog(
     onDismiss: () -> Unit,
-    onSubmit: (String, String, String, String) -> Unit,
+    onSubmit: (String, String, String, String, String, String?) -> Unit,
 ) {
     var fromDay by remember { mutableStateOf(LocalDate.now(BD_ZONE)) }
     var toDay by remember { mutableStateOf(LocalDate.now(BD_ZONE)) }
     var subject by remember { mutableStateOf("") }
     var details by remember { mutableStateOf("") }
+    var leaveType by remember { mutableStateOf(LEAVE_TYPES.first()) }
+    var halfPeriod by remember { mutableStateOf("first") }
     var picking by remember { mutableStateOf<PickWhich?>(null) }
+
+    // A half day is one calendar day worth 0.5 — the server rejects a range.
+    val isHalfDay = leaveType == "Half Day"
+    if (isHalfDay && toDay != fromDay) toDay = fromDay
 
     val subjectOk = subject.trim().isNotEmpty()
     val rangeOk = !fromDay.isAfter(toDay)
@@ -252,7 +270,14 @@ private fun SubmitLeaveDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (canSubmit) onSubmit(fromDay.format(ISO_DAY), toDay.format(ISO_DAY), subject.trim(), details.trim())
+                    if (canSubmit) onSubmit(
+                        fromDay.format(ISO_DAY),
+                        toDay.format(ISO_DAY),
+                        subject.trim(),
+                        details.trim(),
+                        leaveType,
+                        if (isHalfDay) halfPeriod else null,
+                    )
                 },
                 enabled = canSubmit,
             ) { Text("Submit") }
@@ -261,6 +286,27 @@ private fun SubmitLeaveDialog(
         title = { Text("Request leave") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Leave type", style = MaterialTheme.typography.labelSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LEAVE_TYPES.forEach { t ->
+                        FilterChip(
+                            selected = leaveType == t,
+                            onClick = { leaveType = t },
+                            label = { Text(t) },
+                        )
+                    }
+                }
+                if (isHalfDay) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("first" to "First half", "second" to "Second half").forEach { (value, label) ->
+                            FilterChip(
+                                selected = halfPeriod == value,
+                                onClick = { halfPeriod = value },
+                                label = { Text(label) },
+                            )
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { picking = PickWhich.From }, modifier = Modifier.weight(1f)) {
                         Column(horizontalAlignment = Alignment.Start) {
@@ -268,16 +314,25 @@ private fun SubmitLeaveDialog(
                             Text(fromDay.format(DISPLAY_DAY), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
-                    OutlinedButton(onClick = { picking = PickWhich.To }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { picking = PickWhich.To },
+                        enabled = !isHalfDay, // a half day is always a single date
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Column(horizontalAlignment = Alignment.Start) {
                             Text("To", style = MaterialTheme.typography.labelSmall)
                             Text(toDay.format(DISPLAY_DAY), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
-                val days = java.time.temporal.ChronoUnit.DAYS.between(fromDay, toDay).toInt() + 1
+                val days = if (isHalfDay) 0.5
+                else (java.time.temporal.ChronoUnit.DAYS.between(fromDay, toDay) + 1).toDouble()
                 Text(
-                    text = if (!rangeOk) "End date must be on or after the start date." else "$days day${if (days == 1) "" else "s"}",
+                    text = when {
+                        !rangeOk -> "End date must be on or after the start date."
+                        isHalfDay -> "${formatLeaveDays(days)} · ${if (halfPeriod == "first") "first" else "second"} half"
+                        else -> formatLeaveDays(days)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (!rangeOk) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -333,7 +388,7 @@ private fun LeaveCard(req: LeaveRequestDto, onCancel: (() -> Unit)?) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(formatRange(req.fromDay, req.toDay), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "${req.totalDays} day${if (req.totalDays == 1) "" else "s"}",
+                    "${formatLeaveDays(req.totalDays)}${req.leaveType?.let { " · $it" } ?: ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -43,3 +43,16 @@ private val WEEKDAY = DateTimeFormatter.ofPattern("EEEE", Locale.ENGLISH)
 
 fun formatDay(date: LocalDate): String = date.format(DAY)
 fun formatWeekday(date: LocalDate): String = date.format(WEEKDAY)
+
+/**
+ * Render a leave length that may be fractional. Half days arrive as 0.5, so
+ * "2 days" / "1 day" / "0.5 day" rather than Kotlin's raw "2.0".
+ */
+fun formatLeaveDays(days: Double): String {
+    val n = if (days == days.toLong().toDouble()) days.toLong().toString() else days.toString()
+    return if (days == 1.0) "$n day" else "$n days"
+}
+
+/** Bare number for a possibly-fractional day count: 2.0 -> "2", 0.5 -> "0.5". */
+fun trimDays(days: Double): String =
+    if (days == days.toLong().toDouble()) days.toLong().toString() else days.toString()

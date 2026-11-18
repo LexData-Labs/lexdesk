@@ -1,5 +1,6 @@
 package com.attenddesk.ui.approvals
 
+import com.attenddesk.ui.util.formatLeaveDays
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -69,7 +70,7 @@ fun ApprovalsScreen(container: AppContainer, onBack: () -> Unit, initialTab: Int
         val result = runCatching {
             when (which) {
                 0 -> api.manageLeave().requests.map { r ->
-                    ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${range(r.fromDay, r.toDay)}", "${r.totalDays} day(s) · ${r.subject}") { d, n -> api.decideLeave(r.id, DecisionRequest(d, n)) }
+                    ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${range(r.fromDay, r.toDay)}", "${formatLeaveDays(r.totalDays)} · ${r.leaveType ?: "Leave"} · ${r.subject}") { d, n -> api.decideLeave(r.id, DecisionRequest(d, n)) }
                 }
                 1 -> api.manageAsset().requests.map { r ->
                     ApprovalItem(r.id, "${r.userName.ifBlank { r.userEmail }} · ${r.assetName}", listOfNotNull(r.assetType.ifBlank { null }, "${r.fromDay} → ${r.toDay}").joinToString(" · ")) { d, n -> api.decideAsset(r.id, DecisionRequest(d, n)) }
