@@ -28,6 +28,9 @@ object LocationPrefs {
     private val K_CONTINUOUS = intPreferencesKey("continuousIntervalSeconds")
     private val K_FACE_REQUIRED = booleanPreferencesKey("faceRequired")
     private val K_WIFI_REQUIRED = booleanPreferencesKey("wifiRequired")
+    // Flattened "from|to" day ranges, so a background geofence trigger can tell
+    // an office closure from an ordinary morning with no extra network call.
+    private val K_HOLIDAYS = stringSetPreferencesKey("holidayRanges")
     private val K_OFFICE_LAT = doublePreferencesKey("officeLat")
     private val K_OFFICE_LNG = doublePreferencesKey("officeLng")
     private val K_OFFICE_RADIUS = intPreferencesKey("officeRadiusMeters")
@@ -46,6 +49,9 @@ object LocationPrefs {
             p[K_CONTINUOUS] = policy.features.location.continuousIntervalSeconds
             p[K_FACE_REQUIRED] = face
             p[K_WIFI_REQUIRED] = policy.policy?.requireWifi == true
+            p[K_HOLIDAYS] = policy.holidays
+                .mapNotNull { h -> h.fromDay?.let { f -> "$f|${h.toDay ?: f}" } }
+                .toSet()
             if (office != null) {
                 p[K_OFFICE_ID] = office.id
                 p[K_OFFICE_LAT] = office.lat
@@ -84,6 +90,7 @@ object LocationPrefs {
         val continuous = p[K_CONTINUOUS] ?: 60
         val faceRequired = p[K_FACE_REQUIRED] ?: true
         val wifiRequired = p[K_WIFI_REQUIRED] ?: false
+        val holidays = p[K_HOLIDAYS] ?: emptySet()
         val officeId = p[K_OFFICE_ID]
         val officeLat = p[K_OFFICE_LAT]
         val officeLng = p[K_OFFICE_LNG]
@@ -91,7 +98,7 @@ object LocationPrefs {
         val office = if (officeId != null && officeLat != null && officeLng != null && officeRadius != null) {
             CachedOffice(officeId, officeLat, officeLng, officeRadius, p[K_ALLOWED_SSIDS] ?: emptySet(), p[K_ALLOWED_BSSIDS] ?: emptySet())
         } else null
-        return Snapshot(mode, periodic, continuous, faceRequired, wifiRequired, office)
+        return Snapshot(mode, periodic, continuous, faceRequired, wifiRequired, office, holidays)
     }
 
     data class Snapshot(
@@ -104,7 +111,15 @@ object LocationPrefs {
          *  manual check-in would be. */
         val wifiRequired: Boolean,
         val office: CachedOffice?,
-    )
+        /** Inclusive "YYYY-MM-DD|YYYY-MM-DD" ranges. */
+        val holidayRanges: Set<String> = emptySet(),
+    ) {
+        /** True when [day], an ISO date, falls inside any configured holiday. */
+        fun isHoliday(day: String): Boolean = holidayRanges.any { r ->
+            val i = r.indexOf('|')
+            i > 0 && day >= r.substring(0, i) && day <= r.substring(i + 1)
+        }
+    }
 
     data class CachedOffice(
         val id: String,

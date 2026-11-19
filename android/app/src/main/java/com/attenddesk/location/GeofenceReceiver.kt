@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.attenddesk.App
+import com.attenddesk.AppContainer
 import com.attenddesk.MainActivity
 import com.attenddesk.R
 import com.attenddesk.data.api.CheckInRequest
@@ -85,7 +86,32 @@ class GeofenceReceiver : BroadcastReceiver() {
             return
         }
 
-        val location = event.triggeringLocation
+        // triggeringLocation is documented as nullable and several OEMs (Xiaomi
+        // among them) deliver the transition without one. Everything below is
+        // gated on having a location, so a null here silently reduced the whole
+        // feature to a notification — no ping, no auto check-in. Ask for a fix
+        // ourselves in that case; background location is already granted or the
+        // geofence could not have registered.
+        val location = event.triggeringLocation ?: run {
+            val snap = runCatching { container.gpsCheck.snapshot() }.getOrNull()
+            val lat = snap?.lat
+            val lng = snap?.lng
+            if (lat == null || lng == null) {
+                Log.w(TAG, "No triggering location and no fix available (${snap?.reason}); notifying only")
+                null
+            } else {
+                Log.i(TAG, "No triggering location; used a fresh fix instead")
+                android.location.Location("geofence-fallback").apply {
+                    latitude = lat
+                    longitude = lng
+                    accuracy = (snap.accuracyMeters ?: 0.0).toFloat()
+                    if (snap.isMock) {
+                        // Carried through so the server still sees a faked fix.
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isMock = true
+                    }
+                }
+            }
+        }
         val nowIso = isoNow()
 
         // 1) Always record the transition as a location ping.
@@ -114,6 +140,30 @@ class GeofenceReceiver : BroadcastReceiver() {
         //    Face enrollment can't happen in the background, so if face is
         //    required we only notify.
         val isEnter = transition == Geofence.GEOFENCE_TRANSITION_ENTER
+
+        // Don't auto check-in on a day nobody is working, or a second time on a
+        // day already started. Without these, stepping out for lunch and coming
+        // back fires another check-in, and a Saturday visit creates attendance
+        // for a day off.
+        val today = java.time.LocalDate.now(DHAKA)
+        val todayIso = today.toString()
+        val weeklyOff = today.dayOfWeek == java.time.DayOfWeek.FRIDAY ||
+            today.dayOfWeek == java.time.DayOfWeek.SATURDAY
+        val holiday = snapshot.isHoliday(todayIso)
+        val alreadyIn = if (isEnter && !weeklyOff && !holiday) hasCheckedInToday(container, today) else false
+        if (isEnter && (weeklyOff || holiday || alreadyIn)) {
+            val why = when {
+                weeklyOff -> "weekly off"
+                holiday -> "holiday"
+                else -> "already checked in today"
+            }
+            Log.i(TAG, "Skipping auto check-in: $why")
+            // Still notify on a working day they've already started — they may
+            // want to check out. Silent on a day off; nothing is expected.
+            if (alreadyIn) postNotification(context, transition, autoCheckedIn = false)
+            return
+        }
+
         val wifi = runCatching { container.wifiCheck.snapshot() }.getOrNull()
         // Follow the org policy rather than being stricter than it. When
         // "Require Wi-Fi" is off, the geofence alone is enough — matching what a
@@ -225,10 +275,31 @@ class GeofenceReceiver : BroadcastReceiver() {
         const val ACTION_GEOFENCE = "com.attenddesk.location.ACTION_GEOFENCE"
         private const val TAG = "GeofenceReceiver"
 
+        /** Office timezone — "today" must mean the working day, not the phone's. */
+        private val DHAKA: java.time.ZoneId = java.time.ZoneId.of("Asia/Dhaka")
+
         fun isoNow(): String {
             val fmt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             fmt.timeZone = TimeZone.getTimeZone("UTC")
             return fmt.format(Date())
+        }
+    }
+
+    /**
+     * Whether the server already has a successful CHECK_IN for [day] in the
+     * office timezone. Asked of the server rather than tracked locally so a
+     * check-in made by hand, on the web, or at the door counts too.
+     *
+     * Fails CLOSED on a network error: a missed auto check-in is a tap to fix,
+     * a duplicate one is an attendance record somebody has to unpick.
+     */
+    private suspend fun hasCheckedInToday(container: AppContainer, day: java.time.LocalDate): Boolean {
+        val events = runCatching { container.api.history(40).events }.getOrNull() ?: return true
+        return events.any { e ->
+            e.type == "CHECK_IN" && e.allChecksPassed &&
+                runCatching {
+                    java.time.Instant.parse(e.timestamp).atZone(DHAKA).toLocalDate() == day
+                }.getOrDefault(false)
         }
     }
 }

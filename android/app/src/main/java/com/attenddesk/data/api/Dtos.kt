@@ -89,10 +89,19 @@ data class LocationPingRequest(
 data class LocationPingResponse(val ok: Boolean = false)
 
 @Serializable
+data class HolidayDto(
+    val id: String = "",
+    val fromDay: String? = null,
+    val toDay: String? = null,
+    val name: String = "",
+)
+
+@Serializable
 data class PolicyResponse(
     val policy: PolicyDto?,
     val office: OfficeDto?,
     val features: FeaturesDto = FeaturesDto(),
+    val holidays: List<HolidayDto> = emptyList(),
     val faceEmbeddingDim: Int = 192,
     val faceEmbeddingModel: String = "mobilefacenet-v1",
 )
