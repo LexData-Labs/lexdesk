@@ -39,6 +39,21 @@ class LocationModeManager(private val app: Context) {
             cached.office?.lat == incomingOffice?.lat &&
             cached.office?.lng == incomingOffice?.lng &&
             cached.office?.radiusMeters == incomingOffice?.radiusMeters
+        // Persist the snapshot unconditionally, BEFORE the early return below.
+        //
+        // That return guards tearing down and restarting location mechanisms,
+        // which is all it was ever meant to do. But it used to skip this save
+        // too, and `unchanged` only compares mode, intervals and office
+        // geometry — so every policy field outside that list (face and Wi-Fi
+        // requirements, holidays, the Wi-Fi allowlist) stopped reaching disk
+        // the moment the mode and office stood still, which is always.
+        //
+        // DataStore outlives an app update, so a stale faceRequired=true could
+        // survive reinstalls indefinitely and keep blocking auto check-in long
+        // after the server stopped asking for a face. Saving is a cheap,
+        // idempotent write; only the restart needs guarding.
+        LocationPrefs.save(app, policy)
+
         if (unchanged) {
             Log.i(tag, "Location config unchanged ($mode); skipping teardown")
             // Still assert the user's geofence: an app update or reboot drops
@@ -48,10 +63,9 @@ class LocationModeManager(private val app: Context) {
         }
 
         Log.i(tag, "Applying location mode = $mode")
-        // Stop all running mechanisms first (clean slate) but keep prefs —
-        // we're about to overwrite them with the new policy.
+        // Stop all running mechanisms first (clean slate). Prefs are already
+        // written above; stopAll does not read them.
         stopAll()
-        LocationPrefs.save(app, policy)
         when (mode) {
             "manual" -> {
                 /* nothing to do */
