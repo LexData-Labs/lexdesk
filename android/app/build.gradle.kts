@@ -13,8 +13,8 @@ android {
         applicationId = "com.attenddesk"
         minSdk = 26
         targetSdk = 34
-        versionCode = 17
-        versionName = "0.3.5"
+        versionCode = 18
+        versionName = "0.3.6"
 
         // Backend = TeamOS. Override at build time for emulator local dev:
         //   -PattendDeskApiBase=http://10.0.2.2:3000/api/v1
