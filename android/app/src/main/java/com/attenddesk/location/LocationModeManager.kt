@@ -3,6 +3,7 @@ package com.attenddesk.location
 import android.content.Context
 import android.util.Log
 import com.attenddesk.data.api.PolicyResponse
+import kotlinx.coroutines.flow.first
 
 /**
  * Single owner of "which background-location mechanism is currently active".
@@ -40,6 +41,9 @@ class LocationModeManager(private val app: Context) {
             cached.office?.radiusMeters == incomingOffice?.radiusMeters
         if (unchanged) {
             Log.i(tag, "Location config unchanged ($mode); skipping teardown")
+            // Still assert the user's geofence: an app update or reboot drops
+            // registrations even when the policy behind them never moved.
+            ensureUserGeofence(cached?.office)
             return
         }
 
@@ -75,6 +79,34 @@ class LocationModeManager(private val app: Context) {
             }
             else -> Log.w(tag, "Unknown mode '$mode'; treating as manual")
         }
+        ensureUserGeofence(policy.office?.let {
+            LocationPrefs.CachedOffice(it.id, it.lat, it.lng, it.radiusMeters)
+        })
+    }
+
+    /**
+     * Re-register the geofence when the user has auto check-in switched on.
+     *
+     * Auto check-in is a per-user choice and does not depend on the org-wide
+     * mode, which is "manual" for most orgs. But [applyMode] and [applyCached]
+     * both call [stopAll] first, so every app launch, policy refresh and reboot
+     * quietly removed the geofence the Settings toggle had registered — the
+     * feature worked until the next time the app was opened, then stopped with
+     * no sign of why.
+     */
+    private suspend fun ensureUserGeofence(office: LocationPrefs.CachedOffice?) {
+        val on = runCatching {
+            val app = this.app.applicationContext as? com.attenddesk.App ?: return
+            app.container.autoCheckInPrefs.flow.first()
+        }.getOrDefault(false)
+        if (!on) return
+        val target = office ?: runCatching { LocationPrefs.load(app).office }.getOrNull()
+        if (target == null) {
+            Log.w(tag, "Auto check-in is on but no office is cached; cannot register")
+            return
+        }
+        val ok = GeofenceController(app).register(target)
+        Log.i(tag, "Auto check-in on — geofence re-registered: $ok")
     }
 
     /**
@@ -100,6 +132,9 @@ class LocationModeManager(private val app: Context) {
             "continuous" -> LocationForegroundService.start(app, snap.continuousIntervalSeconds)
             else -> Log.w(tag, "Unknown cached mode '${snap.mode}'")
         }
+        // Reboot also drops registered geofences, so the user's own toggle has
+        // to put it back here too.
+        ensureUserGeofence(snap.office)
     }
 
     /**
