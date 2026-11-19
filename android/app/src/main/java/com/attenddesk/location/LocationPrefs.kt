@@ -60,7 +60,11 @@ object LocationPrefs {
             p[K_CONTINUOUS] = policy.features.location.continuousIntervalSeconds
             p[K_FACE_REQUIRED] = face
             p[K_WIFI_REQUIRED] = policy.policy?.requireWifi == true
-            p[K_GPS_ACCURACY_MAX] = policy.policy?.gpsAccuracyMaxMeters ?: 100
+            // Absent when the org has no policy row: deliberately left unset
+            // rather than defaulted, so the receiver can tell "the limit is
+            // generous" from "nobody has told us the limit yet".
+            val maxAccuracy = policy.policy?.gpsAccuracyMaxMeters
+            if (maxAccuracy != null) p[K_GPS_ACCURACY_MAX] = maxAccuracy else p.remove(K_GPS_ACCURACY_MAX)
             p[K_HOLIDAYS] = policy.holidays
                 .mapNotNull { h -> h.fromDay?.let { f -> "$f|${h.toDay ?: f}" } }
                 .toSet()
@@ -102,7 +106,7 @@ object LocationPrefs {
         val continuous = p[K_CONTINUOUS] ?: 60
         val faceRequired = p[K_FACE_REQUIRED] ?: true
         val wifiRequired = p[K_WIFI_REQUIRED] ?: false
-        val gpsAccuracyMax = p[K_GPS_ACCURACY_MAX] ?: 100
+        val gpsAccuracyMax = p[K_GPS_ACCURACY_MAX]
         val holidays = p[K_HOLIDAYS] ?: emptySet()
         val officeId = p[K_OFFICE_ID]
         val officeLat = p[K_OFFICE_LAT]
@@ -125,8 +129,14 @@ object LocationPrefs {
         val wifiRequired: Boolean,
         /** Mirrors policy.gpsAccuracyMaxMeters. The server rejects a coarser fix
          *  as `low_accuracy` WITHOUT measuring distance, so a phone sitting in
-         *  the office still fails if it only offers the geofence's low-power fix. */
-        val gpsAccuracyMaxMeters: Int = 100,
+         *  the office still fails if it only offers the geofence's low-power fix.
+         *
+         *  null means no policy has been cached yet. Callers must treat that as
+         *  "unknown", not as "generous": defaulting it to 100 let the geofence's
+         *  own 100 m fix satisfy the check locally and go out unimproved, which
+         *  the server then refused at its real 40 m limit. A fresh install's
+         *  first arrival failed for that reason. */
+        val gpsAccuracyMaxMeters: Int?,
         val office: CachedOffice?,
         /** Inclusive "YYYY-MM-DD|YYYY-MM-DD" ranges. */
         val holidayRanges: Set<String> = emptySet(),
