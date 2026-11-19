@@ -161,18 +161,35 @@ class GeofenceReceiver : BroadcastReceiver() {
         val weeklyOff = today.dayOfWeek == java.time.DayOfWeek.FRIDAY ||
             today.dayOfWeek == java.time.DayOfWeek.SATURDAY
         val holiday = snapshot.isHoliday(todayIso)
-        val alreadyIn = if (isEnter && !weeklyOff && !holiday) hasCheckedInToday(container, today) else false
+        // null means the server could not be asked. Treated as "already in" so
+        // a network blip can't mint a duplicate attendance record, but kept
+        // distinct from a confirmed yes — the two want different behaviour below.
+        val checkedIn: Boolean? =
+            if (isEnter && !weeklyOff && !holiday) hasCheckedInToday(container, today) else false
+        val alreadyIn = checkedIn != false
         if (isEnter && (weeklyOff || holiday || alreadyIn)) {
             val why = when {
                 weeklyOff -> "weekly off"
                 holiday -> "holiday"
+                checkedIn == null -> "couldn't reach the server to check"
                 else -> "already checked in today"
             }
             Log.i(TAG, "Skipping auto check-in: $why")
-            // Still notify on a working day they've already started — they may
-            // want to check out. Silent on a day off; nothing is expected.
-            if (alreadyIn) {
-                postNotification(context, transition, autoCheckedIn = false, detail = "you're already checked in today")
+            // Say nothing when there is nothing to do. Already checked in, or a
+            // day nobody is working: a lunch run past the 40 m radius and back
+            // would otherwise buzz on every return with news the user already
+            // has. Checking out is prompted by the EXIT notification instead.
+            //
+            // Failing to ASK is different, and still worth surfacing. That is
+            // the silent-refusal case that took four releases to track down,
+            // and it must not creep back in behind this quiet.
+            if (checkedIn == null) {
+                postNotification(
+                    context,
+                    transition,
+                    autoCheckedIn = false,
+                    detail = detail ?: "couldn't confirm today's attendance with the server",
+                )
             }
             return
         }
@@ -348,11 +365,13 @@ class GeofenceReceiver : BroadcastReceiver() {
      * office timezone. Asked of the server rather than tracked locally so a
      * check-in made by hand, on the web, or at the door counts too.
      *
-     * Fails CLOSED on a network error: a missed auto check-in is a tap to fix,
-     * a duplicate one is an attendance record somebody has to unpick.
+     * Returns null when the server could not be asked. Callers fail CLOSED on
+     * null — a missed auto check-in is a tap to fix, a duplicate one is an
+     * attendance record somebody has to unpick — but null is reported to the
+     * user where a confirmed yes is not, since only one of the two is a fault.
      */
-    private suspend fun hasCheckedInToday(container: AppContainer, day: java.time.LocalDate): Boolean {
-        val events = runCatching { container.api.history(40).events }.getOrNull() ?: return true
+    private suspend fun hasCheckedInToday(container: AppContainer, day: java.time.LocalDate): Boolean? {
+        val events = runCatching { container.api.history(40).events }.getOrNull() ?: return null
         return events.any { e ->
             e.type == "CHECK_IN" && e.allChecksPassed &&
                 runCatching {
