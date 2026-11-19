@@ -85,7 +85,32 @@ class GeofenceReceiver : BroadcastReceiver() {
             return
         }
 
-        val location = event.triggeringLocation
+        // triggeringLocation is documented as nullable and several OEMs (Xiaomi
+        // among them) deliver the transition without one. Everything below is
+        // gated on having a location, so a null here silently reduced the whole
+        // feature to a notification — no ping, no auto check-in. Ask for a fix
+        // ourselves in that case; background location is already granted or the
+        // geofence could not have registered.
+        val location = event.triggeringLocation ?: run {
+            val snap = runCatching { container.gpsCheck.snapshot() }.getOrNull()
+            val lat = snap?.lat
+            val lng = snap?.lng
+            if (lat == null || lng == null) {
+                Log.w(TAG, "No triggering location and no fix available (${snap?.reason}); notifying only")
+                null
+            } else {
+                Log.i(TAG, "No triggering location; used a fresh fix instead")
+                android.location.Location("geofence-fallback").apply {
+                    latitude = lat
+                    longitude = lng
+                    accuracy = (snap.accuracyMeters ?: 0.0).toFloat()
+                    if (snap.isMock) {
+                        // Carried through so the server still sees a faked fix.
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isMock = true
+                    }
+                }
+            }
+        }
         val nowIso = isoNow()
 
         // 1) Always record the transition as a location ping.
