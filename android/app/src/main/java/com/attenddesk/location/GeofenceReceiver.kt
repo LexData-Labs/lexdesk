@@ -86,6 +86,10 @@ class GeofenceReceiver : BroadcastReceiver() {
             return
         }
 
+        // Why auto check-in did not happen, in words fit for a lock screen.
+        // See [postNotification] for why this is carried rather than only logged.
+        var detail: String? = null
+
         // triggeringLocation is documented as nullable and several OEMs (Xiaomi
         // among them) deliver the transition without one. Everything below is
         // gated on having a location, so a null here silently reduced the whole
@@ -98,6 +102,7 @@ class GeofenceReceiver : BroadcastReceiver() {
             val lng = snap?.lng
             if (lat == null || lng == null) {
                 Log.w(TAG, "No triggering location and no fix available (${snap?.reason}); notifying only")
+                detail = "no GPS fix (${snap?.reason?.takeIf { it.isNotBlank() } ?: "location unavailable"})"
                 null
             } else {
                 Log.i(TAG, "No triggering location; used a fresh fix instead")
@@ -132,7 +137,13 @@ class GeofenceReceiver : BroadcastReceiver() {
                         isMockLocation = isMockLocation(location),
                     ),
                 )
-            }.onFailure { Log.w(TAG, "ping failed: ${it.message}") }
+            }.onFailure {
+                // A failing ping means the network or the auth token is the
+                // problem, not the geofence — and the check-in below is about
+                // to fail the same way. Keep it as a fallback reason.
+                Log.w(TAG, "ping failed: ${it.message}")
+                detail = "couldn't reach the server (${shortError(it)})"
+            }
         }
 
         // 2) Auto check-IN only. Exiting the geofence never checks anyone out:
@@ -160,7 +171,9 @@ class GeofenceReceiver : BroadcastReceiver() {
             Log.i(TAG, "Skipping auto check-in: $why")
             // Still notify on a working day they've already started — they may
             // want to check out. Silent on a day off; nothing is expected.
-            if (alreadyIn) postNotification(context, transition, autoCheckedIn = false)
+            if (alreadyIn) {
+                postNotification(context, transition, autoCheckedIn = false, detail = "you're already checked in today")
+            }
             return
         }
 
@@ -189,8 +202,16 @@ class GeofenceReceiver : BroadcastReceiver() {
                 )
             }
             if (attempted.isFailure || attempted.getOrNull()?.ok != true) {
-                Log.i(TAG, "Auto check-in did not pass; falling back to notification")
-                postNotification(context, transition, autoCheckedIn = false)
+                // Name the checks the server actually refused on. "did not pass"
+                // alone is what made this unfixable from the outside.
+                val why = attempted.exceptionOrNull()?.let { shortError(it) }
+                    ?: attempted.getOrNull()?.results
+                        ?.filter { it.required && !it.passed }
+                        ?.joinToString(", ") { r -> r.reason?.takeIf { it.isNotBlank() } ?: r.name }
+                        ?.takeIf { it.isNotBlank() }
+                    ?: "the server declined it"
+                Log.i(TAG, "Auto check-in did not pass: $why")
+                postNotification(context, transition, autoCheckedIn = false, detail = why)
             } else {
                 Log.i(TAG, "Auto check-in succeeded via geofence")
                 // Surface the action to the user — Play policy requires that
@@ -199,8 +220,29 @@ class GeofenceReceiver : BroadcastReceiver() {
                 postNotification(context, transition, autoCheckedIn = true)
             }
         } else {
-            postNotification(context, transition, autoCheckedIn = false)
+            // Which gate stopped us, most specific first.
+            val gate = when {
+                !isEnter -> null
+                snapshot.faceRequired -> "face verification is required by your org"
+                location == null -> detail ?: "no GPS fix available"
+                !wifiOk -> "not on office Wi-Fi (saw ${wifi?.ssid ?: "no network"})"
+                else -> detail
+            }
+            Log.i(TAG, "Auto check-in not attempted: ${gate ?: "not an entry event"}")
+            postNotification(context, transition, autoCheckedIn = false, detail = gate)
         }
+    }
+
+    /**
+     * Exception text trimmed to something readable on a lock screen. Falls back
+     * to the class name, because the common background failures (token refresh,
+     * no route to host) often carry no message at all.
+     */
+    private fun shortError(t: Throwable): String {
+        val msg = t.message?.trim()?.takeIf { it.isNotEmpty() }
+            ?: t::class.simpleName
+            ?: "unknown error"
+        return if (msg.length > 120) msg.take(117) + "…" else msg
     }
 
     /**
@@ -223,7 +265,19 @@ class GeofenceReceiver : BroadcastReceiver() {
         return ssidOk || bssidOk
     }
 
-    private fun postNotification(context: Context, transition: Int, autoCheckedIn: Boolean) {
+    /**
+     * [detail] says why auto check-in did not happen. Every failure in this
+     * receiver is caught and logged, which made a refusal indistinguishable
+     * from a success-then-silence from the outside: three releases were spent
+     * guessing at causes the device already knew. Showing the reason on the
+     * notification turns the phone itself into the diagnostic.
+     */
+    private fun postNotification(
+        context: Context,
+        transition: Int,
+        autoCheckedIn: Boolean,
+        detail: String? = null,
+    ) {
         LocationNotifications.ensureChannels(context)
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
 
@@ -231,8 +285,11 @@ class GeofenceReceiver : BroadcastReceiver() {
             if (transition == Geofence.GEOFENCE_TRANSITION_ENTER) {
                 Triple(
                     if (autoCheckedIn) "TeamOS checked you in" else "You arrived at the office",
-                    if (autoCheckedIn) "Auto check-in succeeded at the office geofence."
-                    else "Tap to check in.",
+                    when {
+                        autoCheckedIn -> "Auto check-in succeeded at the office geofence."
+                        detail != null -> "Auto check-in skipped — $detail. Tap to open TeamOS."
+                        else -> "Tap to check in."
+                    },
                     LocationNotifications.NOTIF_ID_GEOFENCE_ENTER,
                 )
             } else {
@@ -256,6 +313,7 @@ class GeofenceReceiver : BroadcastReceiver() {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

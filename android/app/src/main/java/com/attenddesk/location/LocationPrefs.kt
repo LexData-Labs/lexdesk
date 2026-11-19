@@ -42,7 +42,15 @@ object LocationPrefs {
 
     suspend fun save(context: Context, policy: PolicyResponse) {
         val office = policy.office
-        val face = policy.features.verify.face
+        // The org POLICY's requireFace — NOT features.verify.face. That feature
+        // flag only reports that the build supports face verification, and the
+        // server hardcodes it to true for every org. Reading it here pinned
+        // faceRequired permanently on, and auto check-in refuses to run when a
+        // face is required, so the check-in branch in GeofenceReceiver was
+        // unreachable for everyone: arriving at the office only ever produced a
+        // notification. requireWifi below was already wired to the policy; this
+        // line was the odd one out.
+        val face = policy.policy?.requireFace == true
         context.locationDataStore.edit { p ->
             p[K_MODE] = policy.features.location.mode
             p[K_PERIODIC] = policy.features.location.periodicIntervalMinutes
