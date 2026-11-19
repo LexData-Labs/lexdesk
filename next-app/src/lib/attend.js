@@ -132,6 +132,13 @@ export function leaveDaysByMonth(leave, holidays, year, opts = {}) {
   for (const r of leave || []) {
     if (r?.status !== 'approved' || !r.fromDay || !r.toDay) continue;
     const type = r.leaveType || 'Other';
+    const half = fractionalLeave(r);
+    if (half) {
+      if (String(half.date.getFullYear()) === yr) {
+        (byType[type] ||= new Array(12).fill(0))[half.date.getMonth()] += half.days;
+      }
+      continue;
+    }
     const start = new Date(`${r.fromDay}T00:00:00`);
     const end = new Date(`${r.toDay}T00:00:00`);
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) continue;
@@ -270,12 +277,32 @@ export function approvedRemoteCovers(remote, dayKey) {
 // days (Friday) and custom holidays. Days the employee still checked in ARE
 // counted (the leave was granted). Each calendar day in a request's [fromDay,toDay]
 // range is counted at most once toward that request.
+// A Half Day is a single calendar day worth 0.5, and the approval has already
+// settled that it counts. Re-deriving it by walking dates got both halves of
+// that wrong: the per-day loop adds whole days, so 0.5 became 1, and the
+// weekly-off filter erased the three half days taken on Saturday 22 Aug to
+// nothing at all. For these the stored total is authoritative.
+//
+// Returns null for any request that should still be counted day by day.
+function fractionalLeave(r) {
+  if (r?.leaveType !== 'Half Day' || !r.fromDay) return null;
+  const date = new Date(`${r.fromDay}T00:00:00`);
+  if (isNaN(date.getTime())) return null;
+  const stored = Number(r.totalDays);
+  return { date, days: Number.isFinite(stored) && stored > 0 ? stored : 0.5 };
+}
+
 export function approvedLeaveDays(leave, holidays, year, opts = {}) {
   const weeklyOff = opts.weeklyOff || WEEKLY_OFF;
   const yr = String(year);
   let count = 0;
   for (const r of leave || []) {
     if (r?.status !== 'approved' || !r.fromDay || !r.toDay) continue;
+    const half = fractionalLeave(r);
+    if (half) {
+      if (String(half.date.getFullYear()) === yr) count += half.days;
+      continue;
+    }
     const start = new Date(`${r.fromDay}T00:00:00`);
     const end = new Date(`${r.toDay}T00:00:00`);
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) continue;
