@@ -90,23 +90,39 @@ class GeofenceReceiver : BroadcastReceiver() {
         // See [postNotification] for why this is carried rather than only logged.
         var detail: String? = null
 
-        // triggeringLocation is documented as nullable and several OEMs (Xiaomi
-        // among them) deliver the transition without one. Everything below is
-        // gated on having a location, so a null here silently reduced the whole
-        // feature to a notification — no ping, no auto check-in. Ask for a fix
-        // ourselves in that case; background location is already granted or the
-        // geofence could not have registered.
-        val location = event.triggeringLocation ?: run {
-            val snap = runCatching { container.gpsCheck.snapshot() }.getOrNull()
+        // The location that rides along with a geofence transition is produced
+        // by the LOW-POWER location engine, because coarse is all geofencing
+        // needs — in practice ~100 m. The server's geo check refuses anything
+        // coarser than policy.gpsAccuracyMaxMeters (40 m here) as `low_accuracy`
+        // and returns 422 WITHOUT ever measuring distance, so a phone sitting
+        // 6 m from the office centre was rejected for being imprecise about it.
+        //
+        // triggeringLocation is also documented as nullable, and several OEMs
+        // (Xiaomi among them) deliver the transition without one at all.
+        //
+        // Both cases want the same answer: go and get a proper high-accuracy
+        // fix, exactly as the manual check-in button does.
+        val triggered = event.triggeringLocation
+        val accuracyLimit = snapshot.gpsAccuracyMaxMeters
+        val location = if (triggered != null && triggered.accuracy <= accuracyLimit) {
+            triggered
+        } else {
+            Log.i(
+                TAG,
+                "Geofence fix is ${triggered?.accuracy?.toInt()?.toString() ?: "absent"}m " +
+                    "(limit ${accuracyLimit}m); requesting a high-accuracy fix",
+            )
+            val snap = runCatching {
+                // goAsync() extends the broadcast wakelock by seconds, not
+                // minutes. Cap the hunt for satellites so it can't outlive the
+                // receiver and get killed with the check-in still unsent —
+                // better to fall back to the coarse fix and say so.
+                kotlinx.coroutines.withTimeoutOrNull(FIX_TIMEOUT_MS) { container.gpsCheck.snapshot() }
+            }.getOrNull()
             val lat = snap?.lat
             val lng = snap?.lng
-            if (lat == null || lng == null) {
-                Log.w(TAG, "No triggering location and no fix available (${snap?.reason}); notifying only")
-                detail = "no GPS fix (${snap?.reason?.takeIf { it.isNotBlank() } ?: "location unavailable"})"
-                null
-            } else {
-                Log.i(TAG, "No triggering location; used a fresh fix instead")
-                android.location.Location("geofence-fallback").apply {
+            val refined = if (lat != null && lng != null) {
+                android.location.Location("geofence-refined").apply {
                     latitude = lat
                     longitude = lng
                     accuracy = (snap.accuracyMeters ?: 0.0).toFloat()
@@ -115,6 +131,18 @@ class GeofenceReceiver : BroadcastReceiver() {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) isMock = true
                     }
                 }
+            } else null
+            when {
+                refined == null && triggered == null -> {
+                    Log.w(TAG, "No triggering location and no fix available (${snap?.reason}); notifying only")
+                    detail = "no GPS fix (${snap?.reason?.takeIf { it.isNotBlank() } ?: "location unavailable"})"
+                    null
+                }
+                // Keep whichever is tighter. A refresh can come back worse
+                // indoors, and the coarse one at least lets the server decide.
+                refined == null -> triggered
+                triggered == null -> refined
+                else -> if (refined.accuracy <= triggered.accuracy) refined else triggered
             }
         }
         val nowIso = isoNow()
@@ -203,6 +231,17 @@ class GeofenceReceiver : BroadcastReceiver() {
         val wifiOk = !snapshot.wifiRequired || matchesOfficeWifi(wifi, snapshot.office)
 
         if (isEnter && !snapshot.faceRequired && location != null && wifiOk) {
+            // Drop a duplicate broadcast for the same arrival (see
+            // ATTEMPT_DEBOUNCE_MS). Silent: the first broadcast is handling it
+            // and will report its own outcome.
+            val now = android.os.SystemClock.elapsedRealtime()
+            val since = now - runCatching { container.autoCheckInPrefs.lastAttemptAt() }.getOrDefault(0L)
+            if (since in 0 until ATTEMPT_DEBOUNCE_MS) {
+                Log.i(TAG, "Duplicate geofence broadcast ${since}ms after the last attempt; ignoring")
+                return
+            }
+            runCatching { container.autoCheckInPrefs.markAttempt(now) }
+
             val attempted = runCatching {
                 container.api.checkIn(
                     CheckInRequest(
@@ -221,11 +260,8 @@ class GeofenceReceiver : BroadcastReceiver() {
             if (attempted.isFailure || attempted.getOrNull()?.ok != true) {
                 // Name the checks the server actually refused on. "did not pass"
                 // alone is what made this unfixable from the outside.
-                val why = attempted.exceptionOrNull()?.let { shortError(it) }
-                    ?: attempted.getOrNull()?.results
-                        ?.filter { it.required && !it.passed }
-                        ?.joinToString(", ") { r -> r.reason?.takeIf { it.isNotBlank() } ?: r.name }
-                        ?.takeIf { it.isNotBlank() }
+                val why = attempted.exceptionOrNull()?.let { describeFailure(it) }
+                    ?: attempted.getOrNull()?.let { failedChecks(it) }
                     ?: "the server declined it"
                 Log.i(TAG, "Auto check-in did not pass: $why")
                 postNotification(context, transition, autoCheckedIn = false, detail = why)
@@ -248,6 +284,50 @@ class GeofenceReceiver : BroadcastReceiver() {
             Log.i(TAG, "Auto check-in not attempted: ${gate ?: "not an entry event"}")
             postNotification(context, transition, autoCheckedIn = false, detail = gate)
         }
+    }
+
+    /**
+     * The required checks the server refused on, in plain words, or null if it
+     * refused without saying which.
+     */
+    private fun failedChecks(response: com.attenddesk.data.api.CheckInResponse): String? =
+        response.results
+            .filter { it.required && !it.passed }
+            .joinToString(", ") { humanReason(it) }
+            .takeIf { it.isNotBlank() }
+
+    /** Server reason codes rendered for someone reading a lock screen. */
+    private fun humanReason(check: com.attenddesk.data.api.CheckResultDto): String =
+        when (check.reason) {
+            "low_accuracy" -> "GPS fix wasn't precise enough"
+            "outside_geofence" -> "too far from the office"
+            "missing_location" -> "no GPS fix was sent"
+            "mock_location" -> "the location looked faked"
+            "ssid_and_bssid_not_in_allowlist" -> "not on an office network"
+            "device_bound_to_other_user" -> "this phone is registered to someone else"
+            "missing_qr_token" -> "a QR scan is required"
+            "missing_face_embedding" -> "a face scan is required"
+            null, "" -> check.name
+            else -> check.reason!!
+        }
+
+    /**
+     * Retrofit throws on any non-2xx, and throwing discards the response body —
+     * but that body is the ONLY place the server says which check it refused
+     * on. All the notification could show was "HTTP 422", which named the
+     * protocol and not the problem. Read the body back off the exception.
+     */
+    private fun describeFailure(t: Throwable): String {
+        if (t is retrofit2.HttpException) {
+            val body = runCatching { t.response()?.errorBody()?.string() }.getOrNull()
+            if (!body.isNullOrBlank()) {
+                runCatching { ERROR_JSON.decodeFromString<com.attenddesk.data.api.CheckInResponse>(body) }
+                    .getOrNull()
+                    ?.let { failedChecks(it) }
+                    ?.let { return it }
+            }
+        }
+        return shortError(t)
     }
 
     /**
@@ -349,6 +429,22 @@ class GeofenceReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_GEOFENCE = "com.attenddesk.location.ACTION_GEOFENCE"
         private const val TAG = "GeofenceReceiver"
+
+        /** Lenient on purpose: an error body is read for diagnostics, and a
+         *  schema drift there must never cost us the reason it carries. */
+        private val ERROR_JSON = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+        /**
+         * Play Services can deliver the same transition more than once — two
+         * arrived 3 seconds apart in testing. While both were failing that was
+         * invisible; the moment check-in succeeds it is two attendance records
+         * for one arrival. hasCheckedInToday can't catch it, since the first
+         * record isn't in the server's history before the second attempt reads it.
+         */
+        private const val ATTEMPT_DEBOUNCE_MS = 90_000L
+
+        /** Ceiling on the high-accuracy fix request; see its call site. */
+        private const val FIX_TIMEOUT_MS = 12_000L
 
         /** Office timezone — "today" must mean the working day, not the phone's. */
         private val DHAKA: java.time.ZoneId = java.time.ZoneId.of("Asia/Dhaka")

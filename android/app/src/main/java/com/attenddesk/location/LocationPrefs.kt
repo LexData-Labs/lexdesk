@@ -31,6 +31,9 @@ object LocationPrefs {
     // Flattened "from|to" day ranges, so a background geofence trigger can tell
     // an office closure from an ordinary morning with no extra network call.
     private val K_HOLIDAYS = stringSetPreferencesKey("holidayRanges")
+    // The server refuses a fix coarser than this before it even measures
+    // distance, so the receiver needs it to know when to go and get a better one.
+    private val K_GPS_ACCURACY_MAX = intPreferencesKey("gpsAccuracyMaxMeters")
     private val K_OFFICE_LAT = doublePreferencesKey("officeLat")
     private val K_OFFICE_LNG = doublePreferencesKey("officeLng")
     private val K_OFFICE_RADIUS = intPreferencesKey("officeRadiusMeters")
@@ -57,6 +60,7 @@ object LocationPrefs {
             p[K_CONTINUOUS] = policy.features.location.continuousIntervalSeconds
             p[K_FACE_REQUIRED] = face
             p[K_WIFI_REQUIRED] = policy.policy?.requireWifi == true
+            p[K_GPS_ACCURACY_MAX] = policy.policy?.gpsAccuracyMaxMeters ?: 100
             p[K_HOLIDAYS] = policy.holidays
                 .mapNotNull { h -> h.fromDay?.let { f -> "$f|${h.toDay ?: f}" } }
                 .toSet()
@@ -98,6 +102,7 @@ object LocationPrefs {
         val continuous = p[K_CONTINUOUS] ?: 60
         val faceRequired = p[K_FACE_REQUIRED] ?: true
         val wifiRequired = p[K_WIFI_REQUIRED] ?: false
+        val gpsAccuracyMax = p[K_GPS_ACCURACY_MAX] ?: 100
         val holidays = p[K_HOLIDAYS] ?: emptySet()
         val officeId = p[K_OFFICE_ID]
         val officeLat = p[K_OFFICE_LAT]
@@ -106,7 +111,7 @@ object LocationPrefs {
         val office = if (officeId != null && officeLat != null && officeLng != null && officeRadius != null) {
             CachedOffice(officeId, officeLat, officeLng, officeRadius, p[K_ALLOWED_SSIDS] ?: emptySet(), p[K_ALLOWED_BSSIDS] ?: emptySet())
         } else null
-        return Snapshot(mode, periodic, continuous, faceRequired, wifiRequired, office, holidays)
+        return Snapshot(mode, periodic, continuous, faceRequired, wifiRequired, gpsAccuracyMax, office, holidays)
     }
 
     data class Snapshot(
@@ -118,6 +123,10 @@ object LocationPrefs {
          *  on office Wi-Fi when this is on, so it is never stricter than a
          *  manual check-in would be. */
         val wifiRequired: Boolean,
+        /** Mirrors policy.gpsAccuracyMaxMeters. The server rejects a coarser fix
+         *  as `low_accuracy` WITHOUT measuring distance, so a phone sitting in
+         *  the office still fails if it only offers the geofence's low-power fix. */
+        val gpsAccuracyMaxMeters: Int = 100,
         val office: CachedOffice?,
         /** Inclusive "YYYY-MM-DD|YYYY-MM-DD" ranges. */
         val holidayRanges: Set<String> = emptySet(),
