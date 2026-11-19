@@ -104,13 +104,17 @@ class GeofenceReceiver : BroadcastReceiver() {
         // fix, exactly as the manual check-in button does.
         val triggered = event.triggeringLocation
         val accuracyLimit = snapshot.gpsAccuracyMaxMeters
-        val location = if (triggered != null && triggered.accuracy <= accuracyLimit) {
+        // A null limit means no policy is cached yet, so we don't know what the
+        // server will accept — refresh rather than gamble. Assuming a generous
+        // default here is what let a 100 m fix pass locally and be refused
+        // remotely on a fresh install's first arrival.
+        val location = if (triggered != null && accuracyLimit != null && triggered.accuracy <= accuracyLimit) {
             triggered
         } else {
             Log.i(
                 TAG,
                 "Geofence fix is ${triggered?.accuracy?.toInt()?.toString() ?: "absent"}m " +
-                    "(limit ${accuracyLimit}m); requesting a high-accuracy fix",
+                    "(limit ${accuracyLimit?.toString() ?: "unknown"}m); requesting a high-accuracy fix",
             )
             val snap = runCatching {
                 // goAsync() extends the broadcast wakelock by seconds, not
